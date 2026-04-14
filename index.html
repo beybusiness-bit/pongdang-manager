@@ -898,7 +898,7 @@ input[type="checkbox"] {
             <label class="form-label">표지 이미지</label>
             <div style="display: flex; gap: 8px; margin-bottom: 8px;">
               <input type="text" class="form-input" id="textbook-cover-url" placeholder="이미지 URL 입력" style="flex: 1;" oninput="updateCoverPreview()">
-              <label for="textbook-cover-file" class="btn btn-outline btn-sm" style="margin: 0; cursor: pointer; white-space: nowrap;">
+              <label for="textbook-cover-file" class="btn btn-outline btn-sm" style="margin: 0; cursor: pointer; white-space: nowrap; display: flex; align-items: center; justify-content: center;">
                 파일 선택
                 <input type="file" id="textbook-cover-file" accept="image/*" style="display: none;" onchange="handleCoverFileSelect(event)">
               </label>
@@ -932,10 +932,10 @@ input[type="checkbox"] {
       <form id="textbook-form" onsubmit="saveTextbook(event)">
         <input type="hidden" id="textbook-form-id">
         
-        <!-- 알라딘 도서 검색 -->
+        <!-- 시중 도서 검색 -->
         <div class="form-row-single" style="margin-bottom: 20px; padding: 16px; background: var(--bg-side); border-radius: var(--radius-sm);">
           <div class="form-group" style="margin-bottom: 0;">
-            <label class="form-label">📚 알라딘 도서 검색</label>
+            <label class="form-label">📚 시중 도서 검색</label>
             <div style="display: flex; gap: 8px;">
               <input type="text" class="form-input" id="aladin-search-query" placeholder="도서명 또는 ISBN 입력" style="flex: 1;">
               <button type="button" class="btn btn-primary btn-sm" onclick="searchAladinBooks()">검색</button>
@@ -1016,7 +1016,7 @@ input[type="checkbox"] {
             <label class="form-label">표지 이미지</label>
             <div style="display: flex; gap: 8px; margin-bottom: 8px;">
               <input type="text" class="form-input" id="textbook-cover-url" placeholder="이미지 URL 입력" style="flex: 1;" oninput="updateCoverPreview()">
-              <label for="textbook-cover-file" class="btn btn-outline btn-sm" style="margin: 0; cursor: pointer; white-space: nowrap;">
+              <label for="textbook-cover-file" class="btn btn-outline btn-sm" style="margin: 0; cursor: pointer; white-space: nowrap; display: flex; align-items: center; justify-content: center;">
                 파일 선택
                 <input type="file" id="textbook-cover-file" accept="image/*" style="display: none;" onchange="handleCoverFileSelect(event)">
               </label>
@@ -3206,8 +3206,8 @@ function renderTextbookPagination() {
   
   // 뷰 전환 버튼 (아이콘)
   html += '  <div class="btn-group" style="margin-right: 12px;">';
-  html += '    <button class="btn btn-sm' + (currentTextbookView === 'grid' ? ' btn-primary' : ' btn-outline') + '" onclick="changeTextbookView(\'grid\')" title="썸네일 보기" style="font-size: 16px; padding: 4px 10px;">◫</button>';
-  html += '    <button class="btn btn-sm' + (currentTextbookView === 'list' ? ' btn-primary' : ' btn-outline') + '" onclick="changeTextbookView(\'list\')" title="목록 보기" style="font-size: 16px; padding: 4px 10px;">☰</button>';
+  html += '    <button class="btn btn-sm' + (currentTextbookView === 'grid' ? ' btn-primary' : ' btn-outline') + '" onclick="changeTextbookView(\'grid\')" title="썸네일 보기" style="font-size: 16px; padding: 4px 10px; display: inline-flex; align-items: center; justify-content: center;">◫</button>';
+  html += '    <button class="btn btn-sm' + (currentTextbookView === 'list' ? ' btn-primary' : ' btn-outline') + '" onclick="changeTextbookView(\'list\')" title="목록 보기" style="font-size: 16px; padding: 4px 10px; display: inline-flex; align-items: center; justify-content: center;">☰</button>';
   html += '  </div>';
   
   html += '  <div class="pagination">';
@@ -3585,7 +3585,7 @@ async function searchAladinBooks() {
   const resultsContainer = document.getElementById('aladin-search-results');
   
   if (!query || !resultsContainer) {
-    console.error('알라딘 검색 요소를 찾을 수 없습니다');
+    console.error('도서 검색 요소를 찾을 수 없습니다');
     return;
   }
   
@@ -3598,10 +3598,11 @@ async function searchAladinBooks() {
   resultsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text3);">검색 중...</div>';
   
   try {
-    // 알라딘 API 호출
+    // CORS Proxy를 통한 알라딘 API 호출
     const apiUrl = 'https://www.aladin.co.kr/ttb/api/ItemSearch.aspx?ttbkey=ttbgkswjd25121656001&Query=' + encodeURIComponent(searchQuery) + '&QueryType=Title&MaxResults=5&start=1&SearchTarget=Book&output=js&Version=20131101';
+    const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(apiUrl);
     
-    const response = await fetch(apiUrl);
+    const response = await fetch(proxyUrl);
     const data = await response.json();
     
     if (!data.item || data.item.length === 0) {
@@ -3636,8 +3637,8 @@ async function searchAladinBooks() {
     resultsContainer.innerHTML = html;
     
   } catch (error) {
-    console.error('알라딘 API 오류:', error);
-    resultsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--danger);">검색 중 오류가 발생했습니다. CORS 제한으로 인해 브라우저에서 직접 호출이 제한될 수 있습니다.</div>';
+    console.error('도서 검색 오류:', error);
+    resultsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--danger);">검색 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.</div>';
   }
 }
 
@@ -3711,7 +3712,9 @@ function handleCoverFileSelect(event) {
   const reader = new FileReader();
   reader.onload = function(e) {
     const base64 = e.target.result;
-    document.getElementById('textbook-cover-url').value = base64;
+    const urlInput = document.getElementById('textbook-cover-url');
+    urlInput.value = base64;
+    urlInput.placeholder = '✓ ' + file.name + ' 업로드됨';
     updateCoverPreview();
     showToast('이미지가 업로드되었습니다');
   };
