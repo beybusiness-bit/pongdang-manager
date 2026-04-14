@@ -892,7 +892,19 @@ input[type="checkbox"] {
       <form id="student-form" onsubmit="saveStudent(event)">
         <input type="hidden" id="student-form-id">
         
-        <!-- 학생 정보는 나중에 구현 -->
+        <!-- 프로필 이미지 -->
+        <div class="form-row-single">
+          <div class="form-group">
+            <label class="form-label">프로필 사진</label>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <img id="student-image-preview" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; display: none;">
+              <input type="file" class="form-input" id="student-profile-image" accept="image/*" onchange="handleStudentImageUpload(event)" style="flex: 1;">
+              <button type="button" class="btn btn-outline btn-sm" onclick="removeStudentProfileImage()">제거</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 학생 정보 -->
         <div class="form-row-single">
           <div class="form-group">
             <label class="form-label">이름 *</label>
@@ -1091,7 +1103,7 @@ input[type="checkbox"] {
         <div class="detail-section">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <div class="detail-section-title" style="margin: 0;">등록/퇴원 기록</div>
-            <button class="btn btn-primary btn-sm" onclick="openEnrollmentRecordForm()">+ 기록 추가</button>
+            <button class="btn btn-primary btn-sm" onclick="addEnrollmentRecord()">+ 기록 추가</button>
           </div>
           <div id="detail-enrollment-records"></div>
         </div>
@@ -1178,7 +1190,7 @@ const AUTH = {
 const MENUS = [
   { id: 'dashboard', name: '대시보드', icon: '📊' },
   { id: 'calendar', name: '학원 캘린더', icon: '📅' },
-  { id: 'students', name: '수강생 관리', icon: '👨‍🎓' },
+  { id: 'students', name: '학생 관리', icon: '👨‍🎓' },
   { id: 'textbooks', name: '교재 관리', icon: '📚' },
   { id: 'payments', name: '결제 관리', icon: '💳' },
   { id: 'sales', name: '매출 리포트', icon: '💰' },
@@ -1560,7 +1572,7 @@ function getPageContent(pageId) {
         <!-- 통계 카드 -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
           <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--sh);">
-            <div style="font-size: 13px; color: var(--text2); margin-bottom: 8px;">전체 수강생</div>
+            <div style="font-size: 13px; color: var(--text2); margin-bottom: 8px;">전체 학생</div>
             <div style="font-size: 28px; font-weight: 700; color: var(--accent);" id="stat-students">0</div>
           </div>
           <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--sh);">
@@ -1584,7 +1596,7 @@ function getPageContent(pageId) {
           </h3>
           <div style="color: var(--text2); line-height: 1.8; font-size: 14px;">
             <div style="padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm); margin-bottom: 12px;">
-              <strong>✅ 5단계 수강생 관리 완료</strong><br>
+              <strong>✅ 5단계 학생 관리 완료</strong><br>
               학생 추가/수정/삭제, 등록/퇴원 기록 관리, 페이지네이션, 일괄 작업 등이 추가되었습니다.
             </div>
             <div style="padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm);">
@@ -2071,7 +2083,12 @@ function renderStudentsPage() {
       html += '    <input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onclick="toggleStudentSelection(\'' + student.id + '\')">';
       html += '  </td>';
       html += '  <td>' + (student.number || '-') + '</td>';
-      html += '  <td><span onclick="openStudentDetail(\'' + student.id + '\')" style="cursor: pointer; color: var(--accent); text-decoration: underline;">' + (student.name || '-') + '</span></td>';
+      html += '  <td>';
+      html += '    <div style="display: flex; align-items: center; gap: 8px;">';
+      html += '      ' + getProfileImageHTML(student, 32);
+      html += '      <span onclick="openStudentDetail(\'' + student.id + '\')" style="cursor: pointer; color: var(--accent); text-decoration: underline;">' + (student.name || '-') + '</span>';
+      html += '    </div>';
+      html += '  </td>';
       html += '  <td>' + (student.school || '-') + '</td>';
       html += '  <td>' + (student.grade || '-') + '</td>';
       html += '  <td>' + (student.teacher || '-') + '</td>';
@@ -2517,7 +2534,8 @@ function saveStudent(e) {
     parentType: document.getElementById('student-parent-type').value,
     number: document.getElementById('student-number').value,
     address: document.getElementById('student-address').value,
-    memo: document.getElementById('student-memo').value
+    memo: document.getElementById('student-memo').value,
+    profileImage: window.tempStudentProfileImage || ''
   };
   
   if (id) {
@@ -2547,6 +2565,7 @@ function saveStudent(e) {
   }
   
   closeModal('modal-student-form');
+  window.tempStudentProfileImage = null;
   renderStudentsPage();
   
   // TODO: Sheets에 저장
@@ -4104,56 +4123,79 @@ function renderStudentsTextbookUsageViewContent() {
   
   const filtered = getFilteredStudents();
   
-  let html = container.innerHTML;  // 기존 뷰 버튼 유지
+  let html = container.innerHTML;
   
-  html += '<div style="display: flex; flex-direction: column; gap: 20px;">';
+  html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 20px;">';
+  html += '@media (max-width: 768px) { grid-template-columns: 1fr; }';
   
   filtered.forEach(student => {
     const assignedTextbooks = studentTextbooksData
       .filter(st => st.studentId === student.id)
-      .map(st => textbooksData.find(t => t.id === st.textbookId))
-      .filter(Boolean);
+      .map(st => {
+        const tb = textbooksData.find(t => t.id === st.textbookId);
+        return { ...st, textbook: tb };
+      })
+      .filter(st => st.textbook);
     
     html += '<div class="card" style="padding: 20px;">';
-    html += '  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">';
-    html += '    <div style="display: flex; align-items: center; gap: 12px;">';
-    html += '      <div class="avatar">' + (student.name ? student.name.charAt(0) : '?') + '</div>';
-    html += '      <div>';
-    html += '        <div style="font-weight: 600; font-size: 16px;">' + (student.name || '-') + '</div>';
-    html += '        <div style="font-size: 13px; color: var(--text2);">' + (student.school || '-') + ' ' + (student.grade || '') + '</div>';
-    html += '      </div>';
+    html += '  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">';
+    html += '    ' + getProfileImageHTML(student, 48);
+    html += '    <div>';
+    html += '      <div style="font-weight: 600; font-size: 16px;">' + (student.name || '-') + '</div>';
+    html += '      <div style="font-size: 13px; color: var(--text2);">' + (student.school || '-') + ' ' + (student.grade || '') + '</div>';
     html += '    </div>';
-    html += '    <button class="btn btn-primary btn-sm" onclick="quickOpenStudentTextbooks(\'' + student.id + '\')">교재 관리</button>';
     html += '  </div>';
-    
-    html += '  <div class="detail-section">';
-    html += '    <div class="detail-section-title" style="font-size: 14px; margin-bottom: 12px;">교재 사용 목록</div>';
     
     if (assignedTextbooks.length === 0) {
-      html += '    <div style="text-align: center; padding: 20px; color: var(--text3); background: var(--bg-side); border-radius: var(--radius-sm);">';
-      html += '      사용 중인 교재가 없습니다';
-      html += '    </div>';
+      html += '  <div style="text-align: center; padding: 20px; color: var(--text3); background: var(--bg-side); border-radius: var(--radius-sm); cursor: pointer;" onclick="quickOpenStudentTextbooks(\'' + student.id + '\')">';
+      html += '    <div style="font-size: 32px; margin-bottom: 8px;">+</div>';
+      html += '    <div>교재 추가</div>';
+      html += '  </div>';
     } else {
-      html += '    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">';
-      assignedTextbooks.forEach(tb => {
-        const assignment = studentTextbooksData.find(st => st.studentId === student.id && st.textbookId === tb.id);
-        html += '      <div style="padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm); border: 1px solid var(--border);">';
-        html += '        <div style="font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px;">' + tb.title + '</div>';
-        html += '        <div style="font-size: 11px; color: var(--text3);">' + (tb.author || '') + '</div>';
-        if (assignment && assignment.assignedDate) {
-          html += '        <div style="font-size: 10px; color: var(--text3); margin-top: 6px;">시작: ' + assignment.assignedDate + '</div>';
+      html += '  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px;">';
+      assignedTextbooks.forEach((st, idx) => {
+        const tb = st.textbook;
+        html += '    <div class="textbook-card" style="position: relative; padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm); border: 1px solid var(--border); cursor: pointer;">';
+        html += '      <div class="textbook-remove" style="position: absolute; top: 6px; right: 6px; width: 20px; height: 20px; background: var(--danger); color: white; border-radius: 50%; display: none; align-items: center; justify-content: center; font-size: 12px; cursor: pointer;" onclick="unassignTextbookQuick(\'' + st.id + '\', \'' + student.name + '\', \'' + tb.title + '\')">×</div>';
+        html += '      <div style="font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px;">' + tb.title + '</div>';
+        if (st.assignedDate) {
+          html += '      <div style="font-size: 10px; color: var(--text3);">시작: ' + st.assignedDate + '</div>';
         }
-        html += '      </div>';
+        html += '    </div>';
       });
+      
+      html += '    <div style="padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm); border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text3);" onclick="quickOpenStudentTextbooks(\'' + student.id + '\')">';
+      html += '      <div style="font-size: 24px;">+</div>';
       html += '    </div>';
+      
+      html += '  </div>';
     }
     
-    html += '  </div>';
     html += '</div>';
   });
   
   html += '</div>';
+  
+  html += '<style>';
+  html += '.textbook-card:hover .textbook-remove { display: flex !important; }';
+  html += '@media (max-width: 768px) {';
+  html += '  #students-page-content > div:last-child { grid-template-columns: 1fr !important; }';
+  html += '}';
+  html += '</style>';
+  
   container.innerHTML = html;
+}
+
+function unassignTextbookQuick(assignmentId, studentName, textbookTitle) {
+  event.stopPropagation();
+  if (!confirm(studentName + ' 학생의 "' + textbookTitle + '" 교재를 해제하시겠습니까?')) return;
+  
+  const idx = studentTextbooksData.findIndex(st => st.id === assignmentId);
+  if (idx > -1) {
+    studentTextbooksData.splice(idx, 1);
+    showToast('교재가 해제되었습니다');
+    renderStudentsPage();
+  }
 }
 
 function quickOpenStudentTextbooks(studentId) {
@@ -4354,9 +4396,66 @@ function confirmCSVUpload() {
   csvPreviewData = [];
 }
 
+// ============ 프로필 사진 ============
+function getProfileColor(studentId) {
+  const colors = [
+    '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
+    '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B195', '#C06C84',
+    '#6C5B7B', '#355C7D', '#F67280', '#C06C84', '#6C5B7B'
+  ];
+  const hash = studentId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return colors[hash % colors.length];
+}
+
+function getProfileImageHTML(student, size) {
+  size = size || 40;
+  if (student.profileImage) {
+    return '<img src="' + student.profileImage + '" style="width: ' + size + 'px; height: ' + size + 'px; border-radius: 50%; object-fit: cover;">';
+  } else {
+    const initial = student.name ? student.name.charAt(0) : '?';
+    const color = getProfileColor(student.id);
+    return '<div style="width: ' + size + 'px; height: ' + size + 'px; background: ' + color + '; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: ' + (size * 0.5) + 'px; flex-shrink: 0;">' + initial + '</div>';
+  }
+}
+
+function handleStudentImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  if (file.size > 5 * 1024 * 1024) {
+    showToast('파일 크기는 5MB 이하여야 합니다');
+    event.target.value = '';
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const preview = document.getElementById('student-image-preview');
+    if (preview) {
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+    }
+    window.tempStudentProfileImage = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeStudentProfileImage() {
+  const input = document.getElementById('student-profile-image');
+  const preview = document.getElementById('student-image-preview');
+  
+  if (input) input.value = '';
+  if (preview) {
+    preview.src = '';
+    preview.style.display = 'none';
+  }
+  
+  window.tempStudentProfileImage = null;
+}
+
 // ============ 대시보드 ============
 function updateDashboard() {
-  // 전체 수강생
+  // 전체 학생
   const totalStudents = studentsData.filter(s => getStudentStatus(s) === '재원').length;
   const statStudents = document.getElementById('stat-students');
   if (statStudents) statStudents.textContent = totalStudents;
