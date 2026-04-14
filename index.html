@@ -1415,10 +1415,14 @@ function showToast(msg, dur = 2200) {
 }
 
 function openModal(id) {
+  console.log('openModal 호출:', id);
   const m = document.getElementById(id);
+  console.log('모달 엘리먼트:', m);
+  
   if (m) {
     // display 먼저 설정
     m.style.display = 'flex';
+    console.log('display를 flex로 설정');
     
     // 현재 열린 모달들 중 최대 z-index 찾기
     const openModals = document.querySelectorAll('.modal-backdrop.open');
@@ -1430,13 +1434,17 @@ function openModal(id) {
     
     // 새 모달은 최대값 + 10
     m.style.zIndex = maxZ + 10;
+    console.log('z-index 설정:', maxZ + 10);
     
     // 브라우저 렌더링 후 open 클래스 추가 (애니메이션 작동)
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         m.classList.add('open');
+        console.log('open 클래스 추가 완료');
       });
     });
+  } else {
+    console.error('모달을 찾을 수 없음:', id);
   }
 }
 
@@ -2414,20 +2422,33 @@ function updateGradeOptions() {
 function autoFillSchoolLevel() {
   const schoolSelect = document.getElementById('student-school');
   const schoolLevelInput = document.getElementById('student-school-level');
+  const gradeSelect = document.getElementById('student-grade-num');
   
-  if (!schoolSelect || !schoolLevelInput) return;
+  if (!schoolSelect || !schoolLevelInput || !gradeSelect) return;
   
   const selectedSchoolName = schoolSelect.value;
   if (!selectedSchoolName) {
     schoolLevelInput.value = '';
-    updateGradeOptions();
+    gradeSelect.innerHTML = '<option value="">학교급 확인 후 선택</option>';
     return;
   }
   
   const school = schoolsData.find(s => s.name === selectedSchoolName);
-  if (school) {
-    schoolLevelInput.value = school.type || '';
-    updateGradeOptions();
+  if (school && school.type) {
+    schoolLevelInput.value = school.type;
+    
+    // 학년 옵션 즉시 업데이트
+    let html = '<option value="">선택</option>';
+    if (school.type === '초') {
+      for (let i = 1; i <= 6; i++) {
+        html += '<option value="' + i + '">' + i + '학년</option>';
+      }
+    } else if (school.type === '중' || school.type === '고') {
+      for (let i = 1; i <= 3; i++) {
+        html += '<option value="' + i + '">' + i + '학년</option>';
+      }
+    }
+    gradeSelect.innerHTML = html;
   }
 }
 
@@ -2651,13 +2672,54 @@ function renderEnrollmentRecords(student) {
 }
 
 function addEnrollmentRecord() {
-  if (!currentDetailStudent) return;
+  console.log('=== addEnrollmentRecord 시작 ===');
+  console.log('currentDetailStudent:', currentDetailStudent);
   
-  document.getElementById('enrollment-type').value = '등록';
-  document.getElementById('enrollment-date').value = today();
-  document.getElementById('enrollment-memo').value = '';
+  if (!currentDetailStudent) {
+    console.error('currentDetailStudent가 없습니다');
+    alert('학생 정보를 찾을 수 없습니다');
+    return;
+  }
+  
+  // 모달 존재 확인
+  const modal = document.getElementById('modal-enrollment-record');
+  console.log('modal 요소:', modal);
+  
+  if (!modal) {
+    console.error('modal-enrollment-record 요소를 찾을 수 없습니다');
+    alert('모달을 찾을 수 없습니다');
+    return;
+  }
+  
+  // 폼 리셋
+  const form = document.getElementById('enrollment-record-form');
+  if (form) {
+    form.reset();
+    console.log('폼 리셋 완료');
+  } else {
+    console.error('enrollment-record-form을 찾을 수 없습니다');
+  }
+  
+  const typeEl = document.getElementById('enrollment-type');
+  const dateEl = document.getElementById('enrollment-date');
+  const memoEl = document.getElementById('enrollment-memo');
+  
+  console.log('type 요소:', typeEl);
+  console.log('date 요소:', dateEl);
+  console.log('memo 요소:', memoEl);
+  
+  if (typeEl) typeEl.value = '등록';
+  if (dateEl) dateEl.value = today();
+  if (memoEl) memoEl.value = '';
+  
+  console.log('openModal 호출 전 - modal display:', modal.style.display);
+  console.log('openModal 호출 전 - modal className:', modal.className);
   
   openModal('modal-enrollment-record');
+  
+  console.log('openModal 호출 후 - modal display:', modal.style.display);
+  console.log('openModal 호출 후 - modal className:', modal.className);
+  console.log('=== addEnrollmentRecord 종료 ===');
 }
 
 function saveEnrollmentRecord(e) {
@@ -2841,10 +2903,10 @@ function editStudentFromDetail() {
 function loadSampleData() {
   // 학교 샘플 데이터
   schoolsData = [
-    { id: '1', name: '서울초등학교', type: '초등' },
-    { id: '2', name: '중앙중학교', type: '중등' },
-    { id: '3', name: '명문고등학교', type: '고등' },
-    { id: '4', name: '양운중학교', type: '중등' }
+    { id: '1', name: '서울초등학교', type: '초' },
+    { id: '2', name: '중앙중학교', type: '중' },
+    { id: '3', name: '명문고등학교', type: '고' },
+    { id: '4', name: '양운중학교', type: '중' }
   ];
   
   // 보호자 구분 샘플 데이터
