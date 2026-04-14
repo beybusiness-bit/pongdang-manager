@@ -1041,8 +1041,47 @@ input[type="checkbox"] {
       
       <!-- 기본 정보 탭 -->
       <div id="student-detail-tab-info" class="tab-content active">
+        <!-- 프로필 및 기본 정보 -->
         <div class="detail-section">
-          <div class="detail-section-title">기본 정보</div>
+          <div style="display: flex; gap: 24px; margin-bottom: 24px;">
+            <!-- 프로필 사진 -->
+            <div id="detail-profile-image" style="width: 120px; height: 120px; flex-shrink: 0;">
+            </div>
+            
+            <!-- 기본 정보 -->
+            <div style="flex: 1;">
+              <div class="detail-section-title" style="margin-top: 0;">기본 정보</div>
+              <div class="info-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="info-item">
+                  <div class="info-label">이름</div>
+                  <div class="info-value" id="detail-info-name">-</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">생년월일</div>
+                  <div class="info-value" id="detail-info-birthdate">-</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">학교</div>
+                  <div class="info-value" id="detail-info-school">-</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">학년</div>
+                  <div class="info-value" id="detail-info-grade">-</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">상태</div>
+                  <div class="info-value" id="detail-info-status">-</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">담당선생님</div>
+                  <div class="info-value" id="detail-info-teacher">-</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 추가 정보 -->
+          <div class="detail-section-title">연락처 및 기타</div>
           <div class="info-grid" style="grid-template-columns: repeat(2, 1fr);">
             <div class="info-item">
               <div class="info-label">이름</div>
@@ -1151,6 +1190,36 @@ input[type="checkbox"] {
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('modal-assign-textbook')">취소</button>
       <button class="btn btn-primary btn-sm" onclick="saveBulkAssignTextbooks()">배정</button>
+    </div>
+  </div>
+</div>
+
+<!-- 등록/퇴원 기록 모달 -->
+<div class="modal-backdrop" id="modal-enrollment-record">
+  <div class="modal">
+    <div class="modal-title">등록/퇴원 기록 추가</div>
+    <div class="modal-body">
+      <form id="enrollment-record-form" onsubmit="saveEnrollmentRecord(event)">
+        <div class="form-group">
+          <label class="form-label">유형 *</label>
+          <select class="form-input" id="enrollment-type" required>
+            <option value="등록">등록</option>
+            <option value="퇴원">퇴원</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">날짜 *</label>
+          <input type="date" class="form-input" id="enrollment-date" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">메모</label>
+          <textarea class="form-input" id="enrollment-memo" rows="3"></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-enrollment-record')">취소</button>
+      <button class="btn btn-primary btn-sm" type="submit" form="enrollment-record-form">저장</button>
     </div>
   </div>
 </div>
@@ -2619,6 +2688,12 @@ function openStudentDetail(studentId) {
 
 function renderStudentDetailInfo(student) {
   const status = getStudentStatus(student);
+  
+  // 프로필 이미지 표시
+  const profileEl = document.getElementById('detail-profile-image');
+  if (profileEl) {
+    profileEl.innerHTML = getProfileImageHTML(student, 120);
+  }
   
   const fields = {
     'detail-info-name': student.name,
@@ -4125,8 +4200,7 @@ function renderStudentsTextbookUsageViewContent() {
   
   let html = container.innerHTML;
   
-  html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 20px;">';
-  html += '@media (max-width: 768px) { grid-template-columns: 1fr; }';
+  html += '<div class="student-textbook-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 20px;">';
   
   filtered.forEach(student => {
     const assignedTextbooks = studentTextbooksData
@@ -4177,10 +4251,10 @@ function renderStudentsTextbookUsageViewContent() {
   html += '</div>';
   
   html += '<style>';
-  html += '.textbook-card:hover .textbook-remove { display: flex !important; }';
-  html += '@media (max-width: 768px) {';
-  html += '  #students-page-content > div:last-child { grid-template-columns: 1fr !important; }';
-  html += '}';
+  html += '  .textbook-card:hover .textbook-remove { display: flex !important; }';
+  html += '  @media (max-width: 768px) {';
+  html += '    .student-textbook-grid { grid-template-columns: 1fr !important; }';
+  html += '  }';
   html += '</style>';
   
   container.innerHTML = html;
@@ -4205,6 +4279,11 @@ function quickOpenStudentTextbooks(studentId) {
     document.querySelectorAll('#modal-student-detail .tab-btn').forEach((btn, i) => {
       btn.classList.toggle('active', i === 1);
     });
+    
+    // 교재 배정 모달까지 열기
+    setTimeout(() => {
+      openBulkAssignTextbookModal();
+    }, 200);
   }, 100);
 }
 
