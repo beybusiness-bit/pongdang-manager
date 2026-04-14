@@ -919,7 +919,8 @@ input[type="checkbox"] {
         <!-- 시중 도서 검색 -->
         <div class="form-row-single" style="margin-bottom: 20px; padding: 16px; background: var(--bg-side); border-radius: var(--radius-sm);">
           <div class="form-group" style="margin-bottom: 0;">
-            <label class="form-label">📚 시중 도서 검색</label>
+            <label class="form-label">📚 시중 도서 검색 (베타)</label>
+            <div style="font-size: 12px; color: var(--text3); margin-bottom: 8px;">⚠️ 외부 API 제약으로 검색이 불안정할 수 있습니다. 수동 입력을 권장합니다.</div>
             <div style="display: flex; gap: 8px;">
               <input type="text" class="form-input" id="aladin-search-query" placeholder="도서명 또는 ISBN 입력" style="flex: 1;" onkeypress="if(event.key==='Enter'){event.preventDefault();searchAladinBooks();}">
               <button type="button" class="btn btn-primary btn-sm" onclick="searchAladinBooks()">검색</button>
@@ -1099,6 +1100,71 @@ input[type="checkbox"] {
           </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- 학생 상세 모달 -->
+<div class="modal-backdrop" id="modal-student-detail">
+  <div class="modal modal-large">
+    <div class="modal-title" style="display: flex; justify-content: space-between; align-items: center;">
+      <span id="detail-student-name">학생 상세</span>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-primary btn-sm" onclick="editStudentFromDetail()">수정</button>
+        <button class="btn btn-outline btn-sm" onclick="closeModal('modal-student-detail')">닫기</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <!-- 탭 -->
+      <div class="tab-bar" style="margin-bottom: 20px;">
+        <button class="tab-btn active" onclick="switchStudentDetailTab('info', this)">기본 정보</button>
+        <button class="tab-btn" onclick="switchStudentDetailTab('textbooks', this)">교재</button>
+      </div>
+      
+      <!-- 기본 정보 탭 -->
+      <div id="student-detail-tab-info" class="tab-content active">
+        <div class="detail-section">
+          <div class="detail-section-title">학생 정보</div>
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="info-label">이름</div>
+              <div class="info-value" id="detail-student-info-name">-</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">학교</div>
+              <div class="info-value" id="detail-student-info-school">-</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 교재 탭 -->
+      <div id="student-detail-tab-textbooks" class="tab-content" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div class="detail-section-title" style="margin: 0;">배정된 교재</div>
+          <button class="btn btn-primary btn-sm" onclick="openAssignTextbookModal()">+ 교재 배정</button>
+        </div>
+        <div id="detail-student-textbooks-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 교재 배정 모달 -->
+<div class="modal-backdrop" id="modal-assign-textbook">
+  <div class="modal">
+    <div class="modal-title">교재 배정</div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">교재 선택 *</label>
+        <select class="form-input" id="assign-textbook-select" required>
+          <option value="">선택하세요</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-assign-textbook')">취소</button>
+      <button class="btn btn-primary btn-sm" onclick="saveAssignTextbook()">배정</button>
     </div>
   </div>
 </div>
@@ -3732,6 +3798,115 @@ function updateCoverPreview() {
   } else {
     preview.style.display = 'none';
   }
+}
+
+// ============ 학생-교재 연결 ============
+function switchStudentDetailTab(tab, btn) {
+  document.querySelectorAll('#modal-student-detail .tab-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  
+  document.querySelectorAll('#modal-student-detail .tab-content').forEach(t => t.style.display = 'none');
+  const tabEl = document.getElementById('student-detail-tab-' + tab);
+  if (tabEl) tabEl.style.display = 'block';
+  
+  if (tab === 'textbooks') {
+    renderStudentTextbooks();
+  }
+}
+
+function renderStudentTextbooks() {
+  const container = document.getElementById('detail-student-textbooks-list');
+  if (!container || !currentDetailStudent) return;
+  
+  const assignedTextbooks = studentTextbooksData
+    .filter(st => st.studentId === currentDetailStudent.id)
+    .map(st => {
+      const textbook = textbooksData.find(t => t.id === st.textbookId);
+      return { ...st, textbook };
+    })
+    .filter(st => st.textbook);
+  
+  if (assignedTextbooks.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📚</div><div class="empty-text">배정된 교재가 없습니다</div></div>';
+    return;
+  }
+  
+  let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
+  assignedTextbooks.forEach(st => {
+    html += '<div style="padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center;">';
+    html += '  <div style="flex: 1;">';
+    html += '    <div style="font-weight: 600;">' + st.textbook.title + '</div>';
+    html += '    <div style="font-size: 12px; color: var(--text2); margin-top: 2px;">' + (st.textbook.author || '') + ' | ' + (st.textbook.publisher || '') + '</div>';
+    if (st.assignedDate) {
+      html += '    <div style="font-size: 11px; color: var(--text3); margin-top: 4px;">배정일: ' + st.assignedDate + '</div>';
+    }
+    html += '  </div>';
+    html += '  <button class="btn btn-danger btn-sm" onclick="unassignTextbook(\'' + st.id + '\')">해제</button>';
+    html += '</div>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function openAssignTextbookModal() {
+  if (!currentDetailStudent) return;
+  
+  const select = document.getElementById('assign-textbook-select');
+  if (!select) return;
+  
+  select.innerHTML = '<option value="">선택하세요</option>';
+  textbooksData.forEach(t => {
+    select.innerHTML += '<option value="' + t.id + '">' + t.title + '</option>';
+  });
+  
+  openModal('modal-assign-textbook');
+}
+
+function saveAssignTextbook() {
+  if (!currentDetailStudent) return;
+  
+  const textbookId = document.getElementById('assign-textbook-select').value;
+  if (!textbookId) {
+    showToast('교재를 선택해주세요');
+    return;
+  }
+  
+  const exists = studentTextbooksData.find(st => 
+    st.studentId === currentDetailStudent.id && st.textbookId === textbookId
+  );
+  
+  if (exists) {
+    showToast('이미 배정된 교재입니다');
+    return;
+  }
+  
+  studentTextbooksData.push({
+    id: uid(),
+    studentId: currentDetailStudent.id,
+    textbookId: textbookId,
+    assignedDate: today()
+  });
+  
+  showToast('교재가 배정되었습니다');
+  closeModal('modal-assign-textbook');
+  renderStudentTextbooks();
+  renderTextbooksPage();
+}
+
+function unassignTextbook(assignmentId) {
+  if (!confirm('교재 배정을 해제하시겠습니까?')) return;
+  
+  const index = studentTextbooksData.findIndex(st => st.id === assignmentId);
+  if (index > -1) {
+    studentTextbooksData.splice(index, 1);
+    showToast('교재 배정이 해제되었습니다');
+    renderStudentTextbooks();
+    renderTextbooksPage();
+  }
+}
+
+function editStudentFromDetail() {
+  showToast('학생 수정 기능은 추후 구현 예정입니다');
 }
 
 // ============ 대시보드 ============
