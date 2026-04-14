@@ -1721,7 +1721,35 @@ function initApp() {
   updateUserInfo();
   renderSidebar();
   renderPages();
-  navigateTo('dashboard');
+  
+  // localStorage에서 마지막 페이지 복원 또는 URL 해시 확인
+  const hash = window.location.hash.substring(1);
+  const savedPage = hash || localStorage.getItem('currentPage') || 'dashboard';
+  navigateTo(savedPage);
+  
+  // URL 해시 변경 감지 (뒤로가기/앞으로가기)
+  window.addEventListener('hashchange', () => {
+    const newHash = window.location.hash.substring(1);
+    if (newHash && newHash !== currentPage) {
+      // URL 해시와 저장된 페이지 동기화
+      currentPage = newHash;
+      localStorage.setItem('currentPage', newHash);
+      
+      // 페이지 UI 업데이트
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.page === newHash);
+      });
+      document.querySelectorAll('.page').forEach(page => {
+        page.classList.toggle('active', page.id === 'page-' + newHash);
+      });
+      
+      // 페이지별 렌더링
+      if (newHash === 'dashboard') updateDashboard();
+      if (newHash === 'students') renderStudentsPage();
+      if (newHash === 'textbooks') renderTextbooksPage();
+      if (newHash === 'calendar') setTimeout(() => renderCalendar(), 50);
+    }
+  });
 }
 
 function updateUserInfo() {
@@ -1994,6 +2022,12 @@ function getPageContent(pageId) {
 
 function navigateTo(pageId) {
   currentPage = pageId;
+  
+  // localStorage에 현재 페이지 저장
+  localStorage.setItem('currentPage', pageId);
+  
+  // URL 해시 업데이트
+  window.location.hash = pageId;
   
   // 사이드바 활성화
   document.querySelectorAll('.nav-item').forEach(item => {
