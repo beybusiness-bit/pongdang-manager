@@ -1428,14 +1428,20 @@ function openModal(id) {
       if (z > maxZ) maxZ = z;
     });
     
-    // z-index, display, open 클래스 즉시 설정
+    // 모든 스타일을 강제로 설정
     m.style.zIndex = maxZ + 10;
     m.style.display = 'flex';
+    m.style.opacity = '1';
+    m.style.visibility = 'visible';
+    m.style.pointerEvents = 'auto';
     m.classList.add('open');
     
     console.log('z-index 설정:', maxZ + 10);
     console.log('display를 flex로 설정, open 클래스 추가 완료');
     console.log('최종 상태 - display:', m.style.display, 'className:', m.className, 'zIndex:', m.style.zIndex);
+    console.log('computed style display:', window.getComputedStyle(m).display);
+    console.log('computed style visibility:', window.getComputedStyle(m).visibility);
+    console.log('computed style opacity:', window.getComputedStyle(m).opacity);
   } else {
     console.error('모달을 찾을 수 없음:', id);
   }
