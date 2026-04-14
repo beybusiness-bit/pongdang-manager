@@ -924,6 +924,124 @@ input[type="checkbox"] {
   </div>
 </div>
 
+<!-- 교재 추가/수정 모달 -->
+<div class="modal-backdrop" id="modal-textbook-form">
+  <div class="modal modal-wide">
+    <div class="modal-title" id="textbook-form-title">교재 추가</div>
+    <div class="modal-body">
+      <form id="textbook-form" onsubmit="saveTextbook(event)">
+        <input type="hidden" id="textbook-form-id">
+        
+        <!-- 알라딘 도서 검색 -->
+        <div class="form-row-single" style="margin-bottom: 20px; padding: 16px; background: var(--bg-side); border-radius: var(--radius-sm);">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">📚 알라딘 도서 검색</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" class="form-input" id="aladin-search-query" placeholder="도서명 또는 ISBN 입력" style="flex: 1;">
+              <button type="button" class="btn btn-primary btn-sm" onclick="searchAladinBooks()">검색</button>
+            </div>
+          </div>
+          <div id="aladin-search-results" style="margin-top: 12px; max-height: 300px; overflow-y: auto;"></div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">교재명 *</label>
+            <input type="text" class="form-input" id="textbook-title" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">저자</label>
+            <input type="text" class="form-input" id="textbook-author">
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">출판사</label>
+            <input type="text" class="form-input" id="textbook-publisher">
+          </div>
+          <div class="form-group">
+            <label class="form-label">과목</label>
+            <select class="form-input" id="textbook-subject">
+              <option value="">선택</option>
+              <option value="수학">수학</option>
+              <option value="국어">국어</option>
+              <option value="영어">영어</option>
+              <option value="과학">과학</option>
+              <option value="사회">사회</option>
+              <option value="기타">기타</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">학년</label>
+            <select class="form-input" id="textbook-grade">
+              <option value="">선택</option>
+              <option value="초1">초1</option>
+              <option value="초2">초2</option>
+              <option value="초3">초3</option>
+              <option value="초4">초4</option>
+              <option value="초5">초5</option>
+              <option value="초6">초6</option>
+              <option value="중1">중1</option>
+              <option value="중2">중2</option>
+              <option value="중3">중3</option>
+              <option value="고1">고1</option>
+              <option value="고2">고2</option>
+              <option value="고3">고3</option>
+              <option value="공통">공통</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">가격</label>
+            <input type="number" class="form-input" id="textbook-price" placeholder="0">
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">ISBN</label>
+            <input type="text" class="form-input" id="textbook-isbn">
+          </div>
+          <div class="form-group">
+            <label class="form-label">재고 수량</label>
+            <input type="number" class="form-input" id="textbook-stock" placeholder="0" value="0">
+          </div>
+        </div>
+        
+        <div class="form-row-single">
+          <div class="form-group">
+            <label class="form-label">표지 이미지</label>
+            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+              <input type="text" class="form-input" id="textbook-cover-url" placeholder="이미지 URL 입력" style="flex: 1;" oninput="updateCoverPreview()">
+              <label for="textbook-cover-file" class="btn btn-outline btn-sm" style="margin: 0; cursor: pointer; white-space: nowrap;">
+                파일 선택
+                <input type="file" id="textbook-cover-file" accept="image/*" style="display: none;" onchange="handleCoverFileSelect(event)">
+              </label>
+            </div>
+            <div id="textbook-cover-preview" style="display: none; text-align: center;">
+              <img id="textbook-cover-img" src="" alt="표지 미리보기" style="max-width: 150px; max-height: 200px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-row-single">
+          <div class="form-group">
+            <label class="form-label">메모</label>
+            <textarea class="form-input" id="textbook-memo" placeholder="메모를 입력하세요"></textarea>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" type="button" onclick="closeModal('modal-textbook-form')">취소</button>
+      <button class="btn btn-primary btn-sm" type="submit" form="textbook-form">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- 교재 상세 모달 -->
 <div class="modal-backdrop" id="modal-textbook-detail">
   <div class="modal modal-large">
@@ -2956,17 +3074,9 @@ function renderTextbooksPage() {
   html += '    </div>';
   html += '  </div>';
   
-  // 뷰 전환 버튼
-  html += '  <div style="display: flex; gap: 8px; align-items: center;">';
-  html += '    <div class="btn-group">';
-  html += '      <button class="btn btn-sm' + (currentTextbookView === 'grid' ? ' btn-primary' : ' btn-outline') + '" onclick="changeTextbookView(\'grid\')">썸네일</button>';
-  html += '      <button class="btn btn-sm' + (currentTextbookView === 'list' ? ' btn-primary' : ' btn-outline') + '" onclick="changeTextbookView(\'list\')">목록</button>';
-  html += '    </div>';
-  
   if (canWrite) {
-    html += '    <button class="btn btn-primary btn-sm" onclick="openTextbookForm()">+ 교재 추가</button>';
+    html += '  <button class="btn btn-primary btn-sm" onclick="openTextbookForm()">+ 교재 추가</button>';
   }
-  html += '  </div>';
   html += '</div>';
   
   // 페이저 (상단)
@@ -3093,6 +3203,13 @@ function renderTextbookPagination() {
   const currentPage = textbookPagination.currentPage;
   
   let html = '<div class="pagination-container">';
+  
+  // 뷰 전환 버튼 (아이콘)
+  html += '  <div class="btn-group" style="margin-right: 12px;">';
+  html += '    <button class="btn btn-sm' + (currentTextbookView === 'grid' ? ' btn-primary' : ' btn-outline') + '" onclick="changeTextbookView(\'grid\')" title="썸네일 보기" style="font-size: 16px; padding: 4px 10px;">◫</button>';
+  html += '    <button class="btn btn-sm' + (currentTextbookView === 'list' ? ' btn-primary' : ' btn-outline') + '" onclick="changeTextbookView(\'list\')" title="목록 보기" style="font-size: 16px; padding: 4px 10px;">☰</button>';
+  html += '  </div>';
+  
   html += '  <div class="pagination">';
   html += '    <button class="page-btn" onclick="changeTextbookPage(' + (currentPage - 1) + ')" ' + (currentPage === 1 ? 'disabled' : '') + '>이전</button>';
   
@@ -3457,7 +3574,9 @@ function renderTextbookStudents(textbook) {
 function editTextbookFromDetail() {
   if (!currentDetailTextbook) return;
   closeModal('modal-textbook-detail');
-  openTextbookForm(currentDetailTextbook.id);
+  setTimeout(() => {
+    openTextbookForm(currentDetailTextbook.id);
+  }, 100);
 }
 
 // 알라딘 도서 검색 API
