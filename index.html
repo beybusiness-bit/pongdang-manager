@@ -1030,41 +1030,70 @@ input[type="checkbox"] {
       <!-- 기본 정보 탭 -->
       <div id="student-detail-tab-info" class="tab-content active">
         <div class="detail-section">
-          <div class="detail-section-title">학생 정보</div>
+          <div class="detail-section-title">기본 정보</div>
           <div class="info-grid" style="grid-template-columns: repeat(2, 1fr);">
             <div class="info-item">
               <div class="info-label">이름</div>
-              <div class="info-value" id="detail-student-info-name">-</div>
+              <div class="info-value" id="detail-info-name">-</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">생년월일</div>
+              <div class="info-value" id="detail-info-birthdate">-</div>
             </div>
             <div class="info-item">
               <div class="info-label">학교</div>
-              <div class="info-value" id="detail-student-info-school">-</div>
+              <div class="info-value" id="detail-info-school">-</div>
             </div>
             <div class="info-item">
               <div class="info-label">학년</div>
-              <div class="info-value" id="detail-student-info-grade">-</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">연락처</div>
-              <div class="info-value" id="detail-student-info-phone">-</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">담당선생님</div>
-              <div class="info-value" id="detail-student-info-teacher">-</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">수업요일</div>
-              <div class="info-value" id="detail-student-info-days">-</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">수업반</div>
-              <div class="info-value" id="detail-student-info-class">-</div>
+              <div class="info-value" id="detail-info-grade">-</div>
             </div>
             <div class="info-item">
               <div class="info-label">상태</div>
-              <div class="info-value" id="detail-student-info-status">-</div>
+              <div class="info-value" id="detail-info-status">-</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">담당선생님</div>
+              <div class="info-value" id="detail-info-teacher">-</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">수업반</div>
+              <div class="info-value" id="detail-info-class">-</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">수업요일</div>
+              <div class="info-value" id="detail-info-days">-</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">연락처</div>
+              <div class="info-value" id="detail-info-phone">-</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">보호자 연락처</div>
+              <div class="info-value" id="detail-info-parent-phone">-</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">보호자 관계</div>
+              <div class="info-value" id="detail-info-parent-type">-</div>
+            </div>
+            <div class="info-item" style="grid-column: 1 / -1;">
+              <div class="info-label">주소</div>
+              <div class="info-value" id="detail-info-address">-</div>
+            </div>
+            <div class="info-item" style="grid-column: 1 / -1;">
+              <div class="info-label">메모</div>
+              <div class="info-value" id="detail-info-memo">-</div>
             </div>
           </div>
+        </div>
+        
+        <!-- 등록/퇴원 기록 -->
+        <div class="detail-section">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div class="detail-section-title" style="margin: 0;">등록/퇴원 기록</div>
+            <button class="btn btn-primary btn-sm" onclick="openEnrollmentRecordForm()">+ 기록 추가</button>
+          </div>
+          <div id="detail-enrollment-records"></div>
         </div>
       </div>
       
@@ -1087,14 +1116,25 @@ input[type="checkbox"] {
 
 <!-- 교재 일괄 배정 모달 -->
 <div class="modal-backdrop" id="modal-assign-textbook">
-  <div class="modal">
+  <div class="modal modal-wide">
     <div class="modal-title">교재 배정</div>
     <div class="modal-body">
+      <!-- 검색 -->
       <div class="form-group">
-        <label class="form-label">교재 선택 (다중 선택 가능)</label>
-        <div id="assign-textbook-list" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px;">
-        </div>
+        <input type="text" class="form-input" id="assign-textbook-search" placeholder="교재명 또는 저자 검색..." oninput="filterAssignTextbooks()">
       </div>
+      
+      <!-- 선택된 개수 -->
+      <div style="margin-bottom: 12px; font-size: 13px; color: var(--text2);">
+        <span id="assign-selected-count">0개 선택됨</span>
+      </div>
+      
+      <!-- 교재 목록 -->
+      <div id="assign-textbook-list" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px;">
+      </div>
+      
+      <!-- 페이저 -->
+      <div id="assign-textbook-pagination" style="margin-top: 12px;"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('modal-assign-textbook')">취소</button>
@@ -1105,29 +1145,22 @@ input[type="checkbox"] {
 
 <!-- CSV 업로드 모달 -->
 <div class="modal-backdrop" id="modal-csv-upload">
-  <div class="modal">
-    <div class="modal-title">CSV 대량 업로드</div>
+  <div class="modal modal-wide">
+    <div class="modal-title" id="csv-modal-title">CSV 대량 업로드</div>
     <div class="modal-body">
       <div class="form-group">
-        <label class="form-label">데이터 유형</label>
-        <select class="form-input" id="csv-data-type">
-          <option value="students">학생</option>
-          <option value="textbooks">교재</option>
-        </select>
+        <button class="btn btn-outline btn-sm" onclick="downloadCSVTemplate()">📥 템플릿 다운로드</button>
       </div>
       <div class="form-group">
         <label class="form-label">CSV 파일 선택</label>
-        <input type="file" class="form-input" id="csv-file-input" accept=".csv">
+        <input type="file" class="form-input" id="csv-file-input" accept=".csv" onchange="previewCSV()">
       </div>
-      <div style="font-size: 12px; color: var(--text3); margin-top: 8px;">
-        <strong>CSV 형식 안내:</strong><br>
-        • 학생: 번호,이름,학교,학년,연락처,담당선생님,수업요일,수업반<br>
-        • 교재: 교재명,저자,출판사,과목,학년,가격,ISBN,재고
-      </div>
+      <div id="csv-format-guide" style="font-size: 12px; color: var(--text3); margin-top: 8px;"></div>
+      <div id="csv-preview" style="margin-top: 16px;"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('modal-csv-upload')">취소</button>
-      <button class="btn btn-primary btn-sm" onclick="uploadCSV()">업로드</button>
+      <button class="btn btn-primary btn-sm" id="csv-confirm-btn" onclick="confirmCSVUpload()" style="display: none;">등록</button>
     </div>
   </div>
 </div>
@@ -1924,13 +1957,25 @@ function renderStudentsPage() {
   const container = document.getElementById('students-page-content');
   if (!container) return;
   
+  const canWrite = permissions[currentUser.role].students?.write;
+  
+  let html = '';
+  
+  // 뷰 전환 버튼 (항상 왼쪽 상단)
+  html += '<div style="margin-bottom: 16px;">';
+  html += '  <div class="btn-group">';
+  html += '    <button class="btn btn-sm' + (currentStudentView === 'list' ? ' btn-primary' : ' btn-outline') + '" onclick="changeStudentView(\'list\')">일반 뷰</button>';
+  html += '    <button class="btn btn-sm' + (currentStudentView === 'textbooks' ? ' btn-primary' : ' btn-outline') + '" onclick="changeStudentView(\'textbooks\')">교재 사용 현황</button>';
+  html += '  </div>';
+  html += '</div>';
+  
   // 교재 사용 현황 뷰
   if (currentStudentView === 'textbooks') {
-    renderStudentsTextbookUsageView();
+    container.innerHTML = html;
+    renderStudentsTextbookUsageViewContent();
     return;
   }
   
-  const canWrite = permissions[currentUser.role].students?.write;
   const filteredStudents = getFilteredStudents();
   studentPagination.totalItems = filteredStudents.length;
   
@@ -1942,8 +1987,6 @@ function renderStudentsPage() {
   const startIdx = (studentPagination.currentPage - 1) * studentPagination.pageSize;
   const endIdx = startIdx + studentPagination.pageSize;
   const pageStudents = filteredStudents.slice(startIdx, endIdx);
-  
-  let html = '';
   
   // 일괄 작업 바
   html += '<div class="bulk-actions-bar' + (selectedStudentIds.length > 0 ? ' show' : '') + '">';
@@ -1975,11 +2018,6 @@ function renderStudentsPage() {
   html += '        <option value="number-desc"' + (currentStudentSort === 'number-desc' ? ' selected' : '') + '>번호순 (높음→낮음)</option>';
   html += '      </select>';
   html += '    </div>';
-  html += '  </div>';
-  
-  html += '  <div class="btn-group" style="margin-right: 12px;">';
-  html += '    <button class="btn btn-sm' + (currentStudentView === 'list' ? ' btn-primary' : ' btn-outline') + '" onclick="changeStudentView(\'list\')">일반 뷰</button>';
-  html += '    <button class="btn btn-sm' + (currentStudentView === 'textbooks' ? ' btn-primary' : ' btn-outline') + '" onclick="changeStudentView(\'textbooks\')">교재 사용 현황</button>';
   html += '  </div>';
   
   if (canWrite) {
@@ -2564,20 +2602,27 @@ function renderStudentDetailInfo(student) {
   const status = getStudentStatus(student);
   
   const fields = {
-    'detail-student-info-name': student.name,
-    'detail-student-info-school': student.school,
-    'detail-student-info-grade': student.grade,
-    'detail-student-info-phone': student.phone,
-    'detail-student-info-teacher': student.teacher,
-    'detail-student-info-days': student.days,
-    'detail-student-info-class': student.class,
-    'detail-student-info-status': status
+    'detail-info-name': student.name,
+    'detail-info-birthdate': student.birthdate,
+    'detail-info-school': student.school,
+    'detail-info-grade': student.grade,
+    'detail-info-status': status,
+    'detail-info-teacher': student.teacher,
+    'detail-info-class': student.class,
+    'detail-info-days': student.days,
+    'detail-info-phone': student.phone,
+    'detail-info-parent-phone': student.parentPhone,
+    'detail-info-parent-type': student.parentType,
+    'detail-info-address': student.address,
+    'detail-info-memo': student.memo
   };
   
   Object.keys(fields).forEach(key => {
     const el = document.getElementById(key);
     if (el) el.textContent = fields[key] || '-';
   });
+  
+  renderEnrollmentRecords(student);
 }
 
 function renderEnrollmentRecords(student) {
@@ -4053,19 +4098,13 @@ function changeStudentView(view) {
   renderStudentsPage();
 }
 
-function renderStudentsTextbookUsageView() {
+function renderStudentsTextbookUsageViewContent() {
   const container = document.getElementById('students-page-content');
   if (!container) return;
   
   const filtered = getFilteredStudents();
   
-  // 뷰 전환 버튼
-  let html = '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">';
-  html += '  <div class="btn-group">';
-  html += '    <button class="btn btn-sm' + (currentStudentView === 'list' ? ' btn-primary' : ' btn-outline') + '" onclick="changeStudentView(\'list\')">일반 뷰</button>';
-  html += '    <button class="btn btn-sm' + (currentStudentView === 'textbooks' ? ' btn-primary' : ' btn-outline') + '" onclick="changeStudentView(\'textbooks\')">교재 사용 현황</button>';
-  html += '  </div>';
-  html += '</div>';
+  let html = container.innerHTML;  // 기존 뷰 버튼 유지
   
   html += '<div style="display: flex; flex-direction: column; gap: 20px;">';
   
@@ -4131,20 +4170,59 @@ function editStudentFromDetail() {
   showToast('학생 수정 기능은 추후 구현 예정입니다');
 }
 
+let csvDataType = '';
+let csvPreviewData = [];
+
 function openCSVUploadModal(dataType) {
-  document.getElementById('csv-data-type').value = dataType;
+  csvDataType = dataType;
+  csvPreviewData = [];
+  
+  const titleEl = document.getElementById('csv-modal-title');
+  const guideEl = document.getElementById('csv-format-guide');
+  const previewEl = document.getElementById('csv-preview');
+  const confirmBtn = document.getElementById('csv-confirm-btn');
+  
+  if (titleEl) titleEl.textContent = (dataType === 'students' ? '학생' : '교재') + ' CSV 업로드';
+  if (confirmBtn) confirmBtn.style.display = 'none';
+  if (previewEl) previewEl.innerHTML = '';
+  
   document.getElementById('csv-file-input').value = '';
+  
+  if (guideEl) {
+    if (dataType === 'students') {
+      guideEl.innerHTML = '<strong>CSV 형식:</strong> 번호,이름,생년월일,학교,학년,연락처,담당선생님,수업요일,수업반,주소,메모';
+    } else {
+      guideEl.innerHTML = '<strong>CSV 형식:</strong> 교재명,저자,출판사,과목,학년,가격,ISBN,재고';
+    }
+  }
+  
   openModal('modal-csv-upload');
 }
 
-function uploadCSV() {
-  const fileInput = document.getElementById('csv-file-input');
-  const dataType = document.getElementById('csv-data-type').value;
-  
-  if (!fileInput.files || !fileInput.files[0]) {
-    showToast('파일을 선택해주세요');
-    return;
+function downloadCSVTemplate() {
+  let csv = '';
+  if (csvDataType === 'students') {
+    csv = '번호,이름,생년월일,학교,학년,연락처,담당선생님,수업요일,수업반,주소,메모\n';
+    csv += '1,홍길동,2010-01-15,용강중,중3,010-1234-5678,김선생,월수금,A반,서울시 강남구,특이사항 없음\n';
+  } else {
+    csv = '교재명,저자,출판사,과목,학년,가격,ISBN,재고\n';
+    csv += '수학의 정석,홍성대,성지출판,수학,고1,15000,9788936456789,10\n';
   }
+  
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = (csvDataType === 'students' ? '학생_템플릿' : '교재_템플릿') + '.csv';
+  link.click();
+  showToast('템플릿이 다운로드되었습니다');
+}
+
+function previewCSV() {
+  const fileInput = document.getElementById('csv-file-input');
+  const previewEl = document.getElementById('csv-preview');
+  const confirmBtn = document.getElementById('csv-confirm-btn');
+  
+  if (!fileInput.files || !fileInput.files[0]) return;
   
   const file = fileInput.files[0];
   const reader = new FileReader();
@@ -4155,39 +4233,38 @@ function uploadCSV() {
       const lines = csv.split('\n').filter(line => line.trim());
       
       if (lines.length < 2) {
-        showToast('CSV 파일에 데이터가 없습니다');
+        previewEl.innerHTML = '<div style="color: var(--danger); padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm);">CSV 파일에 데이터가 없습니다</div>';
+        confirmBtn.style.display = 'none';
         return;
       }
       
+      csvPreviewData = [];
       const dataLines = lines.slice(1);
-      let count = 0;
       
-      if (dataType === 'students') {
+      if (csvDataType === 'students') {
         dataLines.forEach(line => {
           const cols = line.split(',').map(c => c.trim());
           if (cols.length >= 2 && cols[1]) {
-            studentsData.push({
-              id: uid(),
+            csvPreviewData.push({
               number: cols[0] || '',
               name: cols[1],
-              school: cols[2] || '',
-              grade: cols[3] || '',
-              phone: cols[4] || '',
-              teacher: cols[5] || '',
-              days: cols[6] || '',
-              class: cols[7] || '',
-              createdAt: today()
+              birthdate: cols[2] || '',
+              school: cols[3] || '',
+              grade: cols[4] || '',
+              phone: cols[5] || '',
+              teacher: cols[6] || '',
+              days: cols[7] || '',
+              class: cols[8] || '',
+              address: cols[9] || '',
+              memo: cols[10] || ''
             });
-            count++;
           }
         });
-        renderStudentsPage();
-      } else if (dataType === 'textbooks') {
+      } else {
         dataLines.forEach(line => {
           const cols = line.split(',').map(c => c.trim());
           if (cols.length >= 1 && cols[0]) {
-            textbooksData.push({
-              id: uid(),
+            csvPreviewData.push({
               title: cols[0],
               author: cols[1] || '',
               publisher: cols[2] || '',
@@ -4195,29 +4272,86 @@ function uploadCSV() {
               grade: cols[4] || '',
               price: parseInt(cols[5]) || 0,
               isbn: cols[6] || '',
-              stock: parseInt(cols[7]) || 0,
-              createdAt: today()
+              stock: parseInt(cols[7]) || 0
             });
-            count++;
           }
         });
-        renderTextbooksPage();
       }
       
-      showToast(count + '개 항목이 업로드되었습니다');
-      closeModal('modal-csv-upload');
+      if (csvPreviewData.length === 0) {
+        previewEl.innerHTML = '<div style="color: var(--danger); padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm);">유효한 데이터가 없습니다</div>';
+        confirmBtn.style.display = 'none';
+        return;
+      }
+      
+      let html = '<div style="padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm);">';
+      html += '  <div style="font-weight: 600; margin-bottom: 8px;">미리보기: ' + csvPreviewData.length + '개 항목</div>';
+      html += '  <div style="max-height: 200px; overflow-y: auto; font-size: 12px;">';
+      
+      csvPreviewData.slice(0, 5).forEach((item, idx) => {
+        html += '<div style="padding: 4px 0; border-bottom: 1px solid var(--border);">';
+        if (csvDataType === 'students') {
+          html += (idx + 1) + '. ' + item.name + ' (' + item.school + ' ' + item.grade + ')';
+        } else {
+          html += (idx + 1) + '. ' + item.title + ' (' + item.author + ')';
+        }
+        html += '</div>';
+      });
+      
+      if (csvPreviewData.length > 5) {
+        html += '<div style="padding: 4px 0; color: var(--text3);">외 ' + (csvPreviewData.length - 5) + '개...</div>';
+      }
+      
+      html += '  </div>';
+      html += '</div>';
+      
+      previewEl.innerHTML = html;
+      confirmBtn.style.display = 'inline-block';
       
     } catch (error) {
       console.error('CSV 파싱 오류:', error);
-      showToast('CSV 파일 형식이 올바르지 않습니다');
+      previewEl.innerHTML = '<div style="color: var(--danger); padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm);">CSV 파일 형식이 올바르지 않습니다</div>';
+      confirmBtn.style.display = 'none';
     }
   };
   
   reader.onerror = function() {
-    showToast('파일을 읽을 수 없습니다');
+    previewEl.innerHTML = '<div style="color: var(--danger); padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm);">파일을 읽을 수 없습니다</div>';
+    confirmBtn.style.display = 'none';
   };
   
   reader.readAsText(file, 'UTF-8');
+}
+
+function confirmCSVUpload() {
+  if (csvPreviewData.length === 0) {
+    showToast('업로드할 데이터가 없습니다');
+    return;
+  }
+  
+  if (csvDataType === 'students') {
+    csvPreviewData.forEach(item => {
+      studentsData.push({
+        id: uid(),
+        ...item,
+        createdAt: today()
+      });
+    });
+    renderStudentsPage();
+  } else {
+    csvPreviewData.forEach(item => {
+      textbooksData.push({
+        id: uid(),
+        ...item,
+        createdAt: today()
+      });
+    });
+    renderTextbooksPage();
+  }
+  
+  showToast(csvPreviewData.length + '개 항목이 등록되었습니다');
+  closeModal('modal-csv-upload');
+  csvPreviewData = [];
 }
 
 // ============ 대시보드 ============
