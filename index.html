@@ -916,101 +916,7 @@ input[type="checkbox"] {
       <form id="textbook-form" onsubmit="saveTextbook(event)">
         <input type="hidden" id="textbook-form-id">
         
-        <!-- 시중 도서 검색 -->
-        <div class="form-row-single" style="margin-bottom: 20px; padding: 16px; background: var(--bg-side); border-radius: var(--radius-sm);">
-          <div class="form-group" style="margin-bottom: 0;">
-            <label class="form-label">📚 시중 도서 검색 (베타)</label>
-            <div style="font-size: 12px; color: var(--text3); margin-bottom: 8px;">⚠️ 외부 API 제약으로 검색이 불안정할 수 있습니다. 수동 입력을 권장합니다.</div>
-            <div style="display: flex; gap: 8px;">
-              <input type="text" class="form-input" id="aladin-search-query" placeholder="도서명 또는 ISBN 입력" style="flex: 1;" onkeypress="if(event.key==='Enter'){event.preventDefault();searchAladinBooks();}">
-              <button type="button" class="btn btn-primary btn-sm" onclick="searchAladinBooks()">검색</button>
-            </div>
-          </div>
-          <div id="aladin-search-results" style="margin-top: 12px; max-height: 300px; overflow-y: auto;"></div>
-        </div>
         
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">교재명 *</label>
-            <input type="text" class="form-input" id="textbook-title" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">저자</label>
-            <input type="text" class="form-input" id="textbook-author">
-          </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">출판사</label>
-            <input type="text" class="form-input" id="textbook-publisher">
-          </div>
-          <div class="form-group">
-            <label class="form-label">과목</label>
-            <select class="form-input" id="textbook-subject">
-              <option value="">선택</option>
-              <option value="수학">수학</option>
-              <option value="국어">국어</option>
-              <option value="영어">영어</option>
-              <option value="과학">과학</option>
-              <option value="사회">사회</option>
-              <option value="기타">기타</option>
-            </select>
-          </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">학년</label>
-            <select class="form-input" id="textbook-grade">
-              <option value="">선택</option>
-              <option value="초1">초1</option>
-              <option value="초2">초2</option>
-              <option value="초3">초3</option>
-              <option value="초4">초4</option>
-              <option value="초5">초5</option>
-              <option value="초6">초6</option>
-              <option value="중1">중1</option>
-              <option value="중2">중2</option>
-              <option value="중3">중3</option>
-              <option value="고1">고1</option>
-              <option value="고2">고2</option>
-              <option value="고3">고3</option>
-              <option value="공통">공통</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">가격</label>
-            <input type="number" class="form-input" id="textbook-price" placeholder="0">
-          </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">ISBN</label>
-            <input type="text" class="form-input" id="textbook-isbn">
-          </div>
-          <div class="form-group">
-            <label class="form-label">재고 수량</label>
-            <input type="number" class="form-input" id="textbook-stock" placeholder="0" value="0">
-          </div>
-        </div>
-        
-        <div class="form-row-single">
-          <div class="form-group">
-            <label class="form-label">표지 이미지</label>
-            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-              <input type="text" class="form-input" id="textbook-cover-url" placeholder="이미지 URL 입력" style="flex: 1;" oninput="updateCoverPreview()">
-              <label for="textbook-cover-file" class="btn btn-outline btn-sm" style="margin: 0; cursor: pointer; white-space: nowrap; display: flex; align-items: center; justify-content: center;">
-                파일 선택
-                <input type="file" id="textbook-cover-file" accept="image/*" style="display: none;" onchange="handleCoverFileSelect(event)">
-              </label>
-            </div>
-            <div id="textbook-cover-preview" style="display: none; text-align: center;">
-              <img id="textbook-cover-img" src="" alt="표지 미리보기" style="max-width: 150px; max-height: 200px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
-            </div>
-          </div>
-        </div>
         
         <div class="form-row-single">
           <div class="form-group">
@@ -1140,9 +1046,14 @@ input[type="checkbox"] {
       
       <!-- 교재 탭 -->
       <div id="student-detail-tab-textbooks" class="tab-content" style="display: none;">
+        <div class="bulk-actions-bar" id="student-textbook-bulk-bar" style="display: none;">
+          <span class="bulk-count" id="student-textbook-bulk-count">0개 선택됨</span>
+          <button class="btn btn-danger btn-sm" onclick="bulkUnassignTextbooks()">선택 해제</button>
+          <button class="btn btn-outline btn-sm" onclick="clearStudentTextbookSelection()">선택 취소</button>
+        </div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <div class="detail-section-title" style="margin: 0;">배정된 교재</div>
-          <button class="btn btn-primary btn-sm" onclick="openAssignTextbookModal()">+ 교재 배정</button>
+          <div class="detail-section-title" style="margin: 0;">사용 중 교재</div>
+          <button class="btn btn-primary btn-sm" onclick="openBulkAssignTextbookModal()">+ 교재 배정</button>
         </div>
         <div id="detail-student-textbooks-list"></div>
       </div>
@@ -1150,21 +1061,20 @@ input[type="checkbox"] {
   </div>
 </div>
 
-<!-- 교재 배정 모달 -->
+<!-- 교재 일괄 배정 모달 -->
 <div class="modal-backdrop" id="modal-assign-textbook">
   <div class="modal">
     <div class="modal-title">교재 배정</div>
     <div class="modal-body">
       <div class="form-group">
-        <label class="form-label">교재 선택 *</label>
-        <select class="form-input" id="assign-textbook-select" required>
-          <option value="">선택하세요</option>
-        </select>
+        <label class="form-label">교재 선택 (다중 선택 가능)</label>
+        <div id="assign-textbook-list" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px;">
+        </div>
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('modal-assign-textbook')">취소</button>
-      <button class="btn btn-primary btn-sm" onclick="saveAssignTextbook()">배정</button>
+      <button class="btn btn-primary btn-sm" onclick="saveBulkAssignTextbooks()">배정</button>
     </div>
   </div>
 </div>
@@ -1234,6 +1144,8 @@ let currentStudentFilter = {
 let currentStudentSort = 'name-asc';
 let currentDetailStudent = null;
 let selectedStudentIds = [];
+let selectedStudentTextbookIds = []; // 학생 상세에서 선택한 교재 ID들
+let currentStudentView = 'list'; // list, textbooks
 let studentPagination = {
   currentPage: 1,
   pageSize: 20,
@@ -1959,6 +1871,12 @@ function renderStudentsPage() {
   const container = document.getElementById('students-page-content');
   if (!container) return;
   
+  // 교재 사용 현황 뷰
+  if (currentStudentView === 'textbooks') {
+    renderStudentsTextbookUsageView();
+    return;
+  }
+  
   const canWrite = permissions[currentUser.role].students?.write;
   const filteredStudents = getFilteredStudents();
   studentPagination.totalItems = filteredStudents.length;
@@ -2587,29 +2505,16 @@ function renderStudentDetailInfo(student) {
   const status = getStudentStatus(student);
   
   const fields = {
-    'detail-info-number': student.number,
-    'detail-info-name': student.name,
-    'detail-info-birthdate': student.birthdate,
-    'detail-info-school': student.school,
-    'detail-info-grade': student.grade,
-    'detail-info-status': status,
-    'detail-info-teacher': student.teacher,
-    'detail-info-class': student.class,
-    'detail-info-days': student.days,
-    'detail-info-phone': student.phone,
-    'detail-info-parent-phone': student.parentPhone,
-    'detail-info-parent-type': student.parentType,
-    'detail-info-address': student.address,
-    'detail-info-memo': student.memo
+    'detail-student-info-name': student.name,
+    'detail-student-info-school': student.school,
+    'detail-student-info-grade': student.grade,
+    'detail-student-info-phone': student.phone
   };
   
   Object.keys(fields).forEach(key => {
     const el = document.getElementById(key);
     if (el) el.textContent = fields[key] || '-';
   });
-  
-  // 등록/퇴원 기록 렌더링
-  renderEnrollmentRecords(student);
 }
 
 function renderEnrollmentRecords(student) {
@@ -3826,22 +3731,35 @@ function renderStudentTextbooks() {
     })
     .filter(st => st.textbook);
   
+  // 일괄 작업 바 표시/숨김
+  const bulkBar = document.getElementById('student-textbook-bulk-bar');
+  const bulkCount = document.getElementById('student-textbook-bulk-count');
+  if (bulkBar && bulkCount) {
+    if (selectedStudentTextbookIds.length > 0) {
+      bulkBar.style.display = 'flex';
+      bulkCount.textContent = selectedStudentTextbookIds.length + '개 선택됨';
+    } else {
+      bulkBar.style.display = 'none';
+    }
+  }
+  
   if (assignedTextbooks.length === 0) {
-    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📚</div><div class="empty-text">배정된 교재가 없습니다</div></div>';
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📚</div><div class="empty-text">사용 중 교재가 없습니다</div></div>';
     return;
   }
   
   let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
   assignedTextbooks.forEach(st => {
-    html += '<div style="padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center;">';
+    const isSelected = selectedStudentTextbookIds.includes(st.id);
+    html += '<div style="padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm); display: flex; align-items: center; gap: 12px; ' + (isSelected ? 'box-shadow: 0 0 0 2px var(--accent);' : '') + '">';
+    html += '  <input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onclick="toggleStudentTextbookSelection(\'' + st.id + '\')">';
     html += '  <div style="flex: 1;">';
     html += '    <div style="font-weight: 600;">' + st.textbook.title + '</div>';
     html += '    <div style="font-size: 12px; color: var(--text2); margin-top: 2px;">' + (st.textbook.author || '') + ' | ' + (st.textbook.publisher || '') + '</div>';
     if (st.assignedDate) {
-      html += '    <div style="font-size: 11px; color: var(--text3); margin-top: 4px;">배정일: ' + st.assignedDate + '</div>';
+      html += '    <div style="font-size: 11px; color: var(--text3); margin-top: 4px;">시작: ' + st.assignedDate + '</div>';
     }
     html += '  </div>';
-    html += '  <button class="btn btn-danger btn-sm" onclick="unassignTextbook(\'' + st.id + '\')">해제</button>';
     html += '</div>';
   });
   html += '</div>';
@@ -3876,7 +3794,7 @@ function saveAssignTextbook() {
   );
   
   if (exists) {
-    showToast('이미 배정된 교재입니다');
+    showToast('이미 사용 중 교재입니다');
     return;
   }
   
@@ -3903,6 +3821,177 @@ function unassignTextbook(assignmentId) {
     renderStudentTextbooks();
     renderTextbooksPage();
   }
+}
+
+function toggleStudentTextbookSelection(assignmentId) {
+  const idx = selectedStudentTextbookIds.indexOf(assignmentId);
+  if (idx > -1) {
+    selectedStudentTextbookIds.splice(idx, 1);
+  } else {
+    selectedStudentTextbookIds.push(assignmentId);
+  }
+  renderStudentTextbooks();
+}
+
+function clearStudentTextbookSelection() {
+  selectedStudentTextbookIds = [];
+  renderStudentTextbooks();
+}
+
+function bulkUnassignTextbooks() {
+  if (selectedStudentTextbookIds.length === 0) {
+    showToast('해제할 교재를 선택해주세요');
+    return;
+  }
+  
+  if (!confirm(selectedStudentTextbookIds.length + '개 교재를 해제하시겠습니까?')) return;
+  
+  selectedStudentTextbookIds.forEach(id => {
+    const idx = studentTextbooksData.findIndex(st => st.id === id);
+    if (idx > -1) {
+      studentTextbooksData.splice(idx, 1);
+    }
+  });
+  
+  selectedStudentTextbookIds = [];
+  showToast('교재가 해제되었습니다');
+  renderStudentTextbooks();
+  renderTextbooksPage();
+}
+
+function openBulkAssignTextbookModal() {
+  if (!currentDetailStudent) return;
+  
+  const container = document.getElementById('assign-textbook-list');
+  if (!container) return;
+  
+  let html = '';
+  textbooksData.forEach(tb => {
+    const alreadyAssigned = studentTextbooksData.find(st => 
+      st.studentId === currentDetailStudent.id && st.textbookId === tb.id
+    );
+    
+    html += '<div style="padding: 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px;">';
+    html += '  <input type="checkbox" id="assign-cb-' + tb.id + '" ' + (alreadyAssigned ? 'disabled' : '') + '>';
+    html += '  <label for="assign-cb-' + tb.id + '" style="flex: 1; cursor: pointer; ' + (alreadyAssigned ? 'color: var(--text3); text-decoration: line-through;' : '') + '">';
+    html += '    ' + tb.title + ' <span style="font-size: 11px; color: var(--text3);">(' + (tb.author || '-') + ')</span>';
+    html += '  </label>';
+    html += '</div>';
+  });
+  
+  container.innerHTML = html;
+  openModal('modal-assign-textbook');
+}
+
+function saveBulkAssignTextbooks() {
+  if (!currentDetailStudent) return;
+  
+  const selected = [];
+  textbooksData.forEach(tb => {
+    const cb = document.getElementById('assign-cb-' + tb.id);
+    if (cb && cb.checked) {
+      selected.push(tb.id);
+    }
+  });
+  
+  if (selected.length === 0) {
+    showToast('배정할 교재를 선택해주세요');
+    return;
+  }
+  
+  selected.forEach(textbookId => {
+    studentTextbooksData.push({
+      id: uid(),
+      studentId: currentDetailStudent.id,
+      textbookId: textbookId,
+      assignedDate: today()
+    });
+  });
+  
+  showToast(selected.length + '개 교재가 배정되었습니다');
+  closeModal('modal-assign-textbook');
+  renderStudentTextbooks();
+  renderTextbooksPage();
+}
+
+
+function changeStudentView(view) {
+  currentStudentView = view;
+  renderStudentsPage();
+}
+
+function renderStudentsTextbookUsageView() {
+  const container = document.getElementById('students-page-content');
+  if (!container) return;
+  
+  const filtered = getFilteredStudents();
+  
+  // 뷰 전환 버튼
+  let html = '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">';
+  html += '  <div class="btn-group">';
+  html += '    <button class="btn btn-sm' + (currentStudentView === 'list' ? ' btn-primary' : ' btn-outline') + '" onclick="changeStudentView(\'list\')">일반 뷰</button>';
+  html += '    <button class="btn btn-sm' + (currentStudentView === 'textbooks' ? ' btn-primary' : ' btn-outline') + '" onclick="changeStudentView(\'textbooks\')">교재 사용 현황</button>';
+  html += '  </div>';
+  html += '</div>';
+  
+  html += '<div style="display: flex; flex-direction: column; gap: 20px;">';
+  
+  filtered.forEach(student => {
+    const assignedTextbooks = studentTextbooksData
+      .filter(st => st.studentId === student.id)
+      .map(st => textbooksData.find(t => t.id === st.textbookId))
+      .filter(Boolean);
+    
+    html += '<div class="card" style="padding: 20px;">';
+    html += '  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">';
+    html += '    <div style="display: flex; align-items: center; gap: 12px;">';
+    html += '      <div class="avatar">' + (student.name ? student.name.charAt(0) : '?') + '</div>';
+    html += '      <div>';
+    html += '        <div style="font-weight: 600; font-size: 16px;">' + (student.name || '-') + '</div>';
+    html += '        <div style="font-size: 13px; color: var(--text2);">' + (student.school || '-') + ' ' + (student.grade || '') + '</div>';
+    html += '      </div>';
+    html += '    </div>';
+    html += '    <button class="btn btn-primary btn-sm" onclick="quickOpenStudentTextbooks(\'' + student.id + '\')">교재 관리</button>';
+    html += '  </div>';
+    
+    html += '  <div class="detail-section">';
+    html += '    <div class="detail-section-title" style="font-size: 14px; margin-bottom: 12px;">교재 사용 목록</div>';
+    
+    if (assignedTextbooks.length === 0) {
+      html += '    <div style="text-align: center; padding: 20px; color: var(--text3); background: var(--bg-side); border-radius: var(--radius-sm);">';
+      html += '      사용 중인 교재가 없습니다';
+      html += '    </div>';
+    } else {
+      html += '    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">';
+      assignedTextbooks.forEach(tb => {
+        const assignment = studentTextbooksData.find(st => st.studentId === student.id && st.textbookId === tb.id);
+        html += '      <div style="padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm); border: 1px solid var(--border);">';
+        html += '        <div style="font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px;">' + tb.title + '</div>';
+        html += '        <div style="font-size: 11px; color: var(--text3);">' + (tb.author || '') + '</div>';
+        if (assignment && assignment.assignedDate) {
+          html += '        <div style="font-size: 10px; color: var(--text3); margin-top: 6px;">시작: ' + assignment.assignedDate + '</div>';
+        }
+        html += '      </div>';
+      });
+      html += '    </div>';
+    }
+    
+    html += '  </div>';
+    html += '</div>';
+  });
+  
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function quickOpenStudentTextbooks(studentId) {
+  openStudentDetail(studentId);
+  setTimeout(() => {
+    switchStudentDetailTab('textbooks');
+    document.querySelectorAll('#modal-student-detail .tab-btn').forEach((btn, i) => {
+      btn.classList.toggle('active', i === 1);
+    });
+  }, 100);
 }
 
 function editStudentFromDetail() {
