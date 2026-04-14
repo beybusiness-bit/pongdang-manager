@@ -1268,6 +1268,193 @@ input[type="checkbox"] {
   </div>
 </div>
 
+<!-- 교재 추가/수정 모달 -->
+<div class="modal-backdrop" id="modal-textbook-form">
+  <div class="modal modal-wide">
+    <div class="modal-title" id="textbook-form-title">교재 추가</div>
+    <div class="modal-body">
+      <form id="textbook-form" onsubmit="saveTextbook(event)">
+        <input type="hidden" id="textbook-form-id">
+        
+        <!-- 알라딘 도서 검색 -->
+        <div class="form-row-single" style="margin-bottom: 20px; padding: 16px; background: var(--bg-side); border-radius: var(--radius-sm);">
+          <div class="form-group">
+            <label class="form-label">📚 알라딘 도서 검색</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" class="form-input" id="aladin-search-query" placeholder="도서명 또는 ISBN 입력" style="flex: 1;">
+              <button type="button" class="btn btn-primary btn-sm" onclick="searchAladinBooks()">검색</button>
+            </div>
+          </div>
+          <div id="aladin-search-results" style="margin-top: 12px; max-height: 300px; overflow-y: auto;"></div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">교재명 *</label>
+            <input type="text" class="form-input" id="textbook-title" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">저자</label>
+            <input type="text" class="form-input" id="textbook-author">
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">출판사</label>
+            <input type="text" class="form-input" id="textbook-publisher">
+          </div>
+          <div class="form-group">
+            <label class="form-label">과목</label>
+            <select class="form-input" id="textbook-subject">
+              <option value="">선택</option>
+              <option value="수학">수학</option>
+              <option value="국어">국어</option>
+              <option value="영어">영어</option>
+              <option value="과학">과학</option>
+              <option value="사회">사회</option>
+              <option value="기타">기타</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">학년</label>
+            <select class="form-input" id="textbook-grade">
+              <option value="">선택</option>
+              <option value="초1">초1</option>
+              <option value="초2">초2</option>
+              <option value="초3">초3</option>
+              <option value="초4">초4</option>
+              <option value="초5">초5</option>
+              <option value="초6">초6</option>
+              <option value="중1">중1</option>
+              <option value="중2">중2</option>
+              <option value="중3">중3</option>
+              <option value="고1">고1</option>
+              <option value="고2">고2</option>
+              <option value="고3">고3</option>
+              <option value="공통">공통</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">가격</label>
+            <input type="number" class="form-input" id="textbook-price" placeholder="0">
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">ISBN</label>
+            <input type="text" class="form-input" id="textbook-isbn">
+          </div>
+          <div class="form-group">
+            <label class="form-label">재고 수량</label>
+            <input type="number" class="form-input" id="textbook-stock" placeholder="0" value="0">
+          </div>
+        </div>
+        
+        <div class="form-row-single">
+          <div class="form-group">
+            <label class="form-label">표지 이미지 URL</label>
+            <input type="text" class="form-input" id="textbook-cover-url" placeholder="https://...">
+          </div>
+        </div>
+        
+        <div class="form-row-single">
+          <div class="form-group">
+            <label class="form-label">메모</label>
+            <textarea class="form-input" id="textbook-memo" placeholder="메모를 입력하세요"></textarea>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" type="button" onclick="closeModal('modal-textbook-form')">취소</button>
+      <button class="btn btn-primary btn-sm" type="submit" form="textbook-form">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 교재 상세 모달 -->
+<div class="modal-backdrop" id="modal-textbook-detail">
+  <div class="modal modal-large">
+    <div class="modal-title" style="display: flex; justify-content: space-between; align-items: center;">
+      <span id="detail-textbook-title">교재 상세</span>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-primary btn-sm" onclick="editTextbookFromDetail()">수정</button>
+        <button class="btn btn-outline btn-sm" onclick="closeModal('modal-textbook-detail')">닫기</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div style="display: flex; gap: 24px;">
+        <!-- 표지 이미지 -->
+        <div style="flex-shrink: 0;">
+          <img id="detail-textbook-cover" src="" alt="교재 표지" style="width: 150px; height: 200px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-side);">
+        </div>
+        
+        <!-- 교재 정보 -->
+        <div style="flex: 1;">
+          <div class="detail-section">
+            <div class="detail-section-title">기본 정보</div>
+            <div class="info-grid" style="grid-template-columns: repeat(2, 1fr);">
+              <div class="info-item">
+                <div class="info-label">교재명</div>
+                <div class="info-value" id="detail-textbook-info-title">-</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">저자</div>
+                <div class="info-value" id="detail-textbook-info-author">-</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">출판사</div>
+                <div class="info-value" id="detail-textbook-info-publisher">-</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">과목</div>
+                <div class="info-value" id="detail-textbook-info-subject">-</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">학년</div>
+                <div class="info-value" id="detail-textbook-info-grade">-</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">가격</div>
+                <div class="info-value" id="detail-textbook-info-price">-</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">ISBN</div>
+                <div class="info-value" id="detail-textbook-info-isbn">-</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">재고</div>
+                <div class="info-value" id="detail-textbook-info-stock">-</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="detail-section">
+            <div class="detail-section-title">메모</div>
+            <div class="info-value" id="detail-textbook-info-memo" style="white-space: pre-wrap;">-</div>
+          </div>
+          
+          <div class="detail-section">
+            <div class="detail-section-title">사용 중인 학생</div>
+            <div id="detail-textbook-students">
+              <div class="empty-state">
+                <div class="empty-icon">👨‍🎓</div>
+                <div class="empty-text">사용 중인 학생이 없습니다</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <script>
 // ============ 상수 ============
 const AUTH = {
@@ -1333,6 +1520,21 @@ let currentStudentSort = 'name-asc';
 let currentDetailStudent = null;
 let selectedStudentIds = [];
 let studentPagination = {
+  currentPage: 1,
+  pageSize: 20,
+  totalItems: 0
+};
+
+// 교재 관리 상태
+let textbooksData = [];
+let currentTextbookFilter = {
+  search: '',
+  subject: '',
+  grade: ''
+};
+let currentTextbookSort = 'title-asc';
+let selectedTextbookIds = [];
+let textbookPagination = {
   currentPage: 1,
   pageSize: 20,
   totalItems: 0
@@ -1739,6 +1941,17 @@ function getPageContent(pageId) {
     return '<div id="students-page-content"></div>';
   }
   
+  // 교재 관리 페이지
+  if (pageId === 'textbooks') {
+    return '<div id="textbooks-page-content"></div>';
+  }
+  
+  // 교재 관리 페이지
+  if (pageId === 'textbooks') {
+    const canWrite = permissions[currentUser.role].textbooks?.write;
+    return '<div id="textbooks-page-content"></div>';
+  }
+  
   // 설정 페이지만 특별 처리
   if (pageId === 'settings' && currentUser.role === ROLES.OWNER) {
     return `
@@ -1812,6 +2025,15 @@ function navigateTo(pageId) {
   // 페이지별 렌더링
   if (pageId === 'students') {
     renderStudentsPage();
+  }
+  
+  if (pageId === 'textbooks') {
+    renderTextbooksPage();
+  }
+  
+  // 교재 페이지 렌더링
+  if (pageId === 'textbooks') {
+    renderTextbooksPage();
   }
   
   // 모바일에서 사이드바 닫기
@@ -3021,6 +3243,60 @@ function loadSampleData() {
     }
   ];
   
+  // 교재 샘플 데이터
+  textbooksData = [
+    {
+      id: '1',
+      title: '개념원리 수학(상)',
+      author: '이홍섭',
+      publisher: '개념원리',
+      subject: '수학',
+      grade: '고1',
+      price: 18000,
+      isbn: '9788961336789',
+      stock: 15,
+      coverUrl: 'https://image.aladin.co.kr/product/31896/67/cover500/k252837696_1.jpg',
+      memo: '고등학교 1학년 기본 교재',
+      createdAt: '2026-01-15'
+    },
+    {
+      id: '2',
+      title: '쎈 중등 수학 2-1',
+      author: '홍범준, 신사고수학콘텐츠연구회',
+      publisher: '좋은책신사고',
+      subject: '수학',
+      grade: '중2',
+      price: 16000,
+      isbn: '9788928326891',
+      stock: 20,
+      coverUrl: 'https://image.aladin.co.kr/product/29053/35/cover500/k232830661_1.jpg',
+      memo: '중2 문제집',
+      createdAt: '2026-02-01'
+    },
+    {
+      id: '3',
+      title: '수학의 정석 기본편 수학(상)',
+      author: '홍성대',
+      publisher: '성지출판',
+      subject: '수학',
+      grade: '고1',
+      price: 19000,
+      isbn: '9788943452222',
+      stock: 12,
+      coverUrl: '',
+      memo: '기본 개념 학습용',
+      createdAt: '2026-02-10'
+    }
+  ];
+  
+  // 학생-교재 연결 샘플 데이터
+  studentTextbooksData = [
+    { id: '1', studentId: '1', textbookId: '1', assignedDate: '2026-03-15' },
+    { id: '2', studentId: '2', textbookId: '2', assignedDate: '2026-03-10' },
+    { id: '3', studentId: '3', textbookId: '1', assignedDate: '2026-02-20' },
+    { id: '4', studentId: '3', textbookId: '3', assignedDate: '2026-02-20' }
+  ];
+  
   // appState 업데이트
   appState.students = studentsData;
   appState.teachers = teachersData;
@@ -3029,6 +3305,525 @@ function loadSampleData() {
   appState.examPreps = [];
   appState.workLogs = [];
   appState.meetings = [];
+}
+
+// ============ 교재 관리 ============
+function renderTextbooksPage() {
+  const container = document.getElementById('textbooks-page-content');
+  if (!container) return;
+  
+  const canWrite = permissions[currentUser.role].textbooks?.write;
+  const filteredTextbooks = getFilteredTextbooks();
+  textbookPagination.totalItems = filteredTextbooks.length;
+  
+  const totalPages = Math.ceil(filteredTextbooks.length / textbookPagination.pageSize);
+  if (textbookPagination.currentPage > totalPages && totalPages > 0) {
+    textbookPagination.currentPage = totalPages;
+  }
+  
+  const startIdx = (textbookPagination.currentPage - 1) * textbookPagination.pageSize;
+  const endIdx = startIdx + textbookPagination.pageSize;
+  const pageTextbooks = filteredTextbooks.slice(startIdx, endIdx);
+  
+  let html = '';
+  
+  // 일괄 작업 바
+  html += '<div class="bulk-actions-bar' + (selectedTextbookIds.length > 0 ? ' show' : '') + '">';
+  html += '  <span class="bulk-count">' + selectedTextbookIds.length + '개 선택됨</span>';
+  html += '  <button class="btn btn-danger btn-sm" onclick="bulkDeleteTextbooks()">선택한 교재 삭제</button>';
+  html += '  <button class="btn btn-outline btn-sm" onclick="clearTextbookSelection()">선택 해제</button>';
+  html += '</div>';
+  
+  // 검색/필터/정렬 영역
+  html += '<div class="page-actions">';
+  html += '  <div class="search-filter-group">';
+  html += '    <div class="search-box">';
+  html += '      <span class="search-icon">🔍</span>';
+  html += '      <input type="text" class="search-input" placeholder="교재명, 저자, ISBN 검색..." ';
+  html += '        value="' + (currentTextbookFilter.search || '') + '" ';
+  html += '        oninput="updateTextbookFilter(\'search\', this.value)">';
+  html += '    </div>';
+  html += '    <select class="filter-select" onchange="updateTextbookFilter(\'subject\', this.value)">';
+  html += '      <option value="">전체 과목</option>';
+  html += '      <option value="수학"' + (currentTextbookFilter.subject === '수학' ? ' selected' : '') + '>수학</option>';
+  html += '      <option value="국어"' + (currentTextbookFilter.subject === '국어' ? ' selected' : '') + '>국어</option>';
+  html += '      <option value="영어"' + (currentTextbookFilter.subject === '영어' ? ' selected' : '') + '>영어</option>';
+  html += '      <option value="과학"' + (currentTextbookFilter.subject === '과학' ? ' selected' : '') + '>과학</option>';
+  html += '      <option value="사회"' + (currentTextbookFilter.subject === '사회' ? ' selected' : '') + '>사회</option>';
+  html += '      <option value="기타"' + (currentTextbookFilter.subject === '기타' ? ' selected' : '') + '>기타</option>';
+  html += '    </select>';
+  html += '    <select class="filter-select" onchange="updateTextbookFilter(\'publisher\', this.value)">';
+  html += '      <option value="">전체 출판사</option>';
+  const publishers = [...new Set(textbooksData.map(t => t.publisher).filter(p => p))];
+  publishers.forEach(pub => {
+    html += '      <option value="' + pub + '"' + (currentTextbookFilter.publisher === pub ? ' selected' : '') + '>' + pub + '</option>';
+  });
+  html += '    </select>';
+  html += '    <div class="sort-selector">';
+  html += '      <select onchange="updateTextbookSort(this.value)">';
+  html += '        <option value="title-asc"' + (currentTextbookSort === 'title-asc' ? ' selected' : '') + '>교재명순 (ㄱ→ㅎ)</option>';
+  html += '        <option value="title-desc"' + (currentTextbookSort === 'title-desc' ? ' selected' : '') + '>교재명순 (ㅎ→ㄱ)</option>';
+  html += '        <option value="price-asc"' + (currentTextbookSort === 'price-asc' ? ' selected' : '') + '>가격순 (낮음→높음)</option>';
+  html += '        <option value="price-desc"' + (currentTextbookSort === 'price-desc' ? ' selected' : '') + '>가격순 (높음→낮음)</option>';
+  html += '        <option value="stock-asc"' + (currentTextbookSort === 'stock-asc' ? ' selected' : '') + '>재고순 (낮음→높음)</option>';
+  html += '        <option value="stock-desc"' + (currentTextbookSort === 'stock-desc' ? ' selected' : '') + '>재고순 (높음→낮음)</option>';
+  html += '      </select>';
+  html += '    </div>';
+  html += '  </div>';
+  
+  if (canWrite) {
+    html += '  <button class="btn btn-primary btn-sm" onclick="openTextbookForm()">+ 교재 추가</button>';
+  }
+  
+  html += '</div>';
+  
+  // 페이저 (상단)
+  html += renderTextbookPagination();
+  
+  // 교재 그리드
+  if (pageTextbooks.length === 0) {
+    html += '<div class="empty-state">';
+    html += '  <div class="empty-icon">📚</div>';
+    html += '  <div class="empty-text">';
+    html += currentTextbookFilter.search || currentTextbookFilter.subject || currentTextbookFilter.publisher
+      ? '검색 결과가 없습니다'
+      : '등록된 교재가 없습니다';
+    html += '  </div>';
+    html += '</div>';
+  } else {
+    html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-top: 20px;">';
+    
+    pageTextbooks.forEach(textbook => {
+      const isSelected = selectedTextbookIds.includes(textbook.id);
+      const studentsUsingCount = studentTextbooksData.filter(st => st.textbookId === textbook.id).length;
+      
+      html += '<div style="background: white; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; cursor: pointer; transition: all 0.2s; ' + (isSelected ? 'box-shadow: 0 0 0 2px var(--accent);' : '') + '" ';
+      html += '  onmouseenter="this.style.boxShadow=\'var(--sh-md)\'" ';
+      html += '  onmouseleave="this.style.boxShadow=\'' + (isSelected ? '0 0 0 2px var(--accent)' : 'none') + '\'" ';
+      html += '  onclick="openTextbookDetail(\'' + textbook.id + '\')">';
+      
+      // 체크박스
+      html += '  <div style="padding: 8px; background: var(--bg-side); display: flex; justify-content: space-between; align-items: center;" onclick="event.stopPropagation()">';
+      html += '    <input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onclick="toggleTextbookSelection(\'' + textbook.id + '\')">';
+      html += '    <span style="font-size: 11px; color: var(--text3);">' + (textbook.subject || '') + '</span>';
+      html += '  </div>';
+      
+      // 표지 이미지
+      html += '  <div style="width: 100%; height: 180px; background: var(--bg-side); display: flex; align-items: center; justify-content: center; overflow: hidden;">';
+      if (textbook.coverUrl) {
+        html += '    <img src="' + textbook.coverUrl + '" alt="' + (textbook.title || '') + '" style="width: 100%; height: 100%; object-fit: cover;">';
+      } else {
+        html += '    <span style="font-size: 48px;">📖</span>';
+      }
+      html += '  </div>';
+      
+      // 교재 정보
+      html += '  <div style="padding: 12px;">';
+      html += '    <div style="font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="' + (textbook.title || '') + '">';
+      html += (textbook.title || '-');
+      html += '    </div>';
+      html += '    <div style="font-size: 12px; color: var(--text2); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">';
+      html += (textbook.author || '-') + ' | ' + (textbook.publisher || '-');
+      html += '    </div>';
+      html += '    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">';
+      html += '      <span style="color: var(--accent); font-weight: 600;">' + ((textbook.price || 0).toLocaleString() + '원') + '</span>';
+      html += '      <span style="color: var(--text3);">재고 ' + (textbook.stock || 0) + '</span>';
+      html += '    </div>';
+      if (studentsUsingCount > 0) {
+        html += '    <div style="margin-top: 8px; padding: 4px 8px; background: var(--bg-side); border-radius: 4px; font-size: 11px; color: var(--text2); text-align: center;">';
+        html += '      👨‍🎓 ' + studentsUsingCount + '명 사용 중';
+        html += '    </div>';
+      }
+      html += '  </div>';
+      
+      html += '</div>';
+    });
+    
+    html += '</div>';
+    
+    // 페이저 (하단)
+    html += renderTextbookPagination();
+  }
+  
+  container.innerHTML = html;
+}
+
+function renderTextbookPagination() {
+  const totalPages = Math.ceil(textbookPagination.totalItems / textbookPagination.pageSize) || 1;
+  const currentPage = textbookPagination.currentPage;
+  
+  let html = '<div class="pagination-container">';
+  html += '  <div class="pagination">';
+  html += '    <button class="page-btn" onclick="changeTextbookPage(' + (currentPage - 1) + ')" ' + (currentPage === 1 ? 'disabled' : '') + '>이전</button>';
+  
+  const isMobile = window.innerWidth <= 768;
+  if (isMobile) {
+    html += '    <span class="page-btn active">' + currentPage + ' / ' + totalPages + '</span>';
+  } else {
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+    
+    if (startPage > 1) {
+      html += '    <button class="page-btn" onclick="changeTextbookPage(1)">1</button>';
+      if (startPage > 2) html += '    <span class="page-btn" disabled>...</span>';
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      html += '    <button class="page-btn' + (i === currentPage ? ' active' : '') + '" onclick="changeTextbookPage(' + i + ')">' + i + '</button>';
+    }
+    
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) html += '    <span class="page-btn" disabled>...</span>';
+      html += '    <button class="page-btn" onclick="changeTextbookPage(' + totalPages + ')">' + totalPages + '</button>';
+    }
+  }
+  
+  html += '    <button class="page-btn" onclick="changeTextbookPage(' + (currentPage + 1) + ')" ' + (currentPage === totalPages ? 'disabled' : '') + '>다음</button>';
+  html += '  </div>';
+  html += '  <div class="page-size-selector">';
+  html += '    <span>페이지당</span>';
+  html += '    <select onchange="changeTextbookPageSize(parseInt(this.value))">';
+  html += '      <option value="20"' + (textbookPagination.pageSize === 20 ? ' selected' : '') + '>20개</option>';
+  html += '      <option value="50"' + (textbookPagination.pageSize === 50 ? ' selected' : '') + '>50개</option>';
+  html += '      <option value="100"' + (textbookPagination.pageSize === 100 ? ' selected' : '') + '>100개</option>';
+  html += '    </select>';
+  html += '  </div>';
+  html += '</div>';
+  
+  return html;
+}
+
+function getFilteredTextbooks() {
+  let filtered = textbooksData;
+  
+  if (currentTextbookFilter.search) {
+    const search = currentTextbookFilter.search.toLowerCase();
+    filtered = filtered.filter(t => 
+      (t.title && t.title.toLowerCase().includes(search)) ||
+      (t.author && t.author.toLowerCase().includes(search)) ||
+      (t.isbn && t.isbn.toLowerCase().includes(search)) ||
+      (t.publisher && t.publisher.toLowerCase().includes(search))
+    );
+  }
+  
+  if (currentTextbookFilter.subject) {
+    filtered = filtered.filter(t => t.subject === currentTextbookFilter.subject);
+  }
+  
+  if (currentTextbookFilter.publisher) {
+    filtered = filtered.filter(t => t.publisher === currentTextbookFilter.publisher);
+  }
+  
+  // 정렬
+  filtered = filtered.sort((a, b) => {
+    if (currentTextbookSort === 'title-asc') {
+      return (a.title || '').localeCompare(b.title || '');
+    } else if (currentTextbookSort === 'title-desc') {
+      return (b.title || '').localeCompare(a.title || '');
+    } else if (currentTextbookSort === 'price-asc') {
+      return (a.price || 0) - (b.price || 0);
+    } else if (currentTextbookSort === 'price-desc') {
+      return (b.price || 0) - (a.price || 0);
+    } else if (currentTextbookSort === 'stock-asc') {
+      return (a.stock || 0) - (b.stock || 0);
+    } else if (currentTextbookSort === 'stock-desc') {
+      return (b.stock || 0) - (a.stock || 0);
+    }
+    return 0;
+  });
+  
+  return filtered;
+}
+
+function updateTextbookFilter(key, value) {
+  currentTextbookFilter[key] = value;
+  textbookPagination.currentPage = 1;
+  renderTextbooksPage();
+}
+
+function updateTextbookSort(value) {
+  currentTextbookSort = value;
+  textbookPagination.currentPage = 1;
+  renderTextbooksPage();
+}
+
+function changeTextbookPage(page) {
+  const totalPages = Math.ceil(textbookPagination.totalItems / textbookPagination.pageSize) || 1;
+  if (page < 1 || page > totalPages) return;
+  textbookPagination.currentPage = page;
+  renderTextbooksPage();
+}
+
+function changeTextbookPageSize(size) {
+  textbookPagination.pageSize = size;
+  textbookPagination.currentPage = 1;
+  renderTextbooksPage();
+}
+
+function toggleTextbookSelection(textbookId) {
+  const index = selectedTextbookIds.indexOf(textbookId);
+  if (index > -1) {
+    selectedTextbookIds.splice(index, 1);
+  } else {
+    selectedTextbookIds.push(textbookId);
+  }
+  renderTextbooksPage();
+}
+
+function clearTextbookSelection() {
+  selectedTextbookIds = [];
+  renderTextbooksPage();
+}
+
+function bulkDeleteTextbooks() {
+  if (selectedTextbookIds.length === 0) return;
+  
+  if (!confirm(selectedTextbookIds.length + '개의 교재를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+  
+  textbooksData = textbooksData.filter(t => !selectedTextbookIds.includes(t.id));
+  showToast(selectedTextbookIds.length + '개의 교재가 삭제되었습니다');
+  
+  clearTextbookSelection();
+  renderTextbooksPage();
+}
+
+function openTextbookForm(textbookId) {
+  const modal = document.getElementById('modal-textbook-form');
+  const title = document.getElementById('textbook-form-title');
+  const form = document.getElementById('textbook-form');
+  
+  if (!modal || !title || !form) return;
+  
+  // 알라딘 검색 결과 초기화
+  const searchResults = document.getElementById('aladin-search-results');
+  if (searchResults) searchResults.innerHTML = '';
+  
+  if (textbookId) {
+    // 수정 모드
+    const textbook = textbooksData.find(t => t.id === textbookId);
+    if (!textbook) return;
+    
+    title.textContent = '교재 수정';
+    document.getElementById('textbook-form-id').value = textbook.id;
+    document.getElementById('textbook-title').value = textbook.title || '';
+    document.getElementById('textbook-author').value = textbook.author || '';
+    document.getElementById('textbook-publisher').value = textbook.publisher || '';
+    document.getElementById('textbook-subject').value = textbook.subject || '';
+    document.getElementById('textbook-grade').value = textbook.grade || '';
+    document.getElementById('textbook-price').value = textbook.price || '';
+    document.getElementById('textbook-isbn').value = textbook.isbn || '';
+    document.getElementById('textbook-stock').value = textbook.stock || 0;
+    document.getElementById('textbook-cover-url').value = textbook.coverUrl || '';
+    document.getElementById('textbook-memo').value = textbook.memo || '';
+  } else {
+    // 추가 모드
+    title.textContent = '교재 추가';
+    form.reset();
+    document.getElementById('textbook-form-id').value = '';
+    document.getElementById('textbook-stock').value = '0';
+  }
+  
+  openModal('modal-textbook-form');
+}
+
+function saveTextbook(e) {
+  e.preventDefault();
+  
+  const id = document.getElementById('textbook-form-id').value;
+  
+  const textbookData = {
+    title: document.getElementById('textbook-title').value,
+    author: document.getElementById('textbook-author').value,
+    publisher: document.getElementById('textbook-publisher').value,
+    subject: document.getElementById('textbook-subject').value,
+    grade: document.getElementById('textbook-grade').value,
+    price: parseInt(document.getElementById('textbook-price').value) || 0,
+    isbn: document.getElementById('textbook-isbn').value,
+    stock: parseInt(document.getElementById('textbook-stock').value) || 0,
+    coverUrl: document.getElementById('textbook-cover-url').value,
+    memo: document.getElementById('textbook-memo').value
+  };
+  
+  if (id) {
+    // 수정
+    const index = textbooksData.findIndex(t => t.id === id);
+    if (index !== -1) {
+      textbooksData[index] = { ...textbooksData[index], ...textbookData };
+      showToast('교재 정보가 수정되었습니다');
+    }
+  } else {
+    // 추가
+    const newTextbook = {
+      id: uid(),
+      ...textbookData,
+      createdAt: today()
+    };
+    textbooksData.push(newTextbook);
+    showToast('교재가 추가되었습니다');
+  }
+  
+  closeModal('modal-textbook-form');
+  renderTextbooksPage();
+}
+
+function openTextbookDetail(textbookId) {
+  const textbook = textbooksData.find(t => t.id === textbookId);
+  if (!textbook) return;
+  
+  currentDetailTextbook = textbook;
+  
+  // 제목 표시
+  const nameEl = document.getElementById('detail-textbook-title');
+  if (nameEl) nameEl.textContent = textbook.title || '교재 상세';
+  
+  // 표지 이미지
+  const coverEl = document.getElementById('detail-textbook-cover');
+  if (coverEl) {
+    if (textbook.coverUrl) {
+      coverEl.src = textbook.coverUrl;
+      coverEl.style.display = 'block';
+    } else {
+      coverEl.style.display = 'none';
+    }
+  }
+  
+  // 기본 정보
+  const fields = {
+    'detail-textbook-info-title': textbook.title,
+    'detail-textbook-info-author': textbook.author,
+    'detail-textbook-info-publisher': textbook.publisher,
+    'detail-textbook-info-subject': textbook.subject,
+    'detail-textbook-info-grade': textbook.grade,
+    'detail-textbook-info-price': textbook.price ? textbook.price.toLocaleString() + '원' : '-',
+    'detail-textbook-info-isbn': textbook.isbn,
+    'detail-textbook-info-stock': textbook.stock,
+    'detail-textbook-info-memo': textbook.memo
+  };
+  
+  Object.keys(fields).forEach(key => {
+    const el = document.getElementById(key);
+    if (el) el.textContent = fields[key] || '-';
+  });
+  
+  // 사용 중인 학생 목록
+  renderTextbookStudents(textbook);
+  
+  openModal('modal-textbook-detail');
+}
+
+function renderTextbookStudents(textbook) {
+  const container = document.getElementById('detail-textbook-students');
+  if (!container) return;
+  
+  const studentIds = studentTextbooksData
+    .filter(st => st.textbookId === textbook.id)
+    .map(st => st.studentId);
+  
+  if (studentIds.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">👨‍🎓</div><div class="empty-text">사용 중인 학생이 없습니다</div></div>';
+    return;
+  }
+  
+  const students = studentsData.filter(s => studentIds.includes(s.id));
+  
+  let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+  students.forEach(student => {
+    html += '<div style="padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center;">';
+    html += '  <div>';
+    html += '    <div style="font-weight: 600; color: var(--text);">' + (student.name || '-') + '</div>';
+    html += '    <div style="font-size: 12px; color: var(--text2); margin-top: 2px;">' + (student.school || '-') + ' | ' + (student.grade || '-') + '</div>';
+    html += '  </div>';
+    html += '  <button class="btn btn-outline btn-sm" onclick="openStudentDetail(\'' + student.id + '\')">상세</button>';
+    html += '</div>';
+  });
+  html += '</div>';
+  
+  container.innerHTML = html;
+}
+
+function editTextbookFromDetail() {
+  if (!currentDetailTextbook) return;
+  closeModal('modal-textbook-detail');
+  openTextbookForm(currentDetailTextbook.id);
+}
+
+// 알라딘 도서 검색 API
+async function searchAladinBooks() {
+  const query = document.getElementById('aladin-search-query').value.trim();
+  const resultsContainer = document.getElementById('aladin-search-results');
+  
+  if (!query) {
+    showToast('검색어를 입력해주세요');
+    return;
+  }
+  
+  resultsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text3);">검색 중...</div>';
+  
+  try {
+    // 알라딘 API 호출
+    const apiUrl = 'https://www.aladin.co.kr/ttb/api/ItemSearch.aspx?ttbkey=ttbgkswjd25121656001&Query=' + encodeURIComponent(query) + '&QueryType=Title&MaxResults=5&start=1&SearchTarget=Book&output=js&Version=20131101';
+    
+    const response = await fetch(apiUrl);
+    const data = await response.json();
+    
+    if (!data.item || data.item.length === 0) {
+      resultsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text3);">검색 결과가 없습니다</div>';
+      return;
+    }
+    
+    let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
+    
+    data.item.forEach(book => {
+      html += '<div style="display: flex; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s;" ';
+      html += '  onmouseenter="this.style.background=\'var(--bg-hover)\'" ';
+      html += '  onmouseleave="this.style.background=\'white\'" ';
+      html += '  onclick="fillTextbookFromAladin(' + "'" + JSON.stringify(book).replace(/'/g, "\\'") + "'" + ')">';
+      
+      // 표지 이미지
+      html += '  <img src="' + book.cover + '" alt="' + book.title + '" style="width: 60px; height: 80px; object-fit: cover; border-radius: 4px;">';
+      
+      // 도서 정보
+      html += '  <div style="flex: 1; min-width: 0;">';
+      html += '    <div style="font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + book.title + '</div>';
+      html += '    <div style="font-size: 12px; color: var(--text2); margin-top: 4px;">' + book.author + '</div>';
+      html += '    <div style="font-size: 12px; color: var(--text2); margin-top: 2px;">' + book.publisher + ' | ' + (book.priceStandard ? book.priceStandard.toLocaleString() + '원' : '-') + '</div>';
+      html += '  </div>';
+      
+      html += '</div>';
+    });
+    
+    html += '</div>';
+    
+    resultsContainer.innerHTML = html;
+    
+  } catch (error) {
+    console.error('알라딘 API 오류:', error);
+    resultsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--danger);">검색 중 오류가 발생했습니다</div>';
+  }
+}
+
+function fillTextbookFromAladin(bookDataStr) {
+  try {
+    const book = JSON.parse(bookDataStr);
+    
+    document.getElementById('textbook-title').value = book.title || '';
+    document.getElementById('textbook-author').value = book.author || '';
+    document.getElementById('textbook-publisher').value = book.publisher || '';
+    document.getElementById('textbook-price').value = book.priceStandard || '';
+    document.getElementById('textbook-isbn').value = book.isbn13 || book.isbn || '';
+    document.getElementById('textbook-cover-url').value = book.cover || '';
+    
+    // 검색 결과 초기화
+    const resultsContainer = document.getElementById('aladin-search-results');
+    if (resultsContainer) {
+      resultsContainer.innerHTML = '<div style="text-align: center; padding: 12px; color: var(--accent2); background: var(--bg-side); border-radius: var(--radius-sm);">✓ 도서 정보가 입력되었습니다</div>';
+    }
+    
+    showToast('도서 정보가 입력되었습니다');
+  } catch (error) {
+    console.error('도서 정보 입력 오류:', error);
+    showToast('도서 정보 입력 중 오류가 발생했습니다');
+  }
 }
 
 // ============ 대시보드 ============
@@ -3059,6 +3854,382 @@ function updateDashboard() {
   const statFeedback = document.getElementById('stat-feedback');
   if (statFeedback) statFeedback.textContent = unsentFeedback;
 }
+
+// ============ 교재 관리 ============
+function renderTextbooksPage() {
+  const container = document.getElementById('textbooks-page-content');
+  if (!container) return;
+  
+  const canWrite = permissions[currentUser.role].textbooks?.write;
+  const filteredTextbooks = getFilteredTextbooks();
+  textbookPagination.totalItems = filteredTextbooks.length;
+  
+  const totalPages = Math.ceil(filteredTextbooks.length / textbookPagination.pageSize);
+  if (textbookPagination.currentPage > totalPages && totalPages > 0) {
+    textbookPagination.currentPage = totalPages;
+  }
+  
+  const startIdx = (textbookPagination.currentPage - 1) * textbookPagination.pageSize;
+  const endIdx = startIdx + textbookPagination.pageSize;
+  const pageTextbooks = filteredTextbooks.slice(startIdx, endIdx);
+  
+  let html = '';
+  
+  // 일괄 작업 바
+  html += '<div class="bulk-actions-bar' + (selectedTextbookIds.length > 0 ? ' show' : '') + '">';
+  html += '  <span class="bulk-count">' + selectedTextbookIds.length + '개 선택됨</span>';
+  html += '  <button class="btn btn-danger btn-sm" onclick="bulkDeleteTextbooks()">선택 삭제</button>';
+  html += '  <button class="btn btn-outline btn-sm" onclick="clearTextbookSelection()">선택 해제</button>';
+  html += '</div>';
+  
+  // 검색/필터/정렬 영역
+  html += '<div class="page-actions">';
+  html += '  <div class="search-filter-group">';
+  html += '    <div class="search-box">';
+  html += '      <span class="search-icon">🔍</span>';
+  html += '      <input type="text" class="search-input" placeholder="교재명, 출판사, 저자 검색..." ';
+  html += '        value="' + (currentTextbookFilter.search || '') + '" ';
+  html += '        oninput="updateTextbookFilter(\'search\', this.value)">';
+  html += '    </div>';
+  html += '    <select class="filter-select" onchange="updateTextbookFilter(\'subject\', this.value)">';
+  html += '      <option value="">전체 과목</option>';
+  html += '      <option value="수학"' + (currentTextbookFilter.subject === '수학' ? ' selected' : '') + '>수학</option>';
+  html += '      <option value="영어"' + (currentTextbookFilter.subject === '영어' ? ' selected' : '') + '>영어</option>';
+  html += '      <option value="국어"' + (currentTextbookFilter.subject === '국어' ? ' selected' : '') + '>국어</option>';
+  html += '      <option value="과학"' + (currentTextbookFilter.subject === '과학' ? ' selected' : '') + '>과학</option>';
+  html += '      <option value="사회"' + (currentTextbookFilter.subject === '사회' ? ' selected' : '') + '>사회</option>';
+  html += '      <option value="기타"' + (currentTextbookFilter.subject === '기타' ? ' selected' : '') + '>기타</option>';
+  html += '    </select>';
+  html += '    <select class="filter-select" onchange="updateTextbookFilter(\'grade\', this.value)">';
+  html += '      <option value="">전체 학년</option>';
+  html += '      <option value="초"' + (currentTextbookFilter.grade === '초' ? ' selected' : '') + '>초등</option>';
+  html += '      <option value="중"' + (currentTextbookFilter.grade === '중' ? ' selected' : '') + '>중등</option>';
+  html += '      <option value="고"' + (currentTextbookFilter.grade === '고' ? ' selected' : '') + '>고등</option>';
+  html += '      <option value="공통"' + (currentTextbookFilter.grade === '공통' ? ' selected' : '') + '>공통</option>';
+  html += '    </select>';
+  html += '    <div class="sort-selector">';
+  html += '      <select onchange="updateTextbookSort(this.value)">';
+  html += '        <option value="title-asc"' + (currentTextbookSort === 'title-asc' ? ' selected' : '') + '>교재명순 (ㄱ→ㅎ)</option>';
+  html += '        <option value="title-desc"' + (currentTextbookSort === 'title-desc' ? ' selected' : '') + '>교재명순 (ㅎ→ㄱ)</option>';
+  html += '        <option value="subject-asc"' + (currentTextbookSort === 'subject-asc' ? ' selected' : '') + '>과목순</option>';
+  html += '        <option value="grade-asc"' + (currentTextbookSort === 'grade-asc' ? ' selected' : '') + '>학년순</option>';
+  html += '      </select>';
+  html += '    </div>';
+  html += '  </div>';
+  
+  if (canWrite) {
+    html += '  <button class="btn btn-primary btn-sm" onclick="openTextbookForm()">+ 교재 추가</button>';
+  }
+  
+  html += '</div>';
+  
+  // 페이저 (상단)
+  html += renderTextbookPagination();
+  
+  // 교재 그리드
+  if (pageTextbooks.length === 0) {
+    html += '<div class="empty-state">';
+    html += '  <div class="empty-icon">📚</div>';
+    html += '  <div class="empty-text">';
+    html += currentTextbookFilter.search || currentTextbookFilter.subject || currentTextbookFilter.grade
+      ? '검색 결과가 없습니다'
+      : '등록된 교재가 없습니다';
+    html += '  </div>';
+    html += '</div>';
+  } else {
+    html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">';
+    
+    pageTextbooks.forEach(textbook => {
+      const isSelected = selectedTextbookIds.includes(textbook.id);
+      
+      html += '<div style="background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--sh); transition: all 0.2s; cursor: pointer; ' + (isSelected ? 'border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent);' : '') + '" ';
+      html += 'onmouseenter="this.style.transform=\'translateY(-2px)\'; this.style.boxShadow=\'var(--sh-md)\';" ';
+      html += 'onmouseleave="this.style.transform=\'translateY(0)\'; this.style.boxShadow=\'var(--sh)\';">';
+      
+      // 체크박스
+      html += '  <div style="padding: 8px; background: var(--bg-side); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">';
+      html += '    <input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onclick="event.stopPropagation(); toggleTextbookSelection(\'' + textbook.id + '\')">';
+      html += '    <span style="font-size: 11px; color: var(--text3);">' + (textbook.subject || '') + '</span>';
+      html += '  </div>';
+      
+      // 표지 이미지
+      html += '  <div style="background: var(--bg-side); display: flex; align-items: center; justify-content: center; min-height: 200px; max-height: 200px; overflow: hidden;" onclick="openTextbookForm(\'' + textbook.id + '\')">';
+      if (textbook.cover) {
+        html += '    <img src="' + textbook.cover + '" alt="' + (textbook.title || '') + '" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';">';
+        html += '    <div style="display: none; font-size: 48px;">📚</div>';
+      } else {
+        html += '    <div style="font-size: 48px;">📚</div>';
+      }
+      html += '  </div>';
+      
+      // 교재 정보
+      html += '  <div style="padding: 12px;" onclick="openTextbookForm(\'' + textbook.id + '\')">';
+      html += '    <div style="font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="' + (textbook.title || '') + '">' + (textbook.title || '-') + '</div>';
+      html += '    <div style="font-size: 12px; color: var(--text2); margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + (textbook.publisher || '') + '</div>';
+      html += '    <div style="font-size: 12px; color: var(--text3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + (textbook.author || '') + '</div>';
+      if (textbook.grade) {
+        html += '    <div style="margin-top: 6px;"><span class="status-badge status-active">' + textbook.grade + '</span></div>';
+      }
+      if (textbook.price) {
+        html += '    <div style="font-size: 13px; color: var(--accent); font-weight: 600; margin-top: 6px;">' + parseInt(textbook.price).toLocaleString() + '원</div>';
+      }
+      html += '  </div>';
+      
+      // 작업 버튼
+      if (canWrite) {
+        html += '  <div style="padding: 8px; border-top: 1px solid var(--border); display: flex; gap: 4px;" onclick="event.stopPropagation();">';
+        html += '    <button class="btn btn-outline btn-sm" style="flex: 1; font-size: 12px; padding: 6px;" onclick="openTextbookForm(\'' + textbook.id + '\')">수정</button>';
+        html += '    <button class="btn btn-danger btn-sm" style="flex: 1; font-size: 12px; padding: 6px;" onclick="deleteTextbook(\'' + textbook.id + '\')">삭제</button>';
+        html += '  </div>';
+      }
+      
+      html += '</div>';
+    });
+    
+    html += '</div>';
+    
+    // 페이저 (하단)
+    html += renderTextbookPagination();
+  }
+  
+  container.innerHTML = html;
+}
+
+function renderTextbookPagination() {
+  const totalPages = Math.ceil(textbookPagination.totalItems / textbookPagination.pageSize) || 1;
+  const currentPage = textbookPagination.currentPage;
+  
+  let html = '<div class="pagination-container">';
+  html += '  <div class="pagination">';
+  html += '    <button class="page-btn" onclick="changeTextbookPage(' + (currentPage - 1) + ')" ' + (currentPage === 1 ? 'disabled' : '') + '>이전</button>';
+  
+  const isMobile = window.innerWidth <= 768;
+  if (isMobile) {
+    html += '    <span class="page-btn active">' + currentPage + ' / ' + totalPages + '</span>';
+  } else {
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+    
+    if (startPage > 1) {
+      html += '    <button class="page-btn" onclick="changeTextbookPage(1)">1</button>';
+      if (startPage > 2) html += '    <span class="page-btn" disabled>...</span>';
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      html += '    <button class="page-btn' + (i === currentPage ? ' active' : '') + '" onclick="changeTextbookPage(' + i + ')">' + i + '</button>';
+    }
+    
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) html += '    <span class="page-btn" disabled>...</span>';
+      html += '    <button class="page-btn" onclick="changeTextbookPage(' + totalPages + ')">' + totalPages + '</button>';
+    }
+  }
+  
+  html += '    <button class="page-btn" onclick="changeTextbookPage(' + (currentPage + 1) + ')" ' + (currentPage === totalPages ? 'disabled' : '') + '>다음</button>';
+  html += '  </div>';
+  html += '  <div class="page-size-selector">';
+  html += '    <span>페이지당</span>';
+  html += '    <select onchange="changeTextbookPageSize(parseInt(this.value))">';
+  html += '      <option value="20"' + (textbookPagination.pageSize === 20 ? ' selected' : '') + '>20개</option>';
+  html += '      <option value="50"' + (textbookPagination.pageSize === 50 ? ' selected' : '') + '>50개</option>';
+  html += '      <option value="100"' + (textbookPagination.pageSize === 100 ? ' selected' : '') + '>100개</option>';
+  html += '    </select>';
+  html += '  </div>';
+  html += '</div>';
+  
+  return html;
+}
+
+function getFilteredTextbooks() {
+  let filtered = textbooksData;
+  
+  if (currentTextbookFilter.search) {
+    const search = currentTextbookFilter.search.toLowerCase();
+    filtered = filtered.filter(t => 
+      (t.title && t.title.toLowerCase().includes(search)) ||
+      (t.publisher && t.publisher.toLowerCase().includes(search)) ||
+      (t.author && t.author.toLowerCase().includes(search))
+    );
+  }
+  
+  if (currentTextbookFilter.subject) {
+    filtered = filtered.filter(t => t.subject === currentTextbookFilter.subject);
+  }
+  
+  if (currentTextbookFilter.grade) {
+    if (currentTextbookFilter.grade === '공통') {
+      filtered = filtered.filter(t => t.grade === '공통');
+    } else {
+      filtered = filtered.filter(t => t.grade && t.grade.startsWith(currentTextbookFilter.grade));
+    }
+  }
+  
+  // 정렬
+  filtered = filtered.sort((a, b) => {
+    if (currentTextbookSort === 'title-asc') {
+      return (a.title || '').localeCompare(b.title || '');
+    } else if (currentTextbookSort === 'title-desc') {
+      return (b.title || '').localeCompare(a.title || '');
+    } else if (currentTextbookSort === 'subject-asc') {
+      return (a.subject || '').localeCompare(b.subject || '');
+    } else if (currentTextbookSort === 'grade-asc') {
+      return (a.grade || '').localeCompare(b.grade || '');
+    }
+    return 0;
+  });
+  
+  return filtered;
+}
+
+function updateTextbookFilter(key, value) {
+  currentTextbookFilter[key] = value;
+  textbookPagination.currentPage = 1;
+  renderTextbooksPage();
+}
+
+function updateTextbookSort(value) {
+  currentTextbookSort = value;
+  textbookPagination.currentPage = 1;
+  renderTextbooksPage();
+}
+
+function changeTextbookPage(page) {
+  const totalPages = Math.ceil(textbookPagination.totalItems / textbookPagination.pageSize) || 1;
+  if (page < 1 || page > totalPages) return;
+  textbookPagination.currentPage = page;
+  renderTextbooksPage();
+}
+
+function changeTextbookPageSize(size) {
+  textbookPagination.pageSize = size;
+  textbookPagination.currentPage = 1;
+  renderTextbooksPage();
+}
+
+function toggleTextbookSelection(textbookId) {
+  const index = selectedTextbookIds.indexOf(textbookId);
+  if (index > -1) {
+    selectedTextbookIds.splice(index, 1);
+  } else {
+    selectedTextbookIds.push(textbookId);
+  }
+  renderTextbooksPage();
+}
+
+function clearTextbookSelection() {
+  selectedTextbookIds = [];
+  renderTextbooksPage();
+}
+
+function bulkDeleteTextbooks() {
+  if (selectedTextbookIds.length === 0) return;
+  
+  if (!confirm(selectedTextbookIds.length + '개의 교재를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+  
+  textbooksData = textbooksData.filter(t => !selectedTextbookIds.includes(t.id));
+  showToast(selectedTextbookIds.length + '개의 교재가 삭제되었습니다');
+  
+  clearTextbookSelection();
+  renderTextbooksPage();
+}
+
+function openTextbookForm(textbookId) {
+  const modal = document.getElementById('modal-textbook-form');
+  const title = document.getElementById('textbook-form-title');
+  const form = document.getElementById('textbook-form');
+  
+  if (!modal || !title || !form) return;
+  
+  // 알라딘 검색 결과 숨기기
+  const searchResults = document.getElementById('aladin-search-results');
+  if (searchResults) searchResults.style.display = 'none';
+  
+  // 표지 미리보기 숨기기
+  const coverPreview = document.getElementById('textbook-cover-preview');
+  if (coverPreview) coverPreview.style.display = 'none';
+  
+  if (textbookId) {
+    // 수정 모드
+    const textbook = textbooksData.find(t => t.id === textbookId);
+    if (!textbook) return;
+    
+    title.textContent = '교재 수정';
+    document.getElementById('textbook-form-id').value = textbook.id;
+    document.getElementById('textbook-title').value = textbook.title || '';
+    document.getElementById('textbook-publisher').value = textbook.publisher || '';
+    document.getElementById('textbook-author').value = textbook.author || '';
+    document.getElementById('textbook-price').value = textbook.price || '';
+    document.getElementById('textbook-subject').value = textbook.subject || '';
+    document.getElementById('textbook-grade').value = textbook.grade || '';
+    document.getElementById('textbook-cover').value = textbook.cover || '';
+    document.getElementById('textbook-isbn').value = textbook.isbn || '';
+    document.getElementById('textbook-memo').value = textbook.memo || '';
+    
+    // 표지 미리보기
+    if (textbook.cover) {
+      showTextbookCoverPreview(textbook.cover);
+    }
+  } else {
+    // 추가 모드
+    title.textContent = '교재 추가';
+    form.reset();
+    document.getElementById('textbook-form-id').value = '';
+  }
+  
+  openModal('modal-textbook-form');
+}
+
+function saveTextbook(e) {
+  e.preventDefault();
+  
+  const id = document.getElementById('textbook-form-id').value;
+  
+  const textbookData = {
+    title: document.getElementById('textbook-title').value,
+    publisher: document.getElementById('textbook-publisher').value,
+    author: document.getElementById('textbook-author').value,
+    price: document.getElementById('textbook-price').value,
+    subject: document.getElementById('textbook-subject').value,
+    grade: document.getElementById('textbook-grade').value,
+    cover: document.getElementById('textbook-cover').value,
+    isbn: document.getElementById('textbook-isbn').value,
+    memo: document.getElementById('textbook-memo').value
+  };
+  
+  if (id) {
+    // 수정
+    const index = textbooksData.findIndex(t => t.id === id);
+    if (index !== -1) {
+      textbooksData[index] = { ...textbooksData[index], ...textbookData };
+      showToast('교재 정보가 수정되었습니다');
+    }
+  } else {
+    // 추가
+    const newTextbook = {
+      id: uid(),
+      ...textbookData,
+      createdAt: today()
+    };
+    textbooksData.push(newTextbook);
+    showToast('교재가 추가되었습니다');
+  }
+  
+  closeModal('modal-textbook-form');
+  renderTextbooksPage();
+}
+
+function deleteTextbook(textbookId) {
+  const textbook = textbooksData.find(t => t.id === textbookId);
+  if (!textbook) return;
+  
+  if (!confirm(textbook.title + ' 교재를 삭제하시겠습니까?')) return;
+  
+  textbooksData = textbooksData.filter(t => t.id !== textbookId);
+  showToast('교재가 삭제되었습니다');
+  renderTextbooksPage();
+}
+
+// 알라딘 도서 검색 API
 
 // ============ 캘린더 ============
 function renderCalendar() {
