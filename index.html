@@ -892,52 +892,44 @@ input[type="checkbox"] {
       <form id="student-form" onsubmit="saveStudent(event)">
         <input type="hidden" id="student-form-id">
         
+        <!-- 학생 고유번호 (최상단) -->
+        <div class="form-row-single">
+          <div class="form-group">
+            <label class="form-label">학생 고유번호</label>
+            <input type="text" class="form-input" id="student-number" placeholder="자동 생성" readonly style="background: var(--bg-side); cursor: not-allowed;">
+          </div>
+        </div>
+        
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">이름 *</label>
             <input type="text" class="form-input" id="student-name" required>
           </div>
           <div class="form-group">
-            <label class="form-label">학교</label>
-            <input type="text" class="form-input" id="student-school">
+            <label class="form-label">학교 *</label>
+            <select class="form-input" id="student-school" required onchange="autoFillSchoolLevel()">
+              <option value="">선택</option>
+            </select>
           </div>
         </div>
         
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">학교급</label>
-            <select class="form-input" id="student-school-level" onchange="updateGradeOptions()">
-              <option value="">선택</option>
-              <option value="초">초등</option>
-              <option value="중">중등</option>
-              <option value="고">고등</option>
-            </select>
+            <input type="text" class="form-input" id="student-school-level" readonly style="background: var(--bg-side); cursor: not-allowed;" placeholder="학교 선택 시 자동">
           </div>
           <div class="form-group">
-            <label class="form-label">학년</label>
-            <select class="form-input" id="student-grade-num">
-              <option value="">학교급 먼저 선택</option>
+            <label class="form-label">학년 *</label>
+            <select class="form-input" id="student-grade-num" required>
+              <option value="">학교급 확인 후 선택</option>
             </select>
           </div>
         </div>
         
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">학교</label>
-            <select class="form-input" id="student-school">
-              <option value="">선택</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">생년월일</label>
-            <input type="date" class="form-input" id="student-birthdate">
-          </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">담당선생님</label>
-            <select class="form-input" id="student-teacher">
+            <label class="form-label">담당선생님 *</label>
+            <select class="form-input" id="student-teacher" required>
               <option value="">선택</option>
             </select>
           </div>
@@ -980,32 +972,32 @@ input[type="checkbox"] {
         
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">학생 연락처</label>
-            <input type="tel" class="form-input" id="student-phone" placeholder="010-0000-0000">
+            <label class="form-label">학생 연락처 *</label>
+            <input type="tel" class="form-input" id="student-phone" placeholder="010-0000-0000" required>
           </div>
           <div class="form-group">
-            <label class="form-label">보호자 연락처</label>
-            <input type="tel" class="form-input" id="student-parent-phone" placeholder="010-0000-0000">
+            <label class="form-label">생년월일</label>
+            <input type="date" class="form-input" id="student-birthdate">
           </div>
         </div>
         
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">보호자 구분</label>
-            <select class="form-input" id="student-parent-type">
+            <label class="form-label">보호자 구분 *</label>
+            <select class="form-input" id="student-parent-type" required>
               <option value="">선택</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">학생 고유번호</label>
-            <input type="text" class="form-input" id="student-number" placeholder="숫자만 입력" readonly>
+            <label class="form-label">보호자 연락처 *</label>
+            <input type="tel" class="form-input" id="student-parent-phone" placeholder="010-0000-0000" required>
           </div>
         </div>
         
         <div class="form-row-single">
           <div class="form-group">
-            <label class="form-label">주소</label>
-            <input type="text" class="form-input" id="student-address">
+            <label class="form-label">주소 *</label>
+            <input type="text" class="form-input" id="student-address" required>
           </div>
         </div>
         
@@ -1439,10 +1431,12 @@ function openModal(id) {
     // 새 모달은 최대값 + 10
     m.style.zIndex = maxZ + 10;
     
-    // 약간의 지연 후 open 클래스 추가 (애니메이션 작동)
-    setTimeout(() => {
-      m.classList.add('open');
-    }, 10);
+    // 브라우저 렌더링 후 open 클래스 추가 (애니메이션 작동)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        m.classList.add('open');
+      });
+    });
   }
 }
 
@@ -2082,7 +2076,7 @@ function renderStudentsPage() {
       html += '    <input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onclick="toggleStudentSelection(\'' + student.id + '\')">';
       html += '  </td>';
       html += '  <td>' + (student.number || '-') + '</td>';
-      html += '  <td><span class="student-name">' + (student.name || '-') + '</span></td>';
+      html += '  <td><span onclick="openStudentDetail(\'' + student.id + '\')" style="cursor: pointer; color: var(--accent); text-decoration: underline;">' + (student.name || '-') + '</span></td>';
       html += '  <td>' + (student.school || '-') + '</td>';
       html += '  <td>' + (student.grade || '-') + '</td>';
       html += '  <td>' + (student.teacher || '-') + '</td>';
@@ -2346,13 +2340,15 @@ function openStudentForm(studentId) {
     document.getElementById('student-name').value = student.name || '';
     document.getElementById('student-school').value = student.school || '';
     
-    // 학년 분리
+    // 학교급 자동 채우기
+    autoFillSchoolLevel();
+    
+    // 학년 설정
     if (student.grade) {
-      const schoolLevel = student.grade.charAt(0);
       const gradeNum = student.grade.substring(1);
-      document.getElementById('student-school-level').value = schoolLevel;
-      updateGradeOptions();
-      document.getElementById('student-grade-num').value = gradeNum;
+      setTimeout(() => {
+        document.getElementById('student-grade-num').value = gradeNum;
+      }, 50);
     }
     
     document.getElementById('student-birthdate').value = student.birthdate || '';
@@ -2398,7 +2394,7 @@ function updateGradeOptions() {
   
   let html = '';
   if (!level) {
-    html = '<option value="">학교급 먼저 선택</option>';
+    html = '<option value="">학교급 확인 후 선택</option>';
   } else if (level === '초') {
     html = '<option value="">선택</option>';
     for (let i = 1; i <= 6; i++) {
@@ -2412,6 +2408,27 @@ function updateGradeOptions() {
   }
   
   gradeSelect.innerHTML = html;
+}
+
+// 학교 선택 시 학교급 자동 채우기
+function autoFillSchoolLevel() {
+  const schoolSelect = document.getElementById('student-school');
+  const schoolLevelInput = document.getElementById('student-school-level');
+  
+  if (!schoolSelect || !schoolLevelInput) return;
+  
+  const selectedSchoolName = schoolSelect.value;
+  if (!selectedSchoolName) {
+    schoolLevelInput.value = '';
+    updateGradeOptions();
+    return;
+  }
+  
+  const school = schoolsData.find(s => s.name === selectedSchoolName);
+  if (school) {
+    schoolLevelInput.value = school.type || '';
+    updateGradeOptions();
+  }
 }
 
 function loadSchoolOptions() {
