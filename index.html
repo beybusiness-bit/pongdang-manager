@@ -88,6 +88,10 @@ body {
   background: var(--bg-input);
   transition: all 0.2s;
 }
+.form-input-sm {
+  padding: 6px 8px;
+  font-size: 13px;
+}
 .form-input:focus {
   outline: none;
   border-color: var(--accent);
@@ -453,11 +457,16 @@ body {
   border-collapse: collapse;
   font-size: 14px;
 }
-.student-table thead {
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.student-table thead, .data-table thead {
   background: var(--bg-side);
   border-bottom: 2px solid var(--border);
 }
-.student-table th {
+.student-table th, .data-table th {
   padding: 14px 12px;
   text-align: left;
   font-weight: 600;
@@ -469,10 +478,13 @@ body {
   cursor: pointer;
   transition: background 0.2s;
 }
+.data-table tbody tr {
+  border-bottom: 1px solid var(--border);
+}
 .student-table tbody tr:hover {
   background: var(--bg-hover);
 }
-.student-table td {
+.student-table td, .data-table td {
   padding: 14px 12px;
   color: var(--text);
 }
@@ -1080,33 +1092,9 @@ input[type="checkbox"] {
             </div>
           </div>
           
-          <!-- 추가 정보 -->
-          <div class="detail-section-title">연락처 및 기타</div>
+          <!-- 수업 정보 -->
+          <div class="detail-section-title">수업 정보</div>
           <div class="info-grid" style="grid-template-columns: repeat(2, 1fr);">
-            <div class="info-item">
-              <div class="info-label">이름</div>
-              <div class="info-value" id="detail-info-name">-</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">생년월일</div>
-              <div class="info-value" id="detail-info-birthdate">-</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">학교</div>
-              <div class="info-value" id="detail-info-school">-</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">학년</div>
-              <div class="info-value" id="detail-info-grade">-</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">상태</div>
-              <div class="info-value" id="detail-info-status">-</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">담당선생님</div>
-              <div class="info-value" id="detail-info-teacher">-</div>
-            </div>
             <div class="info-item">
               <div class="info-label">수업반</div>
               <div class="info-value" id="detail-info-class">-</div>
@@ -1142,7 +1130,7 @@ input[type="checkbox"] {
         <div class="detail-section">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <div class="detail-section-title" style="margin: 0;">등록/퇴원 기록</div>
-            <button class="btn btn-primary btn-sm" onclick="addEnrollmentRecord()">+ 기록 추가</button>
+            <button class="btn btn-primary btn-sm" onclick="openEnrollmentRecordsEditor()">기록 수정</button>
           </div>
           <div id="detail-enrollment-records"></div>
         </div>
@@ -1194,32 +1182,34 @@ input[type="checkbox"] {
   </div>
 </div>
 
-<!-- 등록/퇴원 기록 모달 -->
+<!-- 등록/퇴원 기록 수정 모달 -->
 <div class="modal-backdrop" id="modal-enrollment-record">
-  <div class="modal">
-    <div class="modal-title">등록/퇴원 기록 추가</div>
+  <div class="modal modal-wide">
+    <div class="modal-title">등록/퇴원 기록 수정</div>
     <div class="modal-body">
-      <form id="enrollment-record-form" onsubmit="saveEnrollmentRecord(event)">
-        <div class="form-group">
-          <label class="form-label">유형 *</label>
-          <select class="form-input" id="enrollment-type" required>
-            <option value="등록">등록</option>
-            <option value="퇴원">퇴원</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">날짜 *</label>
-          <input type="date" class="form-input" id="enrollment-date" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">메모</label>
-          <textarea class="form-input" id="enrollment-memo" rows="3"></textarea>
-        </div>
-      </form>
+      <div style="margin-bottom: 16px;">
+        <button class="btn btn-primary btn-sm" onclick="addNewEnrollmentRecord()">+ 새 기록 추가</button>
+      </div>
+      
+      <div style="overflow-x: auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 100px;">유형</th>
+              <th style="width: 140px;">날짜</th>
+              <th>메모</th>
+              <th style="width: 100px;">작업</th>
+            </tr>
+          </thead>
+          <tbody id="enrollment-records-table">
+            <!-- 기록들이 여기 표시됩니다 -->
+          </tbody>
+        </table>
+      </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-enrollment-record')">취소</button>
-      <button class="btn btn-primary btn-sm" type="submit" form="enrollment-record-form">저장</button>
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-enrollment-record')">닫기</button>
+      <button class="btn btn-primary btn-sm" onclick="saveAllEnrollmentRecords()">저장</button>
     </div>
   </div>
 </div>
@@ -2663,25 +2653,26 @@ function openStudentDetail(studentId) {
   const nameEl = document.getElementById('detail-student-name');
   if (nameEl) nameEl.textContent = student.name || '학생 상세';
   
-  // 기본 정보 탭 렌더링
-  renderStudentDetailInfo(student);
-  
-  // 다른 탭은 비우기
-  const tabs = ['textbooks', 'payments', 'feedback', 'history'];
-  tabs.forEach(tab => {
-    const content = document.getElementById('detail-tab-' + tab);
-    if (content && content.classList.contains('active')) {
-      content.classList.remove('active');
-    }
+  // 모든 탭 비활성화
+  document.querySelectorAll('#modal-student-detail .tab-content').forEach(tab => {
+    tab.classList.remove('active');
+    tab.style.display = 'none';
   });
   
-  // 첫 번째 탭 활성화
-  const firstTab = document.getElementById('detail-tab-info');
-  if (firstTab) firstTab.classList.add('active');
+  // 기본 정보 탭만 활성화
+  const infoTab = document.getElementById('student-detail-tab-info');
+  if (infoTab) {
+    infoTab.classList.add('active');
+    infoTab.style.display = 'block';
+  }
   
-  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+  // 탭 버튼도 첫 번째만 활성화
+  document.querySelectorAll('#modal-student-detail .tab-btn').forEach((btn, i) => {
     btn.classList.toggle('active', i === 0);
   });
+  
+  // 기본 정보 탭 렌더링
+  renderStudentDetailInfo(student);
   
   openModal('modal-student-detail');
 }
@@ -2750,89 +2741,91 @@ function renderEnrollmentRecords(student) {
   container.innerHTML = html;
 }
 
-function addEnrollmentRecord() {
-  console.log('=== addEnrollmentRecord 시작 ===');
-  console.log('currentDetailStudent:', currentDetailStudent);
-  
-  if (!currentDetailStudent) {
-    console.error('currentDetailStudent가 없습니다');
-    alert('학생 정보를 찾을 수 없습니다');
-    return;
-  }
-  
-  // 모달 존재 확인
-  const modal = document.getElementById('modal-enrollment-record');
-  console.log('modal 요소:', modal);
-  
-  if (!modal) {
-    console.error('modal-enrollment-record 요소를 찾을 수 없습니다');
-    alert('모달을 찾을 수 없습니다');
-    return;
-  }
-  
-  // 폼 리셋
-  const form = document.getElementById('enrollment-record-form');
-  if (form) {
-    form.reset();
-    console.log('폼 리셋 완료');
-  } else {
-    console.error('enrollment-record-form을 찾을 수 없습니다');
-  }
-  
-  const typeEl = document.getElementById('enrollment-type');
-  const dateEl = document.getElementById('enrollment-date');
-  const memoEl = document.getElementById('enrollment-memo');
-  
-  console.log('type 요소:', typeEl);
-  console.log('date 요소:', dateEl);
-  console.log('memo 요소:', memoEl);
-  
-  if (typeEl) typeEl.value = '등록';
-  if (dateEl) dateEl.value = today();
-  if (memoEl) memoEl.value = '';
-  
-  console.log('openModal 호출 전 - modal display:', modal.style.display);
-  console.log('openModal 호출 전 - modal className:', modal.className);
-  
-  openModal('modal-enrollment-record');
-  
-  console.log('openModal 호출 후 - modal display:', modal.style.display);
-  console.log('openModal 호출 후 - modal className:', modal.className);
-  console.log('=== addEnrollmentRecord 종료 ===');
-}
+let tempEnrollmentRecords = [];
 
-function saveEnrollmentRecord(e) {
-  e.preventDefault();
-  
-  if (!currentDetailStudent) return;
-  
-  const type = document.getElementById('enrollment-type').value;
-  const date = document.getElementById('enrollment-date').value;
-  const memo = document.getElementById('enrollment-memo').value;
-  
-  const newRecord = {
-    id: uid(),
-    type: type,
-    date: date,
-    memo: memo
-  };
+function openEnrollmentRecordsEditor() {
+  if (!currentDetailStudent) {
+    showToast('학생 정보를 찾을 수 없습니다');
+    return;
+  }
   
   const student = studentsData.find(s => s.id === currentDetailStudent.id);
   if (!student) return;
   
-  if (!student.enrollmentRecords) {
-    student.enrollmentRecords = [];
+  // 현재 기록 복사
+  tempEnrollmentRecords = JSON.parse(JSON.stringify(student.enrollmentRecords || []));
+  
+  renderEnrollmentRecordsTable();
+  openModal('modal-enrollment-record');
+}
+
+function renderEnrollmentRecordsTable() {
+  const tbody = document.getElementById('enrollment-records-table');
+  if (!tbody) return;
+  
+  if (tempEnrollmentRecords.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: var(--text3);">기록이 없습니다</td></tr>';
+    return;
   }
   
-  student.enrollmentRecords.push(newRecord);
+  let html = '';
+  tempEnrollmentRecords.forEach((record, index) => {
+    html += '<tr>';
+    html += '  <td>';
+    html += '    <select class="form-input form-input-sm" onchange="updateTempRecord(' + index + ', \'type\', this.value)">';
+    html += '      <option value="등록"' + (record.type === '등록' ? ' selected' : '') + '>등록</option>';
+    html += '      <option value="퇴원"' + (record.type === '퇴원' ? ' selected' : '') + '>퇴원</option>';
+    html += '    </select>';
+    html += '  </td>';
+    html += '  <td>';
+    html += '    <input type="date" class="form-input form-input-sm" value="' + (record.date || '') + '" onchange="updateTempRecord(' + index + ', \'date\', this.value)">';
+    html += '  </td>';
+    html += '  <td>';
+    html += '    <input type="text" class="form-input form-input-sm" value="' + (record.memo || '') + '" onchange="updateTempRecord(' + index + ', \'memo\', this.value)" placeholder="메모">';
+    html += '  </td>';
+    html += '  <td>';
+    html += '    <button class="btn btn-danger btn-sm" onclick="deleteTempRecord(' + index + ')">삭제</button>';
+    html += '  </td>';
+    html += '</tr>';
+  });
+  
+  tbody.innerHTML = html;
+}
+
+function addNewEnrollmentRecord() {
+  tempEnrollmentRecords.push({
+    id: uid(),
+    type: '등록',
+    date: today(),
+    memo: ''
+  });
+  renderEnrollmentRecordsTable();
+}
+
+function updateTempRecord(index, field, value) {
+  if (tempEnrollmentRecords[index]) {
+    tempEnrollmentRecords[index][field] = value;
+  }
+}
+
+function deleteTempRecord(index) {
+  if (!confirm('이 기록을 삭제하시겠습니까?')) return;
+  tempEnrollmentRecords.splice(index, 1);
+  renderEnrollmentRecordsTable();
+}
+
+function saveAllEnrollmentRecords() {
+  if (!currentDetailStudent) return;
+  
+  const student = studentsData.find(s => s.id === currentDetailStudent.id);
+  if (!student) return;
+  
+  student.enrollmentRecords = tempEnrollmentRecords;
   currentDetailStudent = student;
   
-  showToast('등록/퇴원 기록이 추가되었습니다');
+  showToast('등록/퇴원 기록이 저장되었습니다');
   closeModal('modal-enrollment-record');
-  
-  // 상세 정보 다시 렌더링
-  renderStudentDetailInfo(student);
-  renderStudentsPage();
+  renderEnrollmentRecords(student);
 }
 
 function switchDetailTab(tabName) {
