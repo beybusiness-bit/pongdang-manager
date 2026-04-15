@@ -146,11 +146,11 @@ body {
   display: flex;
   flex-direction: column;
   z-index: 99;
-  transition: all 0.25s ease;
+  transition: transform 0.25s ease;
   overflow: hidden;
 }
 .sidebar.collapsed {
-  width: 0;
+  transform: translateX(-100%);
   border: none;
 }
 /* 햄버거 버튼 - 사이드바 외부에 독립 */
@@ -182,11 +182,8 @@ body {
   left: auto;
   top: 16px;
 }
-  transition: opacity 0.2s;
-  z-index: 101;
-}
 .logo-wrap {
-  padding: 20px;
+  padding: 20px 20px 20px 24px;
   border-bottom: 1px solid var(--border);
 }
 .logo {
@@ -997,11 +994,12 @@ input[type="checkbox"] {
   
   /* 모바일 사이드바 */
   .sidebar.collapsed {
-    width: 0;
+    transform: translateX(-100%);
   }
   .sidebar:not(.collapsed) {
     width: 85%;
     max-width: 320px;
+    transform: translateX(0);
   }
   .main {
     margin-left: 0;
@@ -5906,13 +5904,13 @@ function renderPaymentMobileCards(pagePayments, canWrite) {
   pagePayments.forEach(p => {
     const student = studentsData.find(s => s.id === p.studentId);
     const studentName = p.isNewStudent ? p.studentName : (student ? student.name : '(삭제)');
-    const schoolType = student ? student.schoolType : '';
+    const schoolType = student ? student.schoolType : '-';
     let studentGrade = '';
     if (student && student.grade) {
-      studentGrade = student.grade.replace(/[^0-9]/g, '');
+      studentGrade = student.grade.replace(/[^0-9]/g, '') + '학년';
     }
     const classObj = classesData.find(c => c.id === p.classId);
-    const className = classObj ? classObj.name : '-';
+    const className = classObj ? classObj.name : '';
     const paymentMethod = paymentMethodsData.find(pm => pm.id === p.paymentMethodId);
     const paymentMethodName = paymentMethod ? paymentMethod.name : '-';
     const discount = discountTypesData.find(dt => dt.id === p.discountTypeId);
@@ -5938,39 +5936,43 @@ function renderPaymentMobileCards(pagePayments, canWrite) {
     html += '  <span style="margin-left: 12px;">결제일: ' + (p.paymentDate ? formatPaymentDate(p.paymentDate) : '결제 예정') + '</span>';
     html += '</div>';
     
-    // 학생 이름
-    html += '<div style="font-weight: 600; font-size: 16px; margin-bottom: 6px;">' + studentName + '</div>';
+    // 학생 이름 + 신입/결제선생 태그
+    html += '<div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">';
+    html += '  <span style="font-weight: 600; font-size: 16px;">' + studentName + '</span>';
+    if (p.isNewStudent) {
+      html += '  <span style="font-size: 10px; background: var(--accent2); color: white; padding: 2px 6px; border-radius: 3px;">신입</span>';
+    }
+    if (p.isTeacherPayment) {
+      html += '  <span style="font-size: 10px; background: var(--accent); color: white; padding: 2px 6px; border-radius: 3px;">결제선생</span>';
+    }
+    html += '</div>';
     
-    // 신입, 결제선생 태그
-    if (p.isNewStudent || p.isTeacherPayment) {
-      html += '<div style="margin-bottom: 8px; display: flex; gap: 4px;">';
-      if (p.isNewStudent) {
-        html += '  <span style="font-size: 10px; background: var(--accent2); color: white; padding: 2px 6px; border-radius: 3px;">신입</span>';
-      }
-      if (p.isTeacherPayment) {
-        html += '  <span style="font-size: 10px; background: var(--accent); color: white; padding: 2px 6px; border-radius: 3px;">결제선생</span>';
-      }
+    // 학교급, 학년, 담당T, 요일
+    html += '<div style="font-size: 13px; color: var(--text2); margin-bottom: 6px;">';
+    html += schoolType + ' · ' + (studentGrade || '-') + ' · ' + (p.teacherName || '-') + ' · ' + (p.days || '-');
+    html += '</div>';
+    
+    // 수강반(횟수) - 있을 때만 표시
+    if (className) {
+      html += '<div style="font-size: 13px; margin-bottom: 8px;">';
+      html += className + (p.count ? '(' + p.count + ')' : '');
       html += '</div>';
     }
     
-    // 학교급, 학년, 담당T
-    html += '<div style="font-size: 13px; color: var(--text2); margin-bottom: 6px;">';
-    html += (schoolType || '-') + ' · ' + (studentGrade || '-') + ' · ' + (p.teacherName || '-');
-    html += '</div>';
-    
-    // 수강반(횟수)
-    html += '<div style="font-size: 13px; margin-bottom: 8px;">';
-    html += className + (p.count ? '(' + p.count + ')' : '');
+    // 기본교습비, 할인
+    html += '<div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">';
+    html += '  <div><span style="color: var(--text2);">기본교습비:</span> <span style="color: var(--accent);">' + (p.baseTuition || 0).toLocaleString() + '원</span></div>';
+    html += '  <div><span style="color: var(--text2);">할인:</span> ' + discountName + '</div>';
     html += '</div>';
     
     // 최종교습비, 결제수단
-    html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">';
-    html += '  <div style="font-size: 15px; font-weight: 600; color: var(--accent);">' + (p.finalTuition || 0).toLocaleString() + '원</div>';
-    html += '  <div style="font-size: 13px; color: var(--text2);">' + paymentMethodName + '</div>';
+    html += '<div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">';
+    html += '  <div><span style="color: var(--text2);">최종교습비:</span> <span style="color: var(--accent);">' + (p.finalTuition || 0).toLocaleString() + '원</span></div>';
+    html += '  <div><span style="color: var(--text2);">결제수단:</span> ' + paymentMethodName + '</div>';
     html += '</div>';
     
     // 입금금액, 수수료
-    html += '<div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px;">';
+    html += '<div style="display: flex; justify-content: space-between; font-size: 13px;">';
     html += '  <div><span style="color: var(--text2);">입금금액:</span> <span style="font-weight: 600; color: var(--accent);">' + (p.depositAmount || 0).toLocaleString() + '원</span></div>';
     html += '  <div><span style="color: var(--text2);">수수료:</span> <span style="color: var(--accent);">' + (p.fee || 0).toLocaleString() + '원</span></div>';
     html += '</div>';
