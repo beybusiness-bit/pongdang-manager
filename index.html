@@ -154,7 +154,49 @@ body {
   display: flex;
   flex-direction: column;
   z-index: 99;
-  transition: transform 0.3s;
+  transition: all 0.3s;
+}
+.sidebar.collapsed {
+  width: 60px;
+}
+.sidebar.collapsed .nav-item span:not(.nav-icon),
+.sidebar.collapsed .nav-group-header span:not(.nav-icon),
+.sidebar.collapsed .nav-group-toggle,
+.sidebar.collapsed .favorite-star,
+.sidebar.collapsed .logo,
+.sidebar.collapsed .user-name,
+.sidebar.collapsed .user-role {
+  display: none;
+}
+.sidebar.collapsed .nav-item,
+.sidebar.collapsed .nav-group-header {
+  justify-content: center;
+  padding: 12px;
+}
+.sidebar.collapsed .nav-icon {
+  margin-right: 0;
+}
+.sidebar-toggle-btn {
+  position: absolute;
+  right: -12px;
+  top: 20px;
+  width: 24px;
+  height: 24px;
+  background: var(--bg-side);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text2);
+  z-index: 100;
+  transition: all 0.2s;
+}
+.sidebar-toggle-btn:hover {
+  background: white;
+  color: var(--accent);
 }
 .logo-wrap {
   padding: 20px;
@@ -388,6 +430,10 @@ body {
 .main {
   margin-left: var(--nav);
   min-height: 100vh;
+  transition: margin-left 0.3s;
+}
+.sidebar.collapsed ~ .main {
+  margin-left: 60px;
 }
 
 .page {
@@ -982,6 +1028,11 @@ input[type="checkbox"] {
   
   <!-- 사이드바 -->
   <nav class="sidebar" id="sidebar">
+    <!-- 토글 버튼 -->
+    <div class="sidebar-toggle-btn" onclick="toggleSidebar()">
+      <span id="sidebar-toggle-icon">▶</span>
+    </div>
+    
     <div class="logo-wrap">
       <div class="logo">🎓 풍당수학</div>
       <div class="logo-sub">학원 관리 시스템</div>
@@ -1751,6 +1802,7 @@ let currentUser = null;
 let currentPage = 'dashboard';
 let favoritePages = JSON.parse(localStorage.getItem('favoritePages') || '[]');
 let expandedGroups = JSON.parse(localStorage.getItem('expandedGroups') || '["work-group", "manage-group", "report-group"]');
+let isSidebarCollapsed = JSON.parse(localStorage.getItem('isSidebarCollapsed') || 'true'); // 처음엔 접힌 상태
 let noticesData = JSON.parse(localStorage.getItem('noticesData') || '[]');
 let permissions = {
   owner: {},
@@ -2024,6 +2076,14 @@ function initApp() {
   renderSidebar();
   renderPages();
   
+  // 사이드바 초기 상태 설정
+  if (isSidebarCollapsed) {
+    document.getElementById('sidebar').classList.add('collapsed');
+    document.getElementById('sidebar-toggle-icon').textContent = '▶';
+  } else {
+    document.getElementById('sidebar-toggle-icon').textContent = '◀';
+  }
+  
   // localStorage에서 마지막 페이지 복원 또는 URL 해시 확인
   const hash = window.location.hash.substring(1);
   const savedPage = hash || localStorage.getItem('currentPage') || 'dashboard';
@@ -2193,6 +2253,30 @@ function toggleFavorite(pageId) {
   }
   localStorage.setItem('favoritePages', JSON.stringify(favoritePages));
   renderSidebar();
+}
+
+function toggleSidebar() {
+  isSidebarCollapsed = !isSidebarCollapsed;
+  localStorage.setItem('isSidebarCollapsed', JSON.stringify(isSidebarCollapsed));
+  
+  const sidebar = document.getElementById('sidebar');
+  const toggleIcon = document.getElementById('sidebar-toggle-icon');
+  
+  if (isSidebarCollapsed) {
+    sidebar.classList.add('collapsed');
+    toggleIcon.textContent = '▶';
+  } else {
+    sidebar.classList.remove('collapsed');
+    toggleIcon.textContent = '◀';
+  }
+}
+
+function formatPaymentDate(dateStr) {
+  if (!dateStr) return '-';
+  // yyyy-mm-dd -> yyyy. m. d
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  return `${parts[0]}. ${parseInt(parts[1])}. ${parseInt(parts[2])}`;
 }
 
 function renderPages() {
@@ -5630,20 +5714,20 @@ function renderPaymentRecords(canWrite) {
   let html = '';
   
   // 툴바
-  html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">';
+  html += '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">';
   
-  // 왼쪽: 필터
-  html += '  <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">';
-  html += '    <input type="month" class="form-input form-input-sm" value="' + currentPaymentFilter.month + '" onchange="currentPaymentFilter.month = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()" style="width: 150px;" placeholder="등록월">';
-  html += '    <input type="text" class="form-input form-input-sm" placeholder="학생명 검색" value="' + currentPaymentFilter.search + '" onchange="currentPaymentFilter.search = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()" style="width: 140px;">';
-  html += '    <select class="form-input form-input-sm" style="width: 120px;" onchange="currentPaymentFilter.schoolType = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()">';
-  html += '      <option value="">전체 학교급</option>';
+  // 왼쪽: 필터 (너비 축소하여 2-3줄로)
+  html += '  <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center; flex: 1; max-width: 700px;">';
+  html += '    <input type="month" class="form-input form-input-sm" value="' + currentPaymentFilter.month + '" onchange="currentPaymentFilter.month = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()" style="width: 120px;">';
+  html += '    <input type="text" class="form-input form-input-sm" placeholder="학생명" value="' + currentPaymentFilter.search + '" onchange="currentPaymentFilter.search = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()" style="width: 100px;">';
+  html += '    <select class="form-input form-input-sm" style="width: 90px;" onchange="currentPaymentFilter.schoolType = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()">';
+  html += '      <option value="">학교급</option>';
   html += '      <option value="초등" ' + (currentPaymentFilter.schoolType === '초등' ? 'selected' : '') + '>초등</option>';
   html += '      <option value="중등" ' + (currentPaymentFilter.schoolType === '중등' ? 'selected' : '') + '>중등</option>';
   html += '      <option value="고등" ' + (currentPaymentFilter.schoolType === '고등' ? 'selected' : '') + '>고등</option>';
   html += '    </select>';
-  html += '    <select class="form-input form-input-sm" style="width: 140px;" onchange="currentPaymentFilter.classId = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()">';
-  html += '      <option value="">전체 수강반</option>';
+  html += '    <select class="form-input form-input-sm" style="width: 110px;" onchange="currentPaymentFilter.classId = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()">';
+  html += '      <option value="">수강반</option>';
   classesData.forEach(c => {
     html += '      <option value="' + c.id + '" ' + (currentPaymentFilter.classId === c.id ? 'selected' : '') + '>' + c.name + '</option>';
   });
@@ -5651,18 +5735,18 @@ function renderPaymentRecords(canWrite) {
   html += '    <select class="form-input form-input-sm" style="width: 100px;" onchange="currentPaymentSort = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()">';
   html += '      <option value="date-desc" ' + (currentPaymentSort === 'date-desc' ? 'selected' : '') + '>최신순</option>';
   html += '      <option value="date-asc" ' + (currentPaymentSort === 'date-asc' ? 'selected' : '') + '>오래된순</option>';
-  html += '      <option value="amount-desc" ' + (currentPaymentSort === 'amount-desc' ? 'selected' : '') + '>금액 높은순</option>';
-  html += '      <option value="amount-asc" ' + (currentPaymentSort === 'amount-asc' ? 'selected' : '') + '>금액 낮은순</option>';
+  html += '      <option value="amount-desc" ' + (currentPaymentSort === 'amount-desc' ? 'selected' : '') + '>금액↓</option>';
+  html += '      <option value="amount-asc" ' + (currentPaymentSort === 'amount-asc' ? 'selected' : '') + '>금액↑</option>';
   html += '    </select>';
   
   if (canWrite && selectedPaymentIds.length > 0) {
-    html += '    <button class="btn btn-outline btn-sm" onclick="bulkDeletePayments()" style="color: var(--danger); border-color: var(--danger);">선택 삭제 (' + selectedPaymentIds.length + ')</button>';
+    html += '    <button class="btn btn-outline btn-sm" onclick="bulkDeletePayments()" style="color: var(--danger); border-color: var(--danger); white-space: nowrap;">삭제 (' + selectedPaymentIds.length + ')</button>';
   }
   
   html += '  </div>';
   
   // 오른쪽: 버튼
-  html += '  <div style="display: flex; gap: 8px;">';
+  html += '  <div style="display: flex; gap: 8px; flex-shrink: 0;">';
   if (canWrite) {
     html += '    <button class="btn btn-outline btn-sm" onclick="openCsvUploadModal()">CSV 업로드</button>';
     html += '    <button class="btn btn-primary btn-sm" onclick="openAddPaymentModal()">+ 결제 추가</button>';
@@ -5706,21 +5790,20 @@ function renderPaymentRecords(canWrite) {
   if (canWrite) {
     html += '    <th style="padding: 12px; width: 40px; text-align: center;"><input type="checkbox" id="select-all-payments" onchange="toggleSelectAllPayments(this.checked)"></th>';
   }
-  html += '    <th style="padding: 12px; width: 50px; text-align: center;">신입</th>';
-  html += '    <th style="padding: 12px; width: 100px; text-align: left;">학생</th>';
+  html += '    <th style="padding: 12px; width: 120px; text-align: left;">학생</th>';
+  html += '    <th style="padding: 12px; width: 60px; text-align: center;">학교급</th>';
   html += '    <th style="padding: 12px; width: 50px; text-align: center;">학년</th>';
   html += '    <th style="padding: 12px; width: 80px; text-align: center;">담당T</th>';
   html += '    <th style="padding: 12px; width: 80px; text-align: center;">등록월</th>';
-  html += '    <th style="padding: 12px; width: 50px; text-align: center;">요일</th>';
-  html += '    <th style="padding: 12px; width: 100px; text-align: left;">수강반</th>';
+  html += '    <th style="padding: 12px; width: 60px; text-align: center;">요일</th>';
+  html += '    <th style="padding: 12px; width: 100px; text-align: center;">수강반</th>';
   html += '    <th style="padding: 12px; width: 90px; text-align: right;">기본교습비</th>';
   html += '    <th style="padding: 12px; width: 90px; text-align: right;">최종교습비</th>';
-  html += '    <th style="padding: 12px; width: 80px; text-align: left;">할인</th>';
-  html += '    <th style="padding: 12px; width: 40px; text-align: center;">결제선생</th>';
+  html += '    <th style="padding: 12px; width: 80px; text-align: center;">할인</th>';
   html += '    <th style="padding: 12px; width: 100px; text-align: right; font-weight: 600;">입금금액</th>';
   html += '    <th style="padding: 12px; width: 70px; text-align: right;">수수료</th>';
-  html += '    <th style="padding: 12px; width: 90px; text-align: center;">결제날짜</th>';
-  html += '    <th style="padding: 12px; width: 90px; text-align: center;">입금날짜</th>';
+  html += '    <th style="padding: 12px; width: 100px; text-align: center;">결제날짜</th>';
+  html += '    <th style="padding: 12px; width: 100px; text-align: center;">입금날짜</th>';
   html += '    <th style="padding: 12px; width: 80px; text-align: center;">결제수단</th>';
   html += '  </tr>';
   html += '</thead>';
@@ -5729,6 +5812,7 @@ function renderPaymentRecords(canWrite) {
   pagePayments.forEach(p => {
     const student = studentsData.find(s => s.id === p.studentId);
     const studentName = p.isNewStudent ? p.studentName : (student ? student.name : '(삭제)');
+    const schoolType = student ? student.schoolType : '';
     let studentGrade = '';
     if (student && student.grade) {
       studentGrade = student.grade.replace(/[^0-9]/g, '') + '학년';
@@ -5741,25 +5825,36 @@ function renderPaymentRecords(canWrite) {
     const discountName = discount ? discount.name : '-';
     const isSelected = selectedPaymentIds.includes(p.id);
     
-    html += '<tr style="border-bottom: 1px solid var(--border); ' + (isSelected ? 'background: var(--bg-hover);' : '') + '">';
+    html += '<tr style="border-bottom: 1px solid var(--border); cursor: pointer; ' + (isSelected ? 'background: var(--bg-hover);' : '') + '" onclick="openEditPaymentModal(\'' + p.id + '\')">';
     if (canWrite) {
-      html += '  <td style="padding: 12px; text-align: center;"><input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onchange="togglePaymentSelection(\'' + p.id + '\', this.checked)"></td>';
+      html += '  <td style="padding: 12px; text-align: center;" onclick="event.stopPropagation();"><input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onchange="togglePaymentSelection(\'' + p.id + '\', this.checked)"></td>';
     }
-    html += '  <td style="padding: 12px; text-align: center;">' + (p.isNewStudent ? '<span style="font-size: 10px; background: var(--accent2); color: white; padding: 2px 6px; border-radius: 3px;">신입</span>' : '-') + '</td>';
-    html += '  <td style="padding: 12px; font-weight: 500; cursor: pointer;" onclick="openEditPaymentModal(\'' + p.id + '\')">' + studentName + '</td>';
+    html += '  <td style="padding: 12px; font-weight: 500;">';
+    html += '    <div>' + studentName + '</div>';
+    if (p.isNewStudent || p.isTeacherPayment) {
+      html += '    <div style="margin-top: 4px; display: flex; gap: 4px;">';
+      if (p.isNewStudent) {
+        html += '      <span style="font-size: 10px; background: var(--accent2); color: white; padding: 2px 6px; border-radius: 3px;">신입</span>';
+      }
+      if (p.isTeacherPayment) {
+        html += '      <span style="font-size: 10px; background: var(--accent); color: white; padding: 2px 6px; border-radius: 3px;">결제선생</span>';
+      }
+      html += '    </div>';
+    }
+    html += '  </td>';
+    html += '  <td style="padding: 12px; text-align: center;">' + (schoolType || '-') + '</td>';
     html += '  <td style="padding: 12px; text-align: center;">' + studentGrade + '</td>';
     html += '  <td style="padding: 12px; text-align: center;">' + (p.teacherName || '-') + '</td>';
     html += '  <td style="padding: 12px; text-align: center;">' + p.enrollmentMonth + '</td>';
     html += '  <td style="padding: 12px; text-align: center;">' + (p.days || '-') + '</td>';
-    html += '  <td style="padding: 12px;">' + className + '</td>';
+    html += '  <td style="padding: 12px; text-align: center;">' + className + '</td>';
     html += '  <td style="padding: 12px; text-align: right;">' + (p.baseTuition || 0).toLocaleString() + '</td>';
     html += '  <td style="padding: 12px; text-align: right; color: var(--accent);">' + (p.finalTuition || 0).toLocaleString() + '</td>';
-    html += '  <td style="padding: 12px;">' + discountName + '</td>';
-    html += '  <td style="padding: 12px; text-align: center;">' + (p.isTeacherPayment ? '✓' : '') + '</td>';
+    html += '  <td style="padding: 12px; text-align: center;">' + discountName + '</td>';
     html += '  <td style="padding: 12px; text-align: right; font-size: 15px; font-weight: 600; color: var(--accent);">' + (p.depositAmount || 0).toLocaleString() + '</td>';
     html += '  <td style="padding: 12px; text-align: right;">' + (p.fee || 0).toLocaleString() + '</td>';
-    html += '  <td style="padding: 12px; text-align: center;">' + (p.paymentDate || '-') + '</td>';
-    html += '  <td style="padding: 12px; text-align: center;">' + (p.depositDate || '-') + '</td>';
+    html += '  <td style="padding: 12px; text-align: center;">' + formatPaymentDate(p.paymentDate) + '</td>';
+    html += '  <td style="padding: 12px; text-align: center;">' + formatPaymentDate(p.depositDate) + '</td>';
     html += '  <td style="padding: 12px; text-align: center;">' + paymentMethodName + '</td>';
     html += '</tr>';
   });
@@ -5808,8 +5903,15 @@ function renderPaymentMobileCards(pagePayments, canWrite) {
     html += '      <div>';
     html += '        <div style="font-weight: 600; font-size: 15px; cursor: pointer;" onclick="openEditPaymentModal(\'' + p.id + '\')">' + studentName + '</div>';
     html += '        <div style="font-size: 12px; color: var(--text2); margin-top: 2px;">' + (studentGrade || '') + (studentGrade && className ? ' · ' : '') + className + '</div>';
-    if (p.isNewStudent) {
-      html += '        <span style="font-size: 10px; background: var(--accent2); color: white; padding: 2px 6px; border-radius: 3px; margin-top: 4px; display: inline-block;">신입</span>';
+    if (p.isNewStudent || p.isTeacherPayment) {
+      html += '        <div style="margin-top: 4px; display: flex; gap: 4px;">';
+      if (p.isNewStudent) {
+        html += '          <span style="font-size: 10px; background: var(--accent2); color: white; padding: 2px 6px; border-radius: 3px;">신입</span>';
+      }
+      if (p.isTeacherPayment) {
+        html += '          <span style="font-size: 10px; background: var(--accent); color: white; padding: 2px 6px; border-radius: 3px;">결제선생</span>';
+      }
+      html += '        </div>';
     }
     html += '      </div>';
     html += '    </div>';
@@ -5823,7 +5925,7 @@ function renderPaymentMobileCards(pagePayments, canWrite) {
     html += '    <div><span style="color: var(--text2);">최종교습비:</span> <span style="color: var(--accent);">' + (p.finalTuition || 0).toLocaleString() + '원</span></div>';
     html += '    <div><span style="color: var(--text2);">수수료:</span> ' + (p.fee || 0).toLocaleString() + '원</div>';
     html += '    <div><span style="color: var(--text2);">결제수단:</span> ' + paymentMethodName + '</div>';
-    html += '    <div><span style="color: var(--text2);">결제일:</span> ' + (p.paymentDate || '-') + '</div>';
+    html += '    <div><span style="color: var(--text2);">결제일:</span> ' + formatPaymentDate(p.paymentDate) + '</div>';
     html += '  </div>';
     
     // 입금금액 강조
@@ -5837,6 +5939,20 @@ function renderPaymentMobileCards(pagePayments, canWrite) {
   
   html += '</div>';
   return html;
+}
+
+function formatPaymentDate(dateStr) {
+  if (!dateStr) return '-';
+  // yyyy-mm-dd -> yyyy. m. d
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    return parts[0] + '. ' + parseInt(parts[1]) + '. ' + parseInt(parts[2]);
+  }
+  // yyyy-mm -> yyyy. m
+  if (parts.length === 2) {
+    return parts[0] + '. ' + parseInt(parts[1]);
+  }
+  return dateStr;
 }
 
 function getFilteredAndSortedPayments() {
