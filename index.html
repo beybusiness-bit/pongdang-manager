@@ -1881,10 +1881,25 @@ const HOLIDAYS_2026 = {
 
 // 기본 권한 초기화 (학원장은 모든 권한)
 function initDefaultPermissions() {
+  // 모든 페이지 ID 수집 (그룹 제외)
+  const allPageIds = [];
   MENUS.forEach(menu => {
-    permissions.owner[menu.id] = { read: true, write: true, ownOnly: false };
-    permissions.teacher[menu.id] = { read: true, write: true, ownOnly: false };
-    permissions.assistant[menu.id] = { read: false, write: false, ownOnly: false };
+    if (menu.type === 'page') {
+      allPageIds.push(menu.id);
+    } else if (menu.type === 'group' && menu.children) {
+      menu.children.forEach(child => {
+        if (child.type === 'page') {
+          allPageIds.push(child.id);
+        }
+      });
+    }
+  });
+  
+  // 권한 초기화
+  allPageIds.forEach(pageId => {
+    permissions.owner[pageId] = { read: true, write: true, ownOnly: false };
+    permissions.teacher[pageId] = { read: true, write: true, ownOnly: false };
+    permissions.assistant[pageId] = { read: false, write: false, ownOnly: false };
   });
   
   // 보조쌤 기본 권한 (읽기만)
