@@ -171,11 +171,9 @@ body {
   color: var(--text);
   z-index: 101;
   transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 .sidebar-toggle-btn:hover {
   background: var(--bg-hover);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 /* 펼쳐진 상태일 때 버튼 위치 변경 */
 .sidebar:not(.collapsed) .sidebar-toggle-btn {
@@ -433,6 +431,7 @@ body {
 
 .page-header {
   margin-bottom: 24px;
+  margin-left: 60px;
 }
 .page-title {
   font-size: 24px;
@@ -980,6 +979,9 @@ input[type="checkbox"] {
 .payment-btn-mobile {
   display: none;
 }
+.payment-delete-mobile {
+  display: none;
+}
 
 /* 대시보드 통계 그리드 */
 .dashboard-stats-grid {
@@ -1011,6 +1013,9 @@ input[type="checkbox"] {
   }
   .payment-btn-mobile {
     display: inline-flex !important;
+  }
+  .payment-delete-mobile {
+    display: block !important;
   }
   .payment-table-desktop {
     display: none;
@@ -2102,7 +2107,7 @@ function initApp() {
     document.getElementById('sidebar').classList.add('collapsed');
     document.getElementById('sidebar-toggle-icon').textContent = '☰';
   } else {
-    document.getElementById('sidebar-toggle-icon').textContent = '◀';
+    document.getElementById('sidebar-toggle-icon').textContent = '✕';
   }
   
   // localStorage에서 마지막 페이지 복원 또는 URL 해시 확인
@@ -2288,7 +2293,7 @@ function toggleSidebar() {
     toggleIcon.textContent = '☰';
   } else {
     sidebar.classList.remove('collapsed');
-    toggleIcon.textContent = '◀';
+    toggleIcon.textContent = '✕';
   }
 }
 
@@ -5741,10 +5746,6 @@ function renderPaymentRecords(canWrite) {
   html += '      <option value="amount-asc" ' + (currentPaymentSort === 'amount-asc' ? 'selected' : '') + '>금액↑</option>';
   html += '    </select>';
   
-  if (canWrite && selectedPaymentIds.length > 0) {
-    html += '    <button class="btn btn-outline btn-sm" onclick="bulkDeletePayments()" style="color: var(--danger); border-color: var(--danger); white-space: nowrap;">삭제 (' + selectedPaymentIds.length + ')</button>';
-  }
-  
   // 모바일 전용 버튼
   if (canWrite) {
     html += '    <button class="btn btn-outline btn-sm payment-btn-mobile" onclick="openCsvUploadModal()" title="CSV 업로드">📤</button>';
@@ -5761,6 +5762,13 @@ function renderPaymentRecords(canWrite) {
   }
   html += '  </div>';
   html += '</div>';
+  
+  // 모바일 전용 삭제 버튼 (필터 아래에 별도 표시)
+  if (canWrite && selectedPaymentIds.length > 0) {
+    html += '<div class="payment-delete-mobile" style="margin-bottom: 12px;">';
+    html += '  <button class="btn btn-outline btn-sm" onclick="bulkDeletePayments()" style="color: var(--danger); border-color: var(--danger); width: 100%;">선택 삭제 (' + selectedPaymentIds.length + ')</button>';
+    html += '</div>';
+  }
   
   // 결제 내역이 없을 때
   if (paymentsData.length === 0) {
@@ -5888,9 +5896,10 @@ function renderPaymentMobileCards(pagePayments, canWrite) {
   pagePayments.forEach(p => {
     const student = studentsData.find(s => s.id === p.studentId);
     const studentName = p.isNewStudent ? p.studentName : (student ? student.name : '(삭제)');
+    const schoolType = student ? student.schoolType : '';
     let studentGrade = '';
     if (student && student.grade) {
-      studentGrade = student.grade.replace(/[^0-9]/g, '') + '학년';
+      studentGrade = student.grade.replace(/[^0-9]/g, '');
     }
     const classObj = classesData.find(c => c.id === p.classId);
     const className = classObj ? classObj.name : '-';
@@ -5900,49 +5909,64 @@ function renderPaymentMobileCards(pagePayments, canWrite) {
     const discountName = discount ? discount.name : '-';
     const isSelected = selectedPaymentIds.includes(p.id);
     
-    html += '<div class="payment-card" style="' + (isSelected ? 'border-color: var(--accent); background: var(--bg-hover);' : '') + '">';
+    // 등록월 포맷 (yyyy년 m월)
+    const enrollmentMonth = p.enrollmentMonth ? p.enrollmentMonth.split('-')[0] + '년 ' + parseInt(p.enrollmentMonth.split('-')[1]) + '월' : '-';
     
-    // 카드 헤더
-    html += '  <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">';
-    html += '    <div style="display: flex; align-items: center; gap: 8px;">';
+    html += '<div class="payment-card" style="position: relative; cursor: pointer; ' + (isSelected ? 'border-color: var(--accent); background: var(--bg-hover);' : '') + '" onclick="openEditPaymentModal(\'' + p.id + '\')">';
+    
+    // 체크박스 - 좌상단
     if (canWrite) {
-      html += '      <input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onchange="togglePaymentSelection(\'' + p.id + '\', this.checked)">';
+      html += '<input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onchange="event.stopPropagation(); togglePaymentSelection(\'' + p.id + '\', this.checked)" style="position: absolute; top: 12px; left: 12px;">';
     }
-    html += '      <div>';
-    html += '        <div style="font-weight: 600; font-size: 15px; cursor: pointer;" onclick="openEditPaymentModal(\'' + p.id + '\')">' + studentName + '</div>';
-    html += '        <div style="font-size: 12px; color: var(--text2); margin-top: 2px;">' + (studentGrade || '') + (studentGrade && className ? ' · ' : '') + className + '</div>';
+    
+    // 카드 내용 (체크박스 여백 고려)
+    html += '<div style="' + (canWrite ? 'margin-left: 32px;' : '') + '">';
+    
+    // 등록월, 결제날짜
+    html += '<div style="font-size: 12px; color: var(--text2); margin-bottom: 8px;">';
+    html += '  <span>등록월: ' + enrollmentMonth + '</span>';
+    html += '  <span style="margin-left: 12px;">결제일: ' + (p.paymentDate ? formatPaymentDate(p.paymentDate) : '결제 예정') + '</span>';
+    html += '</div>';
+    
+    // 학생 이름
+    html += '<div style="font-weight: 600; font-size: 16px; margin-bottom: 6px;">' + studentName + '</div>';
+    
+    // 신입, 결제선생 태그
     if (p.isNewStudent || p.isTeacherPayment) {
-      html += '        <div style="margin-top: 4px; display: flex; gap: 4px;">';
+      html += '<div style="margin-bottom: 8px; display: flex; gap: 4px;">';
       if (p.isNewStudent) {
-        html += '          <span style="font-size: 10px; background: var(--accent2); color: white; padding: 2px 6px; border-radius: 3px;">신입</span>';
+        html += '  <span style="font-size: 10px; background: var(--accent2); color: white; padding: 2px 6px; border-radius: 3px;">신입</span>';
       }
       if (p.isTeacherPayment) {
-        html += '          <span style="font-size: 10px; background: var(--accent); color: white; padding: 2px 6px; border-radius: 3px;">결제선생</span>';
+        html += '  <span style="font-size: 10px; background: var(--accent); color: white; padding: 2px 6px; border-radius: 3px;">결제선생</span>';
       }
-      html += '        </div>';
+      html += '</div>';
     }
-    html += '      </div>';
-    html += '    </div>';
-    html += '    <div style="font-size: 12px; color: var(--text2);">' + p.enrollmentMonth + '</div>';
-    html += '  </div>';
     
-    // 카드 본문 - 2열 그리드
-    html += '  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; margin-bottom: 8px;">';
-    html += '    <div><span style="color: var(--text2);">기본교습비:</span> ' + (p.baseTuition || 0).toLocaleString() + '원</div>';
-    html += '    <div><span style="color: var(--text2);">할인:</span> ' + discountName + '</div>';
-    html += '    <div><span style="color: var(--text2);">최종교습비:</span> <span style="color: var(--accent);">' + (p.finalTuition || 0).toLocaleString() + '원</span></div>';
-    html += '    <div><span style="color: var(--text2);">수수료:</span> ' + (p.fee || 0).toLocaleString() + '원</div>';
-    html += '    <div><span style="color: var(--text2);">결제수단:</span> ' + paymentMethodName + '</div>';
-    html += '    <div><span style="color: var(--text2);">결제일:</span> ' + formatPaymentDate(p.paymentDate) + '</div>';
-    html += '  </div>';
-    
-    // 입금금액 강조
-    html += '  <div style="padding: 8px; background: var(--bg-side); border-radius: 4px; text-align: center;">';
-    html += '    <div style="font-size: 12px; color: var(--text2); margin-bottom: 4px;">입금금액</div>';
-    html += '    <div style="font-size: 18px; font-weight: 600; color: var(--accent);">' + (p.depositAmount || 0).toLocaleString() + '원</div>';
-    html += '  </div>';
-    
+    // 학교급, 학년, 담당T
+    html += '<div style="font-size: 13px; color: var(--text2); margin-bottom: 6px;">';
+    html += (schoolType || '-') + ' · ' + (studentGrade || '-') + ' · ' + (p.teacherName || '-');
     html += '</div>';
+    
+    // 수강반(횟수)
+    html += '<div style="font-size: 13px; margin-bottom: 8px;">';
+    html += className + (p.count ? '(' + p.count + ')' : '');
+    html += '</div>';
+    
+    // 최종교습비, 결제수단
+    html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">';
+    html += '  <div style="font-size: 15px; font-weight: 600; color: var(--accent);">' + (p.finalTuition || 0).toLocaleString() + '원</div>';
+    html += '  <div style="font-size: 13px; color: var(--text2);">' + paymentMethodName + '</div>';
+    html += '</div>';
+    
+    // 입금금액, 수수료
+    html += '<div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px;">';
+    html += '  <div><span style="color: var(--text2);">입금금액:</span> <span style="font-weight: 600; color: var(--accent);">' + (p.depositAmount || 0).toLocaleString() + '원</span></div>';
+    html += '  <div><span style="color: var(--text2);">수수료:</span> <span style="color: var(--accent);">' + (p.fee || 0).toLocaleString() + '원</span></div>';
+    html += '</div>';
+    
+    html += '</div>'; // 내용 끝
+    html += '</div>'; // 카드 끝
   });
   
   html += '</div>';
