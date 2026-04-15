@@ -136,14 +136,6 @@ body {
 }
 .app.active { display: block; }
 
-.sidebar-overlay {
-  display: none;
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 98;
-}
-.sidebar-overlay.open { display: block; }
 
 .sidebar {
   position: fixed;
@@ -154,49 +146,90 @@ body {
   display: flex;
   flex-direction: column;
   z-index: 99;
-  transition: all 0.3s;
+  transition: all 0.25s ease;
+  overflow: hidden;
 }
 .sidebar.collapsed {
-  width: 60px;
+  width: 48px;
 }
+/* 접힌 상태에서 텍스트 숨기기 */
+.sidebar.collapsed .logo,
+.sidebar.collapsed .logo-sub,
 .sidebar.collapsed .nav-item span:not(.nav-icon),
 .sidebar.collapsed .nav-group-header span:not(.nav-icon),
 .sidebar.collapsed .nav-group-toggle,
 .sidebar.collapsed .favorite-star,
-.sidebar.collapsed .logo,
 .sidebar.collapsed .user-name,
-.sidebar.collapsed .user-role {
-  display: none;
+.sidebar.collapsed .user-role,
+.sidebar.collapsed .sync-status span {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
 }
+/* 접힌 상태에서 아이템 중앙 정렬 */
 .sidebar.collapsed .nav-item,
 .sidebar.collapsed .nav-group-header {
   justify-content: center;
-  padding: 12px;
+  padding: 10px 0;
 }
 .sidebar.collapsed .nav-icon {
   margin-right: 0;
 }
+.sidebar.collapsed .logo-wrap {
+  padding: 12px 0;
+  text-align: center;
+}
+.sidebar.collapsed .user-info {
+  justify-content: center;
+  padding: 12px 0;
+}
+.sidebar.collapsed .user-avatar {
+  margin-right: 0;
+}
+/* 토글 버튼 - 클로드 앱 스타일 */
 .sidebar-toggle-btn {
   position: absolute;
-  right: -12px;
-  top: 20px;
-  width: 24px;
-  height: 24px;
-  background: var(--bg-side);
-  border: 1px solid var(--border);
-  border-radius: 50%;
+  left: 8px;
+  top: 16px;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 18px;
   color: var(--text2);
   z-index: 100;
   transition: all 0.2s;
 }
 .sidebar-toggle-btn:hover {
-  background: white;
-  color: var(--accent);
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.sidebar.collapsed .sidebar-toggle-btn {
+  left: 8px;
+}
+/* 토글 버튼 툴팁 */
+.sidebar-toggle-tooltip {
+  position: absolute;
+  left: 52px;
+  top: 16px;
+  background: #1a1a1a;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 101;
+}
+.sidebar.collapsed .sidebar-toggle-btn:hover + .sidebar-toggle-tooltip {
+  opacity: 1;
 }
 .logo-wrap {
   padding: 20px;
@@ -430,10 +463,10 @@ body {
 .main {
   margin-left: var(--nav);
   min-height: 100vh;
-  transition: margin-left 0.3s;
+  transition: margin-left 0.25s ease;
 }
 .sidebar.collapsed ~ .main {
-  margin-left: 60px;
+  margin-left: 48px;
 }
 
 .page {
@@ -1024,16 +1057,16 @@ input[type="checkbox"] {
 <!-- 메인 앱 -->
 <div class="app" id="app">
   <!-- 사이드바 오버레이 (모바일) -->
-  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
   
   <!-- 사이드바 -->
   <nav class="sidebar" id="sidebar">
-    <!-- 토글 버튼 -->
-    <div class="sidebar-toggle-btn" onclick="toggleSidebar()">
-      <span id="sidebar-toggle-icon">▶</span>
-    </div>
+    <!-- 토글 버튼 (햄버거 메뉴) -->
+    <button class="sidebar-toggle-btn" onclick="toggleSidebar()">
+      <span id="sidebar-toggle-icon">☰</span>
+    </button>
+    <div class="sidebar-toggle-tooltip">사이드바 펼치기</div>
     
-    <div class="logo-wrap">
+    <div class="logo-wrap" style="margin-top: 40px;">
       <div class="logo">🎓 풍당수학</div>
       <div class="logo-sub">학원 관리 시스템</div>
     </div>
@@ -2079,9 +2112,9 @@ function initApp() {
   // 사이드바 초기 상태 설정
   if (isSidebarCollapsed) {
     document.getElementById('sidebar').classList.add('collapsed');
-    document.getElementById('sidebar-toggle-icon').textContent = '▶';
+    document.getElementById('sidebar-toggle-icon').textContent = '☰';
   } else {
-    document.getElementById('sidebar-toggle-icon').textContent = '◀';
+    document.getElementById('sidebar-toggle-icon').textContent = '✕';
   }
   
   // localStorage에서 마지막 페이지 복원 또는 URL 해시 확인
@@ -2264,10 +2297,10 @@ function toggleSidebar() {
   
   if (isSidebarCollapsed) {
     sidebar.classList.add('collapsed');
-    toggleIcon.textContent = '▶';
+    toggleIcon.textContent = '☰';
   } else {
     sidebar.classList.remove('collapsed');
-    toggleIcon.textContent = '◀';
+    toggleIcon.textContent = '✕';
   }
 }
 
@@ -2589,30 +2622,8 @@ function navigateTo(pageId) {
   if (pageId === 'textbooks') {
     renderTextbooksPage();
   }
-  
-  // 모바일에서 사이드바 닫기
-  closeSidebar();
 }
 
-function toggleSidebar() {
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('sidebar-overlay');
-  
-  if (sidebar && overlay) {
-    sidebar.classList.toggle('open');
-    overlay.classList.toggle('open');
-  }
-}
-
-function closeSidebar() {
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('sidebar-overlay');
-  
-  if (sidebar && overlay) {
-    sidebar.classList.remove('open');
-    overlay.classList.remove('open');
-  }
-}
 
 // ============ 권한 설정 ============
 function openPermissionsModal() {
@@ -3744,6 +3755,7 @@ function loadSampleData() {
       number: '123',
       name: '홍길동',
       school: '서울초등학교',
+      schoolType: '초등',
       grade: '초5',
       birthdate: '2014-03-15',
       teacher: '김선생',
@@ -3764,6 +3776,7 @@ function loadSampleData() {
       number: '166',
       name: '김영희',
       school: '양운중학교',
+      schoolType: '중등',
       grade: '중2',
       birthdate: '2012-06-08',
       teacher: '이선생',
@@ -3784,6 +3797,7 @@ function loadSampleData() {
       number: '201',
       name: '이철수',
       school: '명문고등학교',
+      schoolType: '고등',
       grade: '고1',
       birthdate: '2009-11-05',
       teacher: '박선생',
@@ -5716,23 +5730,23 @@ function renderPaymentRecords(canWrite) {
   // 툴바
   html += '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">';
   
-  // 왼쪽: 필터 (너비 축소하여 2-3줄로)
-  html += '  <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center; flex: 1; max-width: 700px;">';
-  html += '    <input type="month" class="form-input form-input-sm" value="' + currentPaymentFilter.month + '" onchange="currentPaymentFilter.month = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()" style="width: 120px;">';
-  html += '    <input type="text" class="form-input form-input-sm" placeholder="학생명" value="' + currentPaymentFilter.search + '" onchange="currentPaymentFilter.search = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()" style="width: 100px;">';
-  html += '    <select class="form-input form-input-sm" style="width: 90px;" onchange="currentPaymentFilter.schoolType = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()">';
+  // 왼쪽: 필터 (개별 필터 너비 축소하여 한 줄에 더 많이)
+  html += '  <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center; flex: 1;">';
+  html += '    <input type="month" class="form-input form-input-sm" value="' + currentPaymentFilter.month + '" onchange="currentPaymentFilter.month = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()" style="width: 115px;">';
+  html += '    <input type="text" class="form-input form-input-sm" placeholder="학생명" value="' + currentPaymentFilter.search + '" onchange="currentPaymentFilter.search = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()" style="width: 85px;">';
+  html += '    <select class="form-input form-input-sm" style="width: 80px;" onchange="currentPaymentFilter.schoolType = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()">';
   html += '      <option value="">학교급</option>';
   html += '      <option value="초등" ' + (currentPaymentFilter.schoolType === '초등' ? 'selected' : '') + '>초등</option>';
   html += '      <option value="중등" ' + (currentPaymentFilter.schoolType === '중등' ? 'selected' : '') + '>중등</option>';
   html += '      <option value="고등" ' + (currentPaymentFilter.schoolType === '고등' ? 'selected' : '') + '>고등</option>';
   html += '    </select>';
-  html += '    <select class="form-input form-input-sm" style="width: 110px;" onchange="currentPaymentFilter.classId = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()">';
+  html += '    <select class="form-input form-input-sm" style="width: 95px;" onchange="currentPaymentFilter.classId = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()">';
   html += '      <option value="">수강반</option>';
   classesData.forEach(c => {
     html += '      <option value="' + c.id + '" ' + (currentPaymentFilter.classId === c.id ? 'selected' : '') + '>' + c.name + '</option>';
   });
   html += '    </select>';
-  html += '    <select class="form-input form-input-sm" style="width: 100px;" onchange="currentPaymentSort = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()">';
+  html += '    <select class="form-input form-input-sm" style="width: 90px;" onchange="currentPaymentSort = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()">';
   html += '      <option value="date-desc" ' + (currentPaymentSort === 'date-desc' ? 'selected' : '') + '>최신순</option>';
   html += '      <option value="date-asc" ' + (currentPaymentSort === 'date-asc' ? 'selected' : '') + '>오래된순</option>';
   html += '      <option value="amount-desc" ' + (currentPaymentSort === 'amount-desc' ? 'selected' : '') + '>금액↓</option>';
@@ -5782,29 +5796,29 @@ function renderPaymentRecords(canWrite) {
   const endIdx = startIdx + paymentPagination.pageSize;
   const pagePayments = filteredPayments.slice(startIdx, endIdx);
   
-  // 데스크톱 테이블
-  html += '<div class="payment-table-desktop">';
-  html += '<table style="width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed;">';
+  // 데스크톱 테이블 (가로 스크롤 가능)
+  html += '<div class="payment-table-desktop" style="overflow-x: auto;">';
+  html += '<table style="width: max-content; min-width: 100%; border-collapse: collapse; font-size: 13px;">';
   html += '<thead>';
   html += '  <tr style="background: var(--bg-side); border-bottom: 2px solid var(--border);">';
   if (canWrite) {
     html += '    <th style="padding: 12px; width: 40px; text-align: center;"><input type="checkbox" id="select-all-payments" onchange="toggleSelectAllPayments(this.checked)"></th>';
   }
-  html += '    <th style="padding: 12px; width: 120px; text-align: left;">학생</th>';
-  html += '    <th style="padding: 12px; width: 60px; text-align: center;">학교급</th>';
-  html += '    <th style="padding: 12px; width: 50px; text-align: center;">학년</th>';
-  html += '    <th style="padding: 12px; width: 80px; text-align: center;">담당T</th>';
-  html += '    <th style="padding: 12px; width: 80px; text-align: center;">등록월</th>';
-  html += '    <th style="padding: 12px; width: 60px; text-align: center;">요일</th>';
-  html += '    <th style="padding: 12px; width: 100px; text-align: center;">수강반</th>';
-  html += '    <th style="padding: 12px; width: 90px; text-align: right;">기본교습비</th>';
-  html += '    <th style="padding: 12px; width: 90px; text-align: right;">최종교습비</th>';
-  html += '    <th style="padding: 12px; width: 80px; text-align: center;">할인</th>';
-  html += '    <th style="padding: 12px; width: 100px; text-align: right; font-weight: 600;">입금금액</th>';
-  html += '    <th style="padding: 12px; width: 70px; text-align: right;">수수료</th>';
-  html += '    <th style="padding: 12px; width: 100px; text-align: center;">결제날짜</th>';
-  html += '    <th style="padding: 12px; width: 100px; text-align: center;">입금날짜</th>';
-  html += '    <th style="padding: 12px; width: 80px; text-align: center;">결제수단</th>';
+  html += '    <th style="padding: 12px; width: 80px; text-align: left;">학생</th>';
+  html += '    <th style="padding: 12px; width: 50px; text-align: center;">학교급</th>';
+  html += '    <th style="padding: 12px; width: 40px; text-align: center;">학년</th>';
+  html += '    <th style="padding: 12px; width: 70px; text-align: center;">담당T</th>';
+  html += '    <th style="padding: 12px; width: 75px; text-align: center;">등록월</th>';
+  html += '    <th style="padding: 12px; width: 55px; text-align: center;">요일</th>';
+  html += '    <th style="padding: 12px; width: 120px; text-align: center;">수강반</th>';
+  html += '    <th style="padding: 12px; width: 85px; text-align: right;">기본교습비</th>';
+  html += '    <th style="padding: 12px; width: 85px; text-align: right;">최종교습비</th>';
+  html += '    <th style="padding: 12px; width: 75px; text-align: center;">할인</th>';
+  html += '    <th style="padding: 12px; width: 85px; text-align: right;">입금금액</th>';
+  html += '    <th style="padding: 12px; width: 65px; text-align: right;">수수료</th>';
+  html += '    <th style="padding: 12px; width: 90px; text-align: center;">결제날짜</th>';
+  html += '    <th style="padding: 12px; width: 90px; text-align: center;">입금날짜</th>';
+  html += '    <th style="padding: 12px; width: 75px; text-align: center;">결제수단</th>';
   html += '  </tr>';
   html += '</thead>';
   html += '<tbody>';
@@ -5815,7 +5829,7 @@ function renderPaymentRecords(canWrite) {
     const schoolType = student ? student.schoolType : '';
     let studentGrade = '';
     if (student && student.grade) {
-      studentGrade = student.grade.replace(/[^0-9]/g, '') + '학년';
+      studentGrade = student.grade.replace(/[^0-9]/g, '');  // '학년' 제거, 숫자만
     }
     const classObj = classesData.find(c => c.id === p.classId);
     const className = classObj ? classObj.name : '-';
@@ -5843,15 +5857,15 @@ function renderPaymentRecords(canWrite) {
     }
     html += '  </td>';
     html += '  <td style="padding: 12px; text-align: center;">' + (schoolType || '-') + '</td>';
-    html += '  <td style="padding: 12px; text-align: center;">' + studentGrade + '</td>';
+    html += '  <td style="padding: 12px; text-align: center;">' + (studentGrade || '-') + '</td>';
     html += '  <td style="padding: 12px; text-align: center;">' + (p.teacherName || '-') + '</td>';
-    html += '  <td style="padding: 12px; text-align: center;">' + p.enrollmentMonth + '</td>';
+    html += '  <td style="padding: 12px; text-align: center;">' + formatPaymentDate(p.enrollmentMonth) + '</td>';
     html += '  <td style="padding: 12px; text-align: center;">' + (p.days || '-') + '</td>';
     html += '  <td style="padding: 12px; text-align: center;">' + className + '</td>';
     html += '  <td style="padding: 12px; text-align: right;">' + (p.baseTuition || 0).toLocaleString() + '</td>';
     html += '  <td style="padding: 12px; text-align: right; color: var(--accent);">' + (p.finalTuition || 0).toLocaleString() + '</td>';
     html += '  <td style="padding: 12px; text-align: center;">' + discountName + '</td>';
-    html += '  <td style="padding: 12px; text-align: right; font-size: 15px; font-weight: 600; color: var(--accent);">' + (p.depositAmount || 0).toLocaleString() + '</td>';
+    html += '  <td style="padding: 12px; text-align: right; font-weight: 600; color: var(--accent);">' + (p.depositAmount || 0).toLocaleString() + '</td>';
     html += '  <td style="padding: 12px; text-align: right;">' + (p.fee || 0).toLocaleString() + '</td>';
     html += '  <td style="padding: 12px; text-align: center;">' + formatPaymentDate(p.paymentDate) + '</td>';
     html += '  <td style="padding: 12px; text-align: center;">' + formatPaymentDate(p.depositDate) + '</td>';
