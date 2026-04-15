@@ -2126,7 +2126,14 @@ function renderSidebar() {
       html += '</div>';
       
     } else if (menu.type === 'group') {
-      // 대분류 그룹
+      // 대분류 그룹 - 자식 메뉴 중 하나라도 접근 가능한지 확인
+      const hasAccessibleChild = menu.children && menu.children.some(child => {
+        const perm = permissions[currentUser.role][child.id];
+        return perm && perm.read;
+      });
+      
+      if (!hasAccessibleChild) return;
+      
       const isExpanded = expandedGroups.includes(menu.id);
       
       html += '<div class="nav-group">';
