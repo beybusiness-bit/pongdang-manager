@@ -1500,145 +1500,126 @@ input[type="checkbox"] {
     <div class="modal-body">
       <input type="hidden" id="payment-id">
       
-      <!-- 신입 여부 토글 (상단) -->
-      <div style="margin-bottom: 20px; padding: 16px; background: var(--bg-side); border-radius: var(--radius-sm);">
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <div>
-            <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">신입 여부</div>
-            <div style="font-size: 12px; color: var(--text2);">신입이면 학생 목록에서 선택할 수 없습니다</div>
-          </div>
+      <!-- 1행: 신입여부 토글, 등록월, 학생 선택 -->
+      <div style="display: grid; grid-template-columns: 120px 150px 1fr; gap: 12px; margin-bottom: 16px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">신입 여부</label>
           <label class="toggle-switch">
             <input type="checkbox" id="payment-is-new" onchange="toggleNewStudentMode(this.checked)">
             <span class="toggle-slider"></span>
           </label>
         </div>
-      </div>
-      
-      <!-- 학생 선택 또는 신입 정보 입력 -->
-      <div id="existing-student-section">
-        <div class="form-group">
-          <label class="form-label">학생 선택 *</label>
-          <select class="form-input" id="payment-student-id" onchange="loadStudentInfo()"></select>
+        
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">등록월 *</label>
+          <input type="month" class="form-input" id="payment-enrollment-month">
         </div>
-      </div>
-      
-      <div id="new-student-section" style="display: none;">
-        <div class="form-group">
-          <label class="form-label">학생 이름 *</label>
-          <input type="text" class="form-input" id="payment-new-student-name" placeholder="신입 학생 이름">
-        </div>
-      </div>
-      
-      <!-- 학생 정보 (읽기 전용) -->
-      <div id="student-info-section" style="display: none; margin-bottom: 20px; padding: 16px; background: var(--bg-side); border-radius: var(--radius-sm);">
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; font-size: 13px;">
-          <div>
-            <span style="color: var(--text2);">학교급:</span>
-            <span id="student-school-type" style="margin-left: 8px; font-weight: 500;"></span>
-          </div>
-          <div>
-            <span style="color: var(--text2);">학년:</span>
-            <span id="student-grade" style="margin-left: 8px; font-weight: 500;"></span>
-          </div>
-          <div>
-            <span style="color: var(--text2);">요일:</span>
-            <span id="student-days" style="margin-left: 8px; font-weight: 500;"></span>
-          </div>
-        </div>
-      </div>
-      
-      <!-- 입력 필드 -->
-      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
-        <!-- 왼쪽 열 -->
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-          <div class="form-group">
-            <label class="form-label">등록월 *</label>
-            <input type="month" class="form-input" id="payment-enrollment-month">
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">수강반 *</label>
-            <select class="form-input" id="payment-class" onchange="loadClassTuition()">
-              <option value="">수강반 선택</option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">기본교습비</label>
-            <input type="number" class="form-input" id="payment-base-tuition" readonly style="background: var(--bg-side);">
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">할인</label>
-            <select class="form-input" id="payment-discount-type" onchange="calculateFinalAmount()">
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">할인 금액</label>
-            <input type="number" class="form-input" id="payment-discount-amount" readonly style="background: var(--bg-side);">
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">최종교습비</label>
-            <input type="number" class="form-input" id="payment-final-tuition" readonly style="background: var(--bg-side); font-weight: 600;">
+        
+        <div id="existing-student-section">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">학생 선택 *</label>
+            <select class="form-input" id="payment-student-id" onchange="loadStudentInfo()"></select>
           </div>
         </div>
         
-        <!-- 오른쪽 열 -->
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-          <div class="form-group">
-            <label class="form-label">담당T</label>
-            <input type="text" class="form-input" id="payment-teacher">
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">요일</label>
-            <input type="text" class="form-input" id="payment-days">
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">횟수</label>
-            <input type="number" class="form-input" id="payment-count" placeholder="선택사항">
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">결제수단 *</label>
-            <select class="form-input" id="payment-method" onchange="calculateFinalAmount()">
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">수수료</label>
-            <input type="number" class="form-input" id="payment-fee" readonly style="background: var(--bg-side);">
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">입금금액</label>
-            <input type="number" class="form-input" id="payment-deposit" readonly style="background: var(--bg-side); font-weight: 600;">
+        <div id="new-student-section" style="display: none; grid-column: 3;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">학생 이름 *</label>
+            <input type="text" class="form-input" id="payment-new-student-name" placeholder="신입 학생 이름">
           </div>
         </div>
       </div>
       
-      <!-- 날짜 -->
-      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 16px;">
-        <div class="form-group">
+      <!-- 2행: 담당T(35%), 요일(65%) -->
+      <div style="display: grid; grid-template-columns: 35% 65%; gap: 12px; margin-bottom: 16px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">담당T</label>
+          <input type="text" class="form-input" id="payment-teacher">
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">요일</label>
+          <input type="text" class="form-input" id="payment-days" placeholder="월, 화, 수, 목, 금">
+        </div>
+      </div>
+      
+      <!-- 3행: 수강반(50%), 횟수(10%), 기본교습비(40%) -->
+      <div style="display: grid; grid-template-columns: 50% 10% 40%; gap: 12px; margin-bottom: 16px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">수강반 *</label>
+          <select class="form-input" id="payment-class" onchange="loadClassTuition()">
+            <option value="">수강반 선택</option>
+          </select>
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">횟수</label>
+          <input type="number" class="form-input" id="payment-count" placeholder="0">
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">기본교습비</label>
+          <input type="text" class="form-input" id="payment-base-tuition" readonly style="background: var(--bg-side);">
+        </div>
+      </div>
+      
+      <!-- 4행: 할인(20%), 할인금액(40%), 최종교습비(40%) -->
+      <div style="display: grid; grid-template-columns: 20% 40% 40%; gap: 12px; margin-bottom: 16px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">할인</label>
+          <select class="form-input" id="payment-discount-type" onchange="calculateFinalAmount()">
+          </select>
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">할인 금액</label>
+          <input type="text" class="form-input" id="payment-discount-amount" readonly style="background: var(--bg-side);">
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">최종교습비</label>
+          <input type="text" class="form-input" id="payment-final-tuition" readonly style="background: var(--bg-side);">
+        </div>
+      </div>
+      
+      <!-- 5행: 결제선생(20%), 결제날짜(30%), 입금날짜(30%), 결제수단(20%) -->
+      <div style="display: grid; grid-template-columns: 20% 30% 30% 20%; gap: 12px; margin-bottom: 16px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">결제선생</label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding-top: 8px;">
+            <input type="checkbox" id="payment-teacher-payment">
+            <span style="font-size: 13px;">체크</span>
+          </label>
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">결제날짜 *</label>
           <input type="date" class="form-input" id="payment-date">
         </div>
         
-        <div class="form-group">
+        <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">입금날짜 *</label>
           <input type="date" class="form-input" id="payment-deposit-date">
         </div>
+        
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">결제수단 *</label>
+          <select class="form-input" id="payment-method" onchange="calculateFinalAmount()">
+          </select>
+        </div>
       </div>
       
-      <!-- 결제선생 체크박스 -->
-      <div class="form-group" style="margin-top: 16px;">
-        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-          <input type="checkbox" id="payment-teacher-payment">
-          <span class="form-label" style="margin-bottom: 0;">결제선생</span>
-        </label>
+      <!-- 6행: 수수료(50%), 입금금액(50%) -->
+      <div style="display: grid; grid-template-columns: 50% 50%; gap: 12px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">수수료</label>
+          <input type="text" class="form-input" id="payment-fee" readonly style="background: var(--bg-side);">
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">입금금액</label>
+          <input type="text" class="form-input" id="payment-deposit" readonly style="background: var(--bg-side); font-size: 16px; font-weight: 600; color: var(--accent);">
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -1828,14 +1809,17 @@ let discountTypesData = []; // DiscountTypes (할인 종류)
 let operatingCostsData = []; // OperatingCosts (운영비용)
 let costCategoriesData = []; // CostCategories (비용 항목 카테고리)
 
+let currentPaymentTab = 'register'; // register(월별등록대장) 또는 records(결제기록)
 let currentPaymentFilter = {
   search: '',
   month: '', // 등록월 필터
+  schoolType: '', // 학교급
+  classId: '', // 수강반
   paymentMethod: '',
   teacher: '',
   isNewStudent: '' // 신입여부
 };
-let currentPaymentSort = 'paymentDate-desc';
+let currentPaymentSort = 'date-desc';
 let selectedPaymentIds = [];
 let paymentPagination = {
   currentPage: 1,
@@ -5616,13 +5600,60 @@ function renderPaymentsPage() {
   
   let html = '';
   
+  // 탭 헤더
+  html += '<div style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--border);">';
+  html += '  <button class="tab-btn ' + (currentPaymentTab === 'register' ? 'active' : '') + '" onclick="switchPaymentTab(\'register\')">월별등록대장</button>';
+  html += '  <button class="tab-btn ' + (currentPaymentTab === 'records' ? 'active' : '') + '" onclick="switchPaymentTab(\'records\')">결제기록</button>';
+  html += '</div>';
+  
+  // 탭 내용
+  if (currentPaymentTab === 'register') {
+    // 월별등록대장 (준비중)
+    html += '<div class="empty-state">';
+    html += '  <div class="empty-icon">📋</div>';
+    html += '  <div class="empty-text">월별등록대장 준비중</div>';
+    html += '</div>';
+  } else {
+    // 결제기록
+    html += renderPaymentRecords(canWrite);
+  }
+  
+  container.innerHTML = html;
+}
+
+function switchPaymentTab(tab) {
+  currentPaymentTab = tab;
+  renderPaymentsPage();
+}
+
+function renderPaymentRecords(canWrite) {
+  let html = '';
+  
   // 툴바
   html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">';
   
-  // 왼쪽: 필터 & 선택된 항목 액션
+  // 왼쪽: 필터
   html += '  <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">';
-  html += '    <input type="month" class="form-input form-input-sm" value="' + currentPaymentFilter.month + '" onchange="currentPaymentFilter.month = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()" style="width: 150px;">';
-  html += '    <input type="text" class="form-input form-input-sm" placeholder="학생 이름 검색" value="' + currentPaymentFilter.search + '" onchange="currentPaymentFilter.search = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()" style="width: 160px;">';
+  html += '    <input type="month" class="form-input form-input-sm" value="' + currentPaymentFilter.month + '" onchange="currentPaymentFilter.month = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()" style="width: 150px;" placeholder="등록월">';
+  html += '    <input type="text" class="form-input form-input-sm" placeholder="학생명 검색" value="' + currentPaymentFilter.search + '" onchange="currentPaymentFilter.search = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()" style="width: 140px;">';
+  html += '    <select class="form-input form-input-sm" style="width: 120px;" onchange="currentPaymentFilter.schoolType = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()">';
+  html += '      <option value="">전체 학교급</option>';
+  html += '      <option value="초등" ' + (currentPaymentFilter.schoolType === '초등' ? 'selected' : '') + '>초등</option>';
+  html += '      <option value="중등" ' + (currentPaymentFilter.schoolType === '중등' ? 'selected' : '') + '>중등</option>';
+  html += '      <option value="고등" ' + (currentPaymentFilter.schoolType === '고등' ? 'selected' : '') + '>고등</option>';
+  html += '    </select>';
+  html += '    <select class="form-input form-input-sm" style="width: 140px;" onchange="currentPaymentFilter.classId = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()">';
+  html += '      <option value="">전체 수강반</option>';
+  classesData.forEach(c => {
+    html += '      <option value="' + c.id + '" ' + (currentPaymentFilter.classId === c.id ? 'selected' : '') + '>' + c.name + '</option>';
+  });
+  html += '    </select>';
+  html += '    <select class="form-input form-input-sm" style="width: 100px;" onchange="currentPaymentSort = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()">';
+  html += '      <option value="date-desc" ' + (currentPaymentSort === 'date-desc' ? 'selected' : '') + '>최신순</option>';
+  html += '      <option value="date-asc" ' + (currentPaymentSort === 'date-asc' ? 'selected' : '') + '>오래된순</option>';
+  html += '      <option value="amount-desc" ' + (currentPaymentSort === 'amount-desc' ? 'selected' : '') + '>금액 높은순</option>';
+  html += '      <option value="amount-asc" ' + (currentPaymentSort === 'amount-asc' ? 'selected' : '') + '>금액 낮은순</option>';
+  html += '    </select>';
   
   if (canWrite && selectedPaymentIds.length > 0) {
     html += '    <button class="btn btn-outline btn-sm" onclick="bulkDeletePayments()" style="color: var(--danger); border-color: var(--danger);">선택 삭제 (' + selectedPaymentIds.length + ')</button>';
@@ -5633,8 +5664,7 @@ function renderPaymentsPage() {
   // 오른쪽: 버튼
   html += '  <div style="display: flex; gap: 8px;">';
   if (canWrite) {
-    html += '    <button class="btn btn-outline btn-sm" onclick="openCsvUploadModal()">📁 CSV 업로드</button>';
-    html += '    <button class="btn btn-outline btn-sm" onclick="downloadPaymentsCsv()">💾 CSV 다운로드</button>';
+    html += '    <button class="btn btn-outline btn-sm" onclick="openCsvUploadModal()">CSV 업로드</button>';
     html += '    <button class="btn btn-primary btn-sm" onclick="openAddPaymentModal()">+ 결제 추가</button>';
   }
   html += '  </div>';
@@ -5652,12 +5682,11 @@ function renderPaymentsPage() {
       html += '  </div>';
     }
     html += '</div>';
-    container.innerHTML = html;
-    return;
+    return html;
   }
   
-  // 필터링된 결제 목록
-  const filteredPayments = getFilteredPayments();
+  // 필터링 및 정렬된 결제 목록
+  const filteredPayments = getFilteredAndSortedPayments();
   paymentPagination.totalItems = filteredPayments.length;
   
   const totalPages = Math.ceil(filteredPayments.length / paymentPagination.pageSize);
@@ -5671,28 +5700,41 @@ function renderPaymentsPage() {
   
   // 데스크톱 테이블
   html += '<div class="payment-table-desktop">';
-  html += '<table style="width: 100%; border-collapse: collapse; font-size: 13px;">';
+  html += '<table style="width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed;">';
   html += '<thead>';
   html += '  <tr style="background: var(--bg-side); border-bottom: 2px solid var(--border);">';
   if (canWrite) {
-    html += '    <th style="padding: 12px; width: 40px;"><input type="checkbox" id="select-all-payments" onchange="toggleSelectAllPayments(this.checked)"></th>';
+    html += '    <th style="padding: 12px; width: 40px; text-align: center;"><input type="checkbox" id="select-all-payments" onchange="toggleSelectAllPayments(this.checked)"></th>';
   }
-  html += '    <th style="padding: 12px; text-align: left;">학생</th>';
-  html += '    <th style="padding: 12px; text-align: center;">등록월</th>';
-  html += '    <th style="padding: 12px; text-align: right;">기본교습비</th>';
-  html += '    <th style="padding: 12px; text-align: left;">할인</th>';
-  html += '    <th style="padding: 12px; text-align: right;">최종교습비</th>';
-  html += '    <th style="padding: 12px; text-align: right;">입금금액</th>';
-  html += '    <th style="padding: 12px; text-align: center;">결제수단</th>';
-  html += '    <th style="padding: 12px; text-align: center;">결제날짜</th>';
-  html += '    <th style="padding: 12px; text-align: center;">입금날짜</th>';
+  html += '    <th style="padding: 12px; width: 50px; text-align: center;">신입</th>';
+  html += '    <th style="padding: 12px; width: 100px; text-align: left;">학생</th>';
+  html += '    <th style="padding: 12px; width: 50px; text-align: center;">학년</th>';
+  html += '    <th style="padding: 12px; width: 80px; text-align: center;">담당T</th>';
+  html += '    <th style="padding: 12px; width: 80px; text-align: center;">등록월</th>';
+  html += '    <th style="padding: 12px; width: 50px; text-align: center;">요일</th>';
+  html += '    <th style="padding: 12px; width: 100px; text-align: left;">수강반</th>';
+  html += '    <th style="padding: 12px; width: 90px; text-align: right;">기본교습비</th>';
+  html += '    <th style="padding: 12px; width: 90px; text-align: right;">최종교습비</th>';
+  html += '    <th style="padding: 12px; width: 80px; text-align: left;">할인</th>';
+  html += '    <th style="padding: 12px; width: 40px; text-align: center;">결제선생</th>';
+  html += '    <th style="padding: 12px; width: 100px; text-align: right; font-weight: 600;">입금금액</th>';
+  html += '    <th style="padding: 12px; width: 70px; text-align: right;">수수료</th>';
+  html += '    <th style="padding: 12px; width: 90px; text-align: center;">결제날짜</th>';
+  html += '    <th style="padding: 12px; width: 90px; text-align: center;">입금날짜</th>';
+  html += '    <th style="padding: 12px; width: 80px; text-align: center;">결제수단</th>';
   html += '  </tr>';
   html += '</thead>';
   html += '<tbody>';
   
   pagePayments.forEach(p => {
     const student = studentsData.find(s => s.id === p.studentId);
-    const studentName = p.isNewStudent ? p.studentName : (student ? student.name : '(삭제된 학생)');
+    const studentName = p.isNewStudent ? p.studentName : (student ? student.name : '(삭제)');
+    let studentGrade = '';
+    if (student && student.grade) {
+      studentGrade = student.grade.replace(/[^0-9]/g, '') + '학년';
+    }
+    const classObj = classesData.find(c => c.id === p.classId);
+    const className = classObj ? classObj.name : '-';
     const paymentMethod = paymentMethodsData.find(pm => pm.id === p.paymentMethodId);
     const paymentMethodName = paymentMethod ? paymentMethod.name : '-';
     const discount = discountTypesData.find(dt => dt.id === p.discountTypeId);
@@ -5701,17 +5743,24 @@ function renderPaymentsPage() {
     
     html += '<tr style="border-bottom: 1px solid var(--border); ' + (isSelected ? 'background: var(--bg-hover);' : '') + '">';
     if (canWrite) {
-      html += '  <td style="padding: 12px;"><input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onchange="togglePaymentSelection(\'' + p.id + '\', this.checked)"></td>';
+      html += '  <td style="padding: 12px; text-align: center;"><input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onchange="togglePaymentSelection(\'' + p.id + '\', this.checked)"></td>';
     }
-    html += '  <td style="padding: 12px; font-weight: 500; cursor: pointer;" onclick="openEditPaymentModal(\'' + p.id + '\')">' + studentName + (p.isNewStudent ? ' <span style="font-size: 10px; background: var(--accent2); color: white; padding: 2px 6px; border-radius: 3px;">신입</span>' : '') + '</td>';
+    html += '  <td style="padding: 12px; text-align: center;">' + (p.isNewStudent ? '<span style="font-size: 10px; background: var(--accent2); color: white; padding: 2px 6px; border-radius: 3px;">신입</span>' : '-') + '</td>';
+    html += '  <td style="padding: 12px; font-weight: 500; cursor: pointer;" onclick="openEditPaymentModal(\'' + p.id + '\')">' + studentName + '</td>';
+    html += '  <td style="padding: 12px; text-align: center;">' + studentGrade + '</td>';
+    html += '  <td style="padding: 12px; text-align: center;">' + (p.teacherName || '-') + '</td>';
     html += '  <td style="padding: 12px; text-align: center;">' + p.enrollmentMonth + '</td>';
-    html += '  <td style="padding: 12px; text-align: right;">' + (p.baseTuition || 0).toLocaleString() + '원</td>';
+    html += '  <td style="padding: 12px; text-align: center;">' + (p.days || '-') + '</td>';
+    html += '  <td style="padding: 12px;">' + className + '</td>';
+    html += '  <td style="padding: 12px; text-align: right;">' + (p.baseTuition || 0).toLocaleString() + '</td>';
+    html += '  <td style="padding: 12px; text-align: right; color: var(--accent);">' + (p.finalTuition || 0).toLocaleString() + '</td>';
     html += '  <td style="padding: 12px;">' + discountName + '</td>';
-    html += '  <td style="padding: 12px; text-align: right; font-weight: 600; color: var(--accent);">' + (p.finalTuition || 0).toLocaleString() + '원</td>';
-    html += '  <td style="padding: 12px; text-align: right;">' + (p.depositAmount || 0).toLocaleString() + '원</td>';
-    html += '  <td style="padding: 12px; text-align: center;">' + paymentMethodName + '</td>';
+    html += '  <td style="padding: 12px; text-align: center;">' + (p.isTeacherPayment ? '✓' : '') + '</td>';
+    html += '  <td style="padding: 12px; text-align: right; font-size: 15px; font-weight: 600; color: var(--accent);">' + (p.depositAmount || 0).toLocaleString() + '</td>';
+    html += '  <td style="padding: 12px; text-align: right;">' + (p.fee || 0).toLocaleString() + '</td>';
     html += '  <td style="padding: 12px; text-align: center;">' + (p.paymentDate || '-') + '</td>';
     html += '  <td style="padding: 12px; text-align: center;">' + (p.depositDate || '-') + '</td>';
+    html += '  <td style="padding: 12px; text-align: center;">' + paymentMethodName + '</td>';
     html += '</tr>';
   });
   
@@ -5719,11 +5768,29 @@ function renderPaymentsPage() {
   html += '</table>';
   html += '</div>';
   
-  // 모바일 카드 뷰
-  html += '<div class="payment-cards-mobile">';
+  // 모바일 카드 뷰 (이어서 계속)
+  html += renderPaymentMobileCards(pagePayments, canWrite);
+  
+  // 페이저
+  if (totalPages > 1) {
+    html += renderPagination(paymentPagination.currentPage, totalPages, 'paymentPagination.currentPage = PAGE; renderPaymentsPage()');
+  }
+  
+  return html;
+}
+
+function renderPaymentMobileCards(pagePayments, canWrite) {
+  let html = '<div class="payment-cards-mobile">';
+  
   pagePayments.forEach(p => {
     const student = studentsData.find(s => s.id === p.studentId);
-    const studentName = p.isNewStudent ? p.studentName : (student ? student.name : '(삭제된 학생)');
+    const studentName = p.isNewStudent ? p.studentName : (student ? student.name : '(삭제)');
+    let studentGrade = '';
+    if (student && student.grade) {
+      studentGrade = student.grade.replace(/[^0-9]/g, '') + '학년';
+    }
+    const classObj = classesData.find(c => c.id === p.classId);
+    const className = classObj ? classObj.name : '-';
     const paymentMethod = paymentMethodsData.find(pm => pm.id === p.paymentMethodId);
     const paymentMethodName = paymentMethod ? paymentMethod.name : '-';
     const discount = discountTypesData.find(dt => dt.id === p.discountTypeId);
@@ -5740,6 +5807,7 @@ function renderPaymentsPage() {
     }
     html += '      <div>';
     html += '        <div style="font-weight: 600; font-size: 15px; cursor: pointer;" onclick="openEditPaymentModal(\'' + p.id + '\')">' + studentName + '</div>';
+    html += '        <div style="font-size: 12px; color: var(--text2); margin-top: 2px;">' + (studentGrade || '') + (studentGrade && className ? ' · ' : '') + className + '</div>';
     if (p.isNewStudent) {
       html += '        <span style="font-size: 10px; background: var(--accent2); color: white; padding: 2px 6px; border-radius: 3px; margin-top: 4px; display: inline-block;">신입</span>';
     }
@@ -5748,66 +5816,69 @@ function renderPaymentsPage() {
     html += '    <div style="font-size: 12px; color: var(--text2);">' + p.enrollmentMonth + '</div>';
     html += '  </div>';
     
-    // 카드 본문 - 2열 그리드로 세로 공간 절약
-    html += '  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px;">';
-    html += '    <div><span style="color: var(--text2);">기본교습비:</span> <span style="font-weight: 500;">' + (p.baseTuition || 0).toLocaleString() + '원</span></div>';
+    // 카드 본문 - 2열 그리드
+    html += '  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; margin-bottom: 8px;">';
+    html += '    <div><span style="color: var(--text2);">기본교습비:</span> ' + (p.baseTuition || 0).toLocaleString() + '원</div>';
     html += '    <div><span style="color: var(--text2);">할인:</span> ' + discountName + '</div>';
-    html += '    <div><span style="color: var(--text2);">최종교습비:</span> <span style="font-weight: 600; color: var(--accent);">' + (p.finalTuition || 0).toLocaleString() + '원</span></div>';
-    html += '    <div><span style="color: var(--text2);">입금금액:</span> ' + (p.depositAmount || 0).toLocaleString() + '원</div>';
+    html += '    <div><span style="color: var(--text2);">최종교습비:</span> <span style="color: var(--accent);">' + (p.finalTuition || 0).toLocaleString() + '원</span></div>';
+    html += '    <div><span style="color: var(--text2);">수수료:</span> ' + (p.fee || 0).toLocaleString() + '원</div>';
     html += '    <div><span style="color: var(--text2);">결제수단:</span> ' + paymentMethodName + '</div>';
     html += '    <div><span style="color: var(--text2);">결제일:</span> ' + (p.paymentDate || '-') + '</div>';
     html += '  </div>';
     
+    // 입금금액 강조
+    html += '  <div style="padding: 8px; background: var(--bg-side); border-radius: 4px; text-align: center;">';
+    html += '    <div style="font-size: 12px; color: var(--text2); margin-bottom: 4px;">입금금액</div>';
+    html += '    <div style="font-size: 18px; font-weight: 600; color: var(--accent);">' + (p.depositAmount || 0).toLocaleString() + '원</div>';
+    html += '  </div>';
+    
     html += '</div>';
   });
+  
   html += '</div>';
-  
-  // 페이지네이션 (통일된 스타일)
-  if (totalPages > 1) {
-    html += renderPagination(paymentPagination.currentPage, totalPages, 'paymentPagination.currentPage = PAGE; renderPaymentsPage()');
-  }
-  
-  container.innerHTML = html;
+  return html;
 }
 
-function getFilteredPayments() {
-  let filtered = [...paymentsData];
-  
-  // 월별 필터
-  if (currentPaymentFilter.month) {
-    filtered = filtered.filter(p => p.enrollmentMonth === currentPaymentFilter.month);
-  }
-  
-  // 학생 이름 검색
-  if (currentPaymentFilter.search) {
-    const search = currentPaymentFilter.search.toLowerCase();
-    filtered = filtered.filter(p => {
+function getFilteredAndSortedPayments() {
+  let filtered = paymentsData.filter(p => {
+    // 학생명 검색
+    if (currentPaymentFilter.search) {
       const student = studentsData.find(s => s.id === p.studentId);
-      return student && student.name.toLowerCase().includes(search);
-    });
-  }
+      const studentName = p.isNewStudent ? p.studentName : (student ? student.name : '');
+      if (!studentName.includes(currentPaymentFilter.search)) return false;
+    }
+    
+    // 등록월 필터
+    if (currentPaymentFilter.month && p.enrollmentMonth !== currentPaymentFilter.month) {
+      return false;
+    }
+    
+    // 학교급 필터
+    if (currentPaymentFilter.schoolType) {
+      const student = studentsData.find(s => s.id === p.studentId);
+      if (!student || student.schoolType !== currentPaymentFilter.schoolType) return false;
+    }
+    
+    // 수강반 필터
+    if (currentPaymentFilter.classId && p.classId !== currentPaymentFilter.classId) {
+      return false;
+    }
+    
+    return true;
+  });
   
-  // 결제수단 필터
-  if (currentPaymentFilter.paymentMethod) {
-    filtered = filtered.filter(p => p.paymentMethodId === currentPaymentFilter.paymentMethod);
-  }
-  
-  // 담당선생 필터
-  if (currentPaymentFilter.teacher) {
-    filtered = filtered.filter(p => p.teacherName === currentPaymentFilter.teacher);
-  }
-  
-  // 신입여부 필터
-  if (currentPaymentFilter.isNewStudent) {
-    const isNew = currentPaymentFilter.isNewStudent === 'true';
-    filtered = filtered.filter(p => p.isNewStudent === isNew);
-  }
-  
-  // 정렬 (최근 날짜순)
+  // 정렬
   filtered.sort((a, b) => {
-    const dateA = a.paymentDate || a.enrollmentMonth;
-    const dateB = b.paymentDate || b.enrollmentMonth;
-    return dateB.localeCompare(dateA);
+    if (currentPaymentSort === 'date-desc') {
+      return (b.paymentDate || '').localeCompare(a.paymentDate || '');
+    } else if (currentPaymentSort === 'date-asc') {
+      return (a.paymentDate || '').localeCompare(b.paymentDate || '');
+    } else if (currentPaymentSort === 'amount-desc') {
+      return (b.depositAmount || 0) - (a.depositAmount || 0);
+    } else if (currentPaymentSort === 'amount-asc') {
+      return (a.depositAmount || 0) - (b.depositAmount || 0);
+    }
+    return 0;
   });
   
   return filtered;
@@ -5918,24 +5989,11 @@ function toggleNewStudentMode(isNew) {
 function loadStudentInfo() {
   const studentId = document.getElementById('payment-student-id').value;
   if (!studentId) {
-    document.getElementById('student-info-section').style.display = 'none';
     return;
   }
   
   const student = studentsData.find(s => s.id === studentId);
   if (!student) return;
-  
-  // 학교급 추출
-  let schoolType = '';
-  if (student.school && student.school.includes('초등')) schoolType = '초등';
-  else if (student.school && student.school.includes('중')) schoolType = '중등';
-  else if (student.school && student.school.includes('고')) schoolType = '고등';
-  
-  // 학생 정보 표시
-  document.getElementById('student-school-type').textContent = schoolType || '-';
-  document.getElementById('student-grade').textContent = student.grade || '-';
-  document.getElementById('student-days').textContent = student.days || '-';
-  document.getElementById('student-info-section').style.display = 'block';
   
   // 담당선생, 요일 자동 입력 (변경 가능)
   document.getElementById('payment-teacher').value = student.teacher || '';
@@ -5953,12 +6011,13 @@ function loadClassTuition() {
   }
   
   const tuition = selectedOption.dataset.tuition;
-  document.getElementById('payment-base-tuition').value = tuition || '';
+  document.getElementById('payment-base-tuition').value = parseInt(tuition || 0).toLocaleString();
   calculateFinalAmount();
 }
 
 function calculateFinalAmount() {
-  const baseTuition = parseInt(document.getElementById('payment-base-tuition').value) || 0;
+  const baseTuitionStr = document.getElementById('payment-base-tuition').value.replace(/,/g, '');
+  const baseTuition = parseInt(baseTuitionStr) || 0;
   const discountTypeId = document.getElementById('payment-discount-type').value;
   const paymentMethodId = document.getElementById('payment-method').value;
   
@@ -5988,8 +6047,8 @@ function calculateFinalAmount() {
   
   finalTuition = Math.max(0, baseTuition - discountAmount);
   
-  document.getElementById('payment-discount-amount').value = discountAmount;
-  document.getElementById('payment-final-tuition').value = finalTuition;
+  document.getElementById('payment-discount-amount').value = discountAmount.toLocaleString();
+  document.getElementById('payment-final-tuition').value = finalTuition.toLocaleString();
   
   // 수수료 계산
   let fee = 0;
@@ -6000,8 +6059,8 @@ function calculateFinalAmount() {
     }
   }
   
-  document.getElementById('payment-fee').value = fee;
-  document.getElementById('payment-deposit').value = finalTuition - fee;
+  document.getElementById('payment-fee').value = fee.toLocaleString();
+  document.getElementById('payment-deposit').value = (finalTuition - fee).toLocaleString();
 }
 
 
@@ -6036,16 +6095,16 @@ function openEditPaymentModal(id) {
   
   document.getElementById('payment-enrollment-month').value = payment.enrollmentMonth || '';
   document.getElementById('payment-class').value = payment.classId || '';
-  document.getElementById('payment-base-tuition').value = payment.baseTuition || '';
+  document.getElementById('payment-base-tuition').value = (payment.baseTuition || 0).toLocaleString();
   document.getElementById('payment-discount-type').value = payment.discountTypeId || '';
-  document.getElementById('payment-discount-amount').value = payment.discountAmount || '';
-  document.getElementById('payment-final-tuition').value = payment.finalTuition || '';
+  document.getElementById('payment-discount-amount').value = (payment.discountAmount || 0).toLocaleString();
+  document.getElementById('payment-final-tuition').value = (payment.finalTuition || 0).toLocaleString();
   document.getElementById('payment-teacher').value = payment.teacherName || '';
   document.getElementById('payment-days').value = payment.days || '';
   document.getElementById('payment-count').value = payment.count || '';
   document.getElementById('payment-method').value = payment.paymentMethodId || '';
-  document.getElementById('payment-fee').value = payment.fee || '';
-  document.getElementById('payment-deposit').value = payment.depositAmount || '';
+  document.getElementById('payment-fee').value = (payment.fee || 0).toLocaleString();
+  document.getElementById('payment-deposit').value = (payment.depositAmount || 0).toLocaleString();
   document.getElementById('payment-date').value = payment.paymentDate || '';
   document.getElementById('payment-deposit-date').value = payment.depositDate || '';
   document.getElementById('payment-teacher-payment').checked = payment.isTeacherPayment || false;
@@ -6060,16 +6119,16 @@ function savePayment() {
   const newStudentName = isNewStudent ? document.getElementById('payment-new-student-name').value : '';
   const enrollmentMonth = document.getElementById('payment-enrollment-month').value;
   const classId = document.getElementById('payment-class').value;
-  const baseTuition = parseInt(document.getElementById('payment-base-tuition').value) || 0;
+  const baseTuition = parseInt(document.getElementById('payment-base-tuition').value.replace(/,/g, '')) || 0;
   const discountTypeId = document.getElementById('payment-discount-type').value;
-  const discountAmount = parseInt(document.getElementById('payment-discount-amount').value) || 0;
-  const finalTuition = parseInt(document.getElementById('payment-final-tuition').value) || 0;
+  const discountAmount = parseInt(document.getElementById('payment-discount-amount').value.replace(/,/g, '')) || 0;
+  const finalTuition = parseInt(document.getElementById('payment-final-tuition').value.replace(/,/g, '')) || 0;
   const teacherName = document.getElementById('payment-teacher').value;
   const days = document.getElementById('payment-days').value;
   const count = parseInt(document.getElementById('payment-count').value) || 0;
   const paymentMethodId = document.getElementById('payment-method').value;
-  const fee = parseInt(document.getElementById('payment-fee').value) || 0;
-  const depositAmount = parseInt(document.getElementById('payment-deposit').value) || 0;
+  const fee = parseInt(document.getElementById('payment-fee').value.replace(/,/g, '')) || 0;
+  const depositAmount = parseInt(document.getElementById('payment-deposit').value.replace(/,/g, '')) || 0;
   const paymentDate = document.getElementById('payment-date').value;
   const depositDate = document.getElementById('payment-deposit-date').value;
   const isTeacherPayment = document.getElementById('payment-teacher-payment').checked;
