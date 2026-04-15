@@ -236,7 +236,7 @@ body {
   padding: 12px 20px;
   color: var(--text2);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 400;
   cursor: pointer;
   transition: all 0.2s;
   border-left: 3px solid transparent;
@@ -938,6 +938,19 @@ input[type="checkbox"] {
   background: white;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
+
+/* 대시보드 통계 그리드 */
+.dashboard-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .dashboard-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 </style>
 </head>
 <body>
@@ -1635,6 +1648,28 @@ input[type="checkbox"] {
   </div>
 </div>
 
+<!-- 공지사항 모달 -->
+<div class="modal-backdrop" id="modal-notice">
+  <div class="modal">
+    <div class="modal-title" id="notice-modal-title">공지사항 추가</div>
+    <div class="modal-body">
+      <input type="hidden" id="notice-id">
+      <div class="form-group">
+        <label class="form-label">제목 *</label>
+        <input type="text" class="form-input" id="notice-title" placeholder="공지 제목을 입력하세요">
+      </div>
+      <div class="form-group">
+        <label class="form-label">내용 *</label>
+        <textarea class="form-input" id="notice-content" rows="4" placeholder="공지 내용을 입력하세요"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-notice')">취소</button>
+      <button class="btn btn-primary btn-sm" onclick="saveNotice()">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- 결제 CSV 업로드 모달 -->
 <div class="modal-backdrop" id="modal-payment-csv-upload">
   <div class="modal modal-wide">
@@ -1735,6 +1770,7 @@ let currentUser = null;
 let currentPage = 'dashboard';
 let favoritePages = JSON.parse(localStorage.getItem('favoritePages') || '[]');
 let expandedGroups = JSON.parse(localStorage.getItem('expandedGroups') || '["work-group", "manage-group", "report-group"]');
+let noticesData = JSON.parse(localStorage.getItem('noticesData') || '[]');
 let permissions = {
   owner: {},
   teacher: {},
@@ -2220,15 +2256,30 @@ function getPageContent(pageId) {
   if (pageId === 'dashboard') {
     return `
       <div style="display: flex; flex-direction: column; gap: 20px;">
+        <!-- 공지사항 -->
+        <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--sh);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="font-size: 16px; font-weight: 600; color: var(--text); margin: 0;">
+              📢 공지사항
+            </h3>
+            ${permissions[currentUser.role].dashboard?.write ? '<button class="btn btn-outline btn-sm" onclick="openNoticeModal()">+ 공지 추가</button>' : ''}
+          </div>
+          <div id="notice-list" style="color: var(--text2); line-height: 1.8; font-size: 14px;">
+            <div style="color: var(--text3); text-align: center; padding: 20px;">
+              등록된 공지사항이 없습니다.
+            </div>
+          </div>
+        </div>
+        
         <!-- 통계 카드 -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+        <div class="dashboard-stats-grid">
           <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--sh);">
             <div style="font-size: 13px; color: var(--text2); margin-bottom: 8px;">전체 학생</div>
             <div style="font-size: 28px; font-weight: 700; color: var(--accent);" id="stat-students">0</div>
           </div>
           <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--sh);">
-            <div style="font-size: 13px; color: var(--text2); margin-bottom: 8px;">이번 달 매출</div>
-            <div style="font-size: 28px; font-weight: 700; color: var(--accent2);" id="stat-revenue">0원</div>
+            <div style="font-size: 13px; color: var(--text2); margin-bottom: 8px;">통계 준비중</div>
+            <div style="font-size: 28px; font-weight: 700; color: var(--text3);">-</div>
           </div>
           <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--sh);">
             <div style="font-size: 13px; color: var(--text2); margin-bottom: 8px;">진행 중 시험대비</div>
@@ -2240,30 +2291,13 @@ function getPageContent(pageId) {
           </div>
         </div>
         
-        <!-- 공지사항 -->
-        <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--sh);">
-          <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text);">
-            📢 공지사항
-          </h3>
-          <div style="color: var(--text2); line-height: 1.8; font-size: 14px;">
-            <div style="padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm); margin-bottom: 12px;">
-              <strong>✅ 5단계 학생 관리 완료</strong><br>
-              학생 추가/수정/삭제, 등록/퇴원 기록 관리, 페이지네이션, 일괄 작업 등이 추가되었습니다.
-            </div>
-            <div style="padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm);">
-              <strong>🎯 4단계 캘린더 완료</strong><br>
-              월별/주별 보기, 공휴일 표시, 근무일지/회의록/시험대비 배지가 추가되었습니다.
-            </div>
-          </div>
-        </div>
-        
         <!-- 최근 활동 -->
         <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--sh);">
           <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text);">
             🕐 최근 활동
           </h3>
           <div id="recent-activities" style="color: var(--text3); font-size: 14px;">
-            아직 활동 내역이 없습니다.
+            최근 30일 내 학생 추가/수정, 결제 등록, 교재 배정 등의 활동이 표시됩니다.
           </div>
         </div>
       </div>
@@ -5132,14 +5166,6 @@ function updateDashboard() {
   const statStudents = document.getElementById('stat-students');
   if (statStudents) statStudents.textContent = totalStudents;
   
-  // 이번 달 매출
-  const thisMonth = today().substring(0, 7);
-  const monthlyRevenue = paymentsData
-    .filter(p => p.month === thisMonth)
-    .reduce((sum, p) => sum + (p.paidAmount || 0), 0);
-  const statRevenue = document.getElementById('stat-revenue');
-  if (statRevenue) statRevenue.textContent = monthlyRevenue.toLocaleString() + '원';
-  
   // 진행 중 시험대비
   const todayStr = today();
   const ongoingExams = appState.examPreps.filter(e => 
@@ -5152,6 +5178,109 @@ function updateDashboard() {
   const unsentFeedback = feedbackData.filter(f => !f.sent).length;
   const statFeedback = document.getElementById('stat-feedback');
   if (statFeedback) statFeedback.textContent = unsentFeedback;
+  
+  // 공지사항 렌더링
+  renderNotices();
+}
+
+function renderNotices() {
+  const container = document.getElementById('notice-list');
+  if (!container) return;
+  
+  if (noticesData.length === 0) {
+    container.innerHTML = '<div style="color: var(--text3); text-align: center; padding: 20px;">등록된 공지사항이 없습니다.</div>';
+    return;
+  }
+  
+  let html = '';
+  noticesData.forEach(notice => {
+    html += '<div style="padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm); margin-bottom: 12px; position: relative;">';
+    html += '  <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 4px;">';
+    html += '    <strong>' + notice.title + '</strong>';
+    if (permissions[currentUser.role].dashboard?.write) {
+      html += '    <div style="display: flex; gap: 4px;">';
+      html += '      <button class="btn btn-outline" style="padding: 2px 8px; font-size: 11px;" onclick="editNotice(\'' + notice.id + '\')">수정</button>';
+      html += '      <button class="btn btn-outline" style="padding: 2px 8px; font-size: 11px; color: var(--danger); border-color: var(--danger);" onclick="deleteNotice(\'' + notice.id + '\')">삭제</button>';
+      html += '    </div>';
+    }
+    html += '  </div>';
+    html += '  <div style="font-size: 13px; color: var(--text2); white-space: pre-wrap;">' + notice.content + '</div>';
+    html += '  <div style="font-size: 11px; color: var(--text3); margin-top: 8px;">' + notice.createdAt + '</div>';
+    html += '</div>';
+  });
+  
+  container.innerHTML = html;
+}
+
+function openNoticeModal() {
+  document.getElementById('notice-modal-title').textContent = '공지사항 추가';
+  document.getElementById('notice-id').value = '';
+  document.getElementById('notice-title').value = '';
+  document.getElementById('notice-content').value = '';
+  openModal('modal-notice');
+}
+
+function editNotice(id) {
+  const notice = noticesData.find(n => n.id === id);
+  if (!notice) return;
+  
+  document.getElementById('notice-modal-title').textContent = '공지사항 수정';
+  document.getElementById('notice-id').value = notice.id;
+  document.getElementById('notice-title').value = notice.title;
+  document.getElementById('notice-content').value = notice.content;
+  openModal('modal-notice');
+}
+
+function saveNotice() {
+  const id = document.getElementById('notice-id').value;
+  const title = document.getElementById('notice-title').value.trim();
+  const content = document.getElementById('notice-content').value.trim();
+  
+  if (!title) {
+    showToast('제목을 입력하세요');
+    return;
+  }
+  
+  if (!content) {
+    showToast('내용을 입력하세요');
+    return;
+  }
+  
+  if (id) {
+    // 수정
+    const idx = noticesData.findIndex(n => n.id === id);
+    if (idx !== -1) {
+      noticesData[idx] = {
+        ...noticesData[idx],
+        title,
+        content,
+        updatedAt: today()
+      };
+      showToast('공지사항이 수정되었습니다');
+    }
+  } else {
+    // 추가
+    noticesData.unshift({
+      id: uid(),
+      title,
+      content,
+      createdAt: today()
+    });
+    showToast('공지사항이 추가되었습니다');
+  }
+  
+  localStorage.setItem('noticesData', JSON.stringify(noticesData));
+  closeModal('modal-notice');
+  renderNotices();
+}
+
+function deleteNotice(id) {
+  if (!confirm('이 공지사항을 삭제하시겠습니까?')) return;
+  
+  noticesData = noticesData.filter(n => n.id !== id);
+  localStorage.setItem('noticesData', JSON.stringify(noticesData));
+  showToast('공지사항이 삭제되었습니다');
+  renderNotices();
 }
 
 // ============ 캘린더 ============
