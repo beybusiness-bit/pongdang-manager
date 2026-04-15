@@ -2354,6 +2354,7 @@ function getPageSubtitle(pageId) {
     students: '학생 정보를 관리합니다',
     textbooks: '교재 목록을 관리합니다',
     payments: '결제 내역을 기록하고 조회합니다',
+    'monthly-register': '월별 등록 현황과 통계를 확인합니다',
     sales: '매출 현황을 분석합니다',
     reports: 'AI 기반 학생 성장 리포트',
     worklog: '수업 일지를 작성합니다',
@@ -2507,6 +2508,11 @@ function getPageContent(pageId) {
   // 결제 관리 페이지
   if (pageId === 'payments') {
     return '<div id="payments-page-content"></div>';
+  }
+  
+  // 월별등록대장 페이지
+  if (pageId === 'monthly-register') {
+    return '<div id="page-monthly-register-content"></div>';
   }
   
   // 설정 페이지만 특별 처리
@@ -3876,6 +3882,10 @@ function loadSampleData() {
     { id: '3', studentId: '3', textbookId: '1', assignedDate: '2026-02-20' },
     { id: '4', studentId: '3', textbookId: '3', assignedDate: '2026-02-20' }
   ];
+  
+  // 월별등록대장 초기 탭
+  monthlyRegisterTabs = ['2026-04', '2026-03', '2026-05'];
+  currentMonthTab = '2026-04';
   
   // appState 업데이트
   appState.students = studentsData;
