@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>풍당수학 학원 관리 시스템</title>
+<title>퐁당수학 학원 관리 시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
@@ -150,86 +150,42 @@ body {
   overflow: hidden;
 }
 .sidebar.collapsed {
-  width: 48px;
-}
-/* 접힌 상태에서 텍스트 숨기기 */
-.sidebar.collapsed .logo,
-.sidebar.collapsed .logo-sub,
-.sidebar.collapsed .nav-item span:not(.nav-icon),
-.sidebar.collapsed .nav-group-header span:not(.nav-icon),
-.sidebar.collapsed .nav-group-toggle,
-.sidebar.collapsed .favorite-star,
-.sidebar.collapsed .user-name,
-.sidebar.collapsed .user-role,
-.sidebar.collapsed .sync-status span {
-  opacity: 0;
   width: 0;
-  overflow: hidden;
-}
-/* 접힌 상태에서 아이템 중앙 정렬 */
-.sidebar.collapsed .nav-item,
-.sidebar.collapsed .nav-group-header {
-  justify-content: center;
-  padding: 10px 0;
-}
-.sidebar.collapsed .nav-icon {
-  margin-right: 0;
-}
-.sidebar.collapsed .logo-wrap {
-  padding: 12px 0;
-  text-align: center;
-}
-.sidebar.collapsed .user-info {
-  justify-content: center;
-  padding: 12px 0;
-}
-.sidebar.collapsed .user-avatar {
-  margin-right: 0;
-}
-/* 토글 버튼 - 클로드 앱 스타일 */
-.sidebar-toggle-btn {
-  position: absolute;
-  left: 8px;
-  top: 16px;
-  width: 32px;
-  height: 32px;
-  background: transparent;
   border: none;
-  border-radius: 6px;
+}
+/* 햄버거 버튼 - 사이드바 외부에 독립 */
+.sidebar-toggle-btn {
+  position: fixed;
+  left: 16px;
+  top: 16px;
+  width: 40px;
+  height: 40px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 18px;
-  color: var(--text2);
-  z-index: 100;
+  font-size: 20px;
+  color: var(--text);
+  z-index: 101;
   transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 .sidebar-toggle-btn:hover {
   background: var(--bg-hover);
-  color: var(--text);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
-.sidebar.collapsed .sidebar-toggle-btn {
-  left: 8px;
-}
-/* 토글 버튼 툴팁 */
-.sidebar-toggle-tooltip {
+/* 펼쳐진 상태일 때 버튼 위치 변경 */
+.sidebar:not(.collapsed) .sidebar-toggle-btn {
   position: absolute;
-  left: 52px;
+  right: 16px;
+  left: auto;
   top: 16px;
-  background: #1a1a1a;
-  color: white;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
+}
   transition: opacity 0.2s;
   z-index: 101;
-}
-.sidebar.collapsed .sidebar-toggle-btn:hover + .sidebar-toggle-tooltip {
-  opacity: 1;
 }
 .logo-wrap {
   padding: 20px;
@@ -466,7 +422,7 @@ body {
   transition: margin-left 0.25s ease;
 }
 .sidebar.collapsed ~ .main {
-  margin-left: 48px;
+  margin-left: 0;
 }
 
 .page {
@@ -1006,6 +962,9 @@ input[type="checkbox"] {
 }
 
 /* 결제 카드 스타일 (기본은 숨김) */
+.payment-table-desktop {
+  display: block;
+}
 .payment-cards-mobile {
   display: none;
 }
@@ -1016,6 +975,10 @@ input[type="checkbox"] {
   margin-bottom: 12px;
   background: white;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+/* 모바일 전용 버튼 기본 숨김 */
+.payment-btn-mobile {
+  display: none;
 }
 
 /* 대시보드 통계 그리드 */
@@ -1029,6 +992,32 @@ input[type="checkbox"] {
   .dashboard-stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+  
+  /* 모바일 사이드바 */
+  .sidebar.collapsed {
+    width: 0;
+  }
+  .sidebar:not(.collapsed) {
+    width: 85%;
+    max-width: 320px;
+  }
+  .main {
+    margin-left: 0;
+  }
+  
+  /* 결제 모바일 전용 */
+  .payment-buttons-desktop {
+    display: none !important;
+  }
+  .payment-btn-mobile {
+    display: inline-flex !important;
+  }
+  .payment-table-desktop {
+    display: none;
+  }
+  .payment-cards-mobile {
+    display: block;
+  }
 }
 </style>
 </head>
@@ -1037,7 +1026,7 @@ input[type="checkbox"] {
 <!-- 로그인 화면 -->
 <div class="login-screen" id="login-screen">
   <div class="login-box">
-    <div class="login-logo">🎓 풍당수학</div>
+    <div class="login-logo">🎓 퐁당수학</div>
     <div class="login-subtitle">학원 관리 시스템</div>
     <form class="login-form" onsubmit="handleLogin(event)">
       <div class="form-group">
@@ -1064,10 +1053,9 @@ input[type="checkbox"] {
     <button class="sidebar-toggle-btn" onclick="toggleSidebar()">
       <span id="sidebar-toggle-icon">☰</span>
     </button>
-    <div class="sidebar-toggle-tooltip">사이드바 펼치기</div>
     
-    <div class="logo-wrap" style="margin-top: 40px;">
-      <div class="logo">🎓 풍당수학</div>
+    <div class="logo-wrap" style="margin-top: 60px;">
+      <div class="logo">🎓 퐁당수학</div>
       <div class="logo-sub">학원 관리 시스템</div>
     </div>
     
@@ -2114,7 +2102,7 @@ function initApp() {
     document.getElementById('sidebar').classList.add('collapsed');
     document.getElementById('sidebar-toggle-icon').textContent = '☰';
   } else {
-    document.getElementById('sidebar-toggle-icon').textContent = '✕';
+    document.getElementById('sidebar-toggle-icon').textContent = '◀';
   }
   
   // localStorage에서 마지막 페이지 복원 또는 URL 해시 확인
@@ -2300,7 +2288,7 @@ function toggleSidebar() {
     toggleIcon.textContent = '☰';
   } else {
     sidebar.classList.remove('collapsed');
-    toggleIcon.textContent = '✕';
+    toggleIcon.textContent = '◀';
   }
 }
 
@@ -5730,8 +5718,8 @@ function renderPaymentRecords(canWrite) {
   // 툴바
   html += '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">';
   
-  // 왼쪽: 필터 (개별 필터 너비 축소하여 한 줄에 더 많이)
-  html += '  <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center; flex: 1;">';
+  // 왼쪽: 필터
+  html += '  <div class="payment-filters" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center; flex: 1;">';
   html += '    <input type="month" class="form-input form-input-sm" value="' + currentPaymentFilter.month + '" onchange="currentPaymentFilter.month = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()" style="width: 115px;">';
   html += '    <input type="text" class="form-input form-input-sm" placeholder="학생명" value="' + currentPaymentFilter.search + '" onchange="currentPaymentFilter.search = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()" style="width: 85px;">';
   html += '    <select class="form-input form-input-sm" style="width: 80px;" onchange="currentPaymentFilter.schoolType = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()">';
@@ -5757,10 +5745,16 @@ function renderPaymentRecords(canWrite) {
     html += '    <button class="btn btn-outline btn-sm" onclick="bulkDeletePayments()" style="color: var(--danger); border-color: var(--danger); white-space: nowrap;">삭제 (' + selectedPaymentIds.length + ')</button>';
   }
   
+  // 모바일 전용 버튼
+  if (canWrite) {
+    html += '    <button class="btn btn-outline btn-sm payment-btn-mobile" onclick="openCsvUploadModal()" title="CSV 업로드">📤</button>';
+    html += '    <button class="btn btn-primary btn-sm payment-btn-mobile" onclick="openAddPaymentModal()" title="결제 추가">+</button>';
+  }
+  
   html += '  </div>';
   
-  // 오른쪽: 버튼
-  html += '  <div style="display: flex; gap: 8px; flex-shrink: 0;">';
+  // 오른쪽: 데스크탑 전용 버튼
+  html += '  <div class="payment-buttons-desktop" style="display: flex; gap: 8px; flex-shrink: 0;">';
   if (canWrite) {
     html += '    <button class="btn btn-outline btn-sm" onclick="openCsvUploadModal()">CSV 업로드</button>';
     html += '    <button class="btn btn-primary btn-sm" onclick="openAddPaymentModal()">+ 결제 추가</button>';
@@ -5866,7 +5860,7 @@ function renderPaymentRecords(canWrite) {
     html += '  <td style="padding: 12px; text-align: right; color: var(--accent);">' + (p.finalTuition || 0).toLocaleString() + '</td>';
     html += '  <td style="padding: 12px; text-align: center;">' + discountName + '</td>';
     html += '  <td style="padding: 12px; text-align: right; font-weight: 600; color: var(--accent);">' + (p.depositAmount || 0).toLocaleString() + '</td>';
-    html += '  <td style="padding: 12px; text-align: right;">' + (p.fee || 0).toLocaleString() + '</td>';
+    html += '  <td style="padding: 12px; text-align: right; color: var(--accent);">' + (p.fee || 0).toLocaleString() + '</td>';
     html += '  <td style="padding: 12px; text-align: center;">' + formatPaymentDate(p.paymentDate) + '</td>';
     html += '  <td style="padding: 12px; text-align: center;">' + formatPaymentDate(p.depositDate) + '</td>';
     html += '  <td style="padding: 12px; text-align: center;">' + paymentMethodName + '</td>';
