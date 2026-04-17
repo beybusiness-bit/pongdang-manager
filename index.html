@@ -1869,6 +1869,23 @@ input[type="checkbox"] {
   </div>
 </div>
 
+<!-- 월 추가 모달 -->
+<div class="modal-backdrop" id="modal-add-ledger-month">
+  <div class="modal" style="max-width: 400px;">
+    <div class="modal-title">월 추가</div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">추가할 월 선택 *</label>
+        <input type="month" class="form-input" id="add-ledger-month-input">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-add-ledger-month')">취소</button>
+      <button class="btn btn-primary btn-sm" onclick="addLedgerMonth()">추가</button>
+    </div>
+  </div>
+</div>
+
 <!-- 결제 CSV 업로드 모달 -->
 <div class="modal-backdrop" id="modal-payment-csv-upload">
   <div class="modal modal-wide">
@@ -7375,12 +7392,17 @@ function selectLedgerMonth(month) {
 }
 
 function openAddLedgerMonthModal() {
-  const month = prompt('추가할 월을 입력하세요 (예: 2026-05)');
-  if (!month) return;
+  // 현재 월을 기본값으로 설정
+  const currentMonth = today().substring(0, 7);
+  document.getElementById('add-ledger-month-input').value = currentMonth;
+  openModal('modal-add-ledger-month');
+}
+
+function addLedgerMonth() {
+  const month = document.getElementById('add-ledger-month-input').value;
   
-  // 유효성 검사
-  if (!/^\d{4}-\d{2}$/.test(month)) {
-    showToast('올바른 형식이 아닙니다 (예: 2026-05)');
+  if (!month) {
+    showToast('월을 선택해주세요');
     return;
   }
   
@@ -7392,6 +7414,7 @@ function openAddLedgerMonthModal() {
   
   ledgerMonths.push(month);
   currentLedgerMonth = month;
+  closeModal('modal-add-ledger-month');
   renderPaymentsPage();
   showToast(month + ' 월이 추가되었습니다');
 }
@@ -7405,3 +7428,6 @@ function openAddNewStudentModal() {
   document.getElementById('payment-enrollment-month').value = currentLedgerMonth;
 }
 
+</script>
+</body>
+</html>
