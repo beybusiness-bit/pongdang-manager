@@ -6146,37 +6146,39 @@ function renderEnrollmentLedger(canWrite) {
     html += '</div>';
   });
   
-  // 전체 통계
-  const totalStudents = monthPayments.length;
-  const totalRevenue = monthPayments.reduce((sum, p) => sum + (p.finalTuition || 0), 0);
-  const totalDeposit = monthPayments.reduce((sum, p) => sum + (p.depositAmount || 0), 0);
-  const totalFee = monthPayments.reduce((sum, p) => sum + (p.fee || 0), 0);
+  // CSV 기반 대시보드 통계
   
-  html += '<div style="margin-top: 32px; padding: 20px; background: var(--bg-side); border-radius: var(--radius-sm); border: 2px solid var(--accent);">';
-  html += '  <h4 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">📊 ' + currentLedgerMonth + ' 전체 통계</h4>';
-  html += '  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">';
-  html += '    <div>';
-  html += '      <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">총 학생 수</div>';
-  html += '      <div style="font-size: 24px; font-weight: 700; color: var(--accent);">' + totalStudents + '명</div>';
-  html += '    </div>';
-  html += '    <div>';
-  html += '      <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">총 매출</div>';
-  html += '      <div style="font-size: 24px; font-weight: 700; color: var(--accent2);">' + totalRevenue.toLocaleString() + '원</div>';
-  html += '    </div>';
-  html += '    <div>';
-  html += '      <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">총 입금금액</div>';
-  html += '      <div style="font-size: 24px; font-weight: 700;">' + totalDeposit.toLocaleString() + '원</div>';
-  html += '    </div>';
-  html += '    <div>';
-  html += '      <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">총 수수료</div>';
-  html += '      <div style="font-size: 24px; font-weight: 700;">' + totalFee.toLocaleString() + '원</div>';
-  html += '    </div>';
-  html += '  </div>';
-  html += '</div>';
+  // 학급별/담당별 통계 계산
+  const schoolStats = {
+    '초등': { count: 0, revenue: 0, deposit: 0, fee: 0 },
+    '중등': { count: 0, revenue: 0, deposit: 0, fee: 0 },
+    '고등': { count: 0, revenue: 0, deposit: 0, fee: 0 },
+    '신입': { count: 0, revenue: 0, deposit: 0, fee: 0 }
+  };
   
-  // 담당별 매출 현황
   const teacherStats = {};
+  
   monthPayments.forEach(p => {
+    const student = studentsData.find(s => s.id === p.studentId);
+    const schoolType = student ? student.schoolType : '기타';
+    
+    // 학급별
+    if (schoolStats[schoolType]) {
+      schoolStats[schoolType].count++;
+      schoolStats[schoolType].revenue += p.finalTuition || 0;
+      schoolStats[schoolType].deposit += p.depositAmount || 0;
+      schoolStats[schoolType].fee += p.fee || 0;
+    }
+    
+    // 신입
+    if (p.isNewStudent) {
+      schoolStats['신입'].count++;
+      schoolStats['신입'].revenue += p.finalTuition || 0;
+      schoolStats['신입'].deposit += p.depositAmount || 0;
+      schoolStats['신입'].fee += p.fee || 0;
+    }
+    
+    // 담당별
     const teacher = p.teacherName || '미지정';
     if (!teacherStats[teacher]) {
       teacherStats[teacher] = { count: 0, revenue: 0, deposit: 0, fee: 0 };
@@ -6187,45 +6189,241 @@ function renderEnrollmentLedger(canWrite) {
     teacherStats[teacher].fee += p.fee || 0;
   });
   
-  const teachers = Object.keys(teacherStats).sort();
+  const totalStudents = monthPayments.length;
+  const totalRevenue = monthPayments.reduce((sum, p) => sum + (p.finalTuition || 0), 0);
+  const totalDeposit = monthPayments.reduce((sum, p) => sum + (p.depositAmount || 0), 0);
+  const totalFee = monthPayments.reduce((sum, p) => sum + (p.fee || 0), 0);
   
-  if (teachers.length > 0) {
-    html += '<div style="margin-top: 24px; padding: 20px; background: white; border-radius: var(--radius-sm); border: 1px solid var(--border);">';
-    html += '  <h4 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">👥 담당별 매출 현황</h4>';
-    html += '  <table style="width: 100%; border-collapse: collapse; font-size: 13px;">';
-    html += '    <thead>';
-    html += '      <tr style="background: var(--bg-side); border-bottom: 2px solid var(--border);">';
-    html += '        <th style="padding: 10px; text-align: left;">담당선생</th>';
-    html += '        <th style="padding: 10px; text-align: center;">학생 수</th>';
-    html += '        <th style="padding: 10px; text-align: right;">총 매출</th>';
-    html += '        <th style="padding: 10px; text-align: right;">총 입금금액</th>';
-    html += '        <th style="padding: 10px; text-align: right;">총 수수료</th>';
-    html += '        <th style="padding: 10px; text-align: right;">강사 배분 (48%)</th>';
-    html += '        <th style="padding: 10px; text-align: right;">학원 배분 (52%)</th>';
-    html += '      </tr>';
-    html += '    </thead>';
-    html += '    <tbody>';
+  // 대시보드 시작
+  html += '<div style="margin-top: 40px;">';
+  html += '  <h3 style="margin: 0 0 20px 0; padding: 12px 20px; background: #5F9EA0; color: white; font-size: 18px; font-weight: 600; text-align: center;">' + currentLedgerMonth.replace('-', '년 ').replace(/(\d+)$/, '$1월') + ' 대시보드</h3>';
+  
+  // 3개 섹션을 가로로 배치
+  html += '  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 30px;">';
+  
+  // 1. 매출 통계 (좌측)
+  html += '    <div>';
+  html += '      <table style="width: 100%; border-collapse: collapse; font-size: 13px; border: 1px solid var(--border);">';
+  html += '        <thead>';
+  html += '          <tr style="background: #5F9EA0; color: white;">';
+  html += '            <th style="padding: 10px; text-align: left; border: 1px solid #ccc;">매출</th>';
+  html += '            <th style="padding: 10px; text-align: center; border: 1px solid #ccc;">총 학생 수</th>';
+  html += '            <th style="padding: 10px; text-align: right; border: 1px solid #ccc;">총 매출</th>';
+  html += '            <th style="padding: 10px; text-align: right; border: 1px solid #ccc;">총 입금금액</th>';
+  html += '            <th style="padding: 10px; text-align: right; border: 1px solid #ccc;">총 수수료</th>';
+  html += '          </tr>';
+  html += '        </thead>';
+  html += '        <tbody>';
+  
+  // 총합
+  html += '          <tr>';
+  html += '            <td style="padding: 8px; border: 1px solid #ccc; font-weight: 600;">총합</td>';
+  html += '            <td style="padding: 8px; text-align: center; border: 1px solid #ccc;">' + totalStudents + '</td>';
+  html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + totalRevenue.toLocaleString() + '</td>';
+  html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + totalDeposit.toLocaleString() + '</td>';
+  html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + totalFee.toLocaleString() + '</td>';
+  html += '          </tr>';
+  
+  // 학급별
+  html += '          <tr>';
+  html += '            <td rowspan="4" style="padding: 8px; border: 1px solid #ccc; font-weight: 600; vertical-align: top;">학급별</td>';
+  html += '            <td style="padding: 8px; border: 1px solid #ccc;">초등</td>';
+  html += '            <td style="padding: 8px; text-align: center; border: 1px solid #ccc;">' + schoolStats['초등'].count + '</td>';
+  html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + schoolStats['초등'].revenue.toLocaleString() + '</td>';
+  html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + schoolStats['초등'].deposit.toLocaleString() + '</td>';
+  html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + schoolStats['초등'].fee.toLocaleString() + '</td>';
+  html += '          </tr>';
+  html += '          <tr>';
+  html += '            <td style="padding: 8px; border: 1px solid #ccc;">중등</td>';
+  html += '            <td style="padding: 8px; text-align: center; border: 1px solid #ccc;">' + schoolStats['중등'].count + '</td>';
+  html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + schoolStats['중등'].revenue.toLocaleString() + '</td>';
+  html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + schoolStats['중등'].deposit.toLocaleString() + '</td>';
+  html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + schoolStats['중등'].fee.toLocaleString() + '</td>';
+  html += '          </tr>';
+  html += '          <tr>';
+  html += '            <td style="padding: 8px; border: 1px solid #ccc;">고등</td>';
+  html += '            <td style="padding: 8px; text-align: center; border: 1px solid #ccc;">' + schoolStats['고등'].count + '</td>';
+  html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + schoolStats['고등'].revenue.toLocaleString() + '</td>';
+  html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + schoolStats['고등'].deposit.toLocaleString() + '</td>';
+  html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + schoolStats['고등'].fee.toLocaleString() + '</td>';
+  html += '          </tr>';
+  html += '          <tr>';
+  html += '            <td style="padding: 8px; border: 1px solid #ccc;">신입</td>';
+  html += '            <td style="padding: 8px; text-align: center; border: 1px solid #ccc;">' + schoolStats['신입'].count + '</td>';
+  html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + schoolStats['신입'].revenue.toLocaleString() + '</td>';
+  html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + schoolStats['신입'].deposit.toLocaleString() + '</td>';
+  html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + schoolStats['신입'].fee.toLocaleString() + '</td>';
+  html += '          </tr>';
+  
+  // 담당별
+  const teachers = Object.keys(teacherStats).sort();
+  teachers.forEach((teacher, idx) => {
+    const stats = teacherStats[teacher];
+    if (idx === 0) {
+      html += '          <tr>';
+      html += '            <td rowspan="' + teachers.length + '" style="padding: 8px; border: 1px solid #ccc; font-weight: 600; vertical-align: top;">담당별</td>';
+      html += '            <td style="padding: 8px; border: 1px solid #ccc;">' + teacher + '</td>';
+      html += '            <td style="padding: 8px; text-align: center; border: 1px solid #ccc;">' + stats.count + '</td>';
+      html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + stats.revenue.toLocaleString() + '</td>';
+      html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + stats.deposit.toLocaleString() + '</td>';
+      html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + stats.fee.toLocaleString() + '</td>';
+      html += '          </tr>';
+    } else {
+      html += '          <tr>';
+      html += '            <td style="padding: 8px; border: 1px solid #ccc;">' + teacher + '</td>';
+      html += '            <td style="padding: 8px; text-align: center; border: 1px solid #ccc;">' + stats.count + '</td>';
+      html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + stats.revenue.toLocaleString() + '</td>';
+      html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + stats.deposit.toLocaleString() + '</td>';
+      html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + stats.fee.toLocaleString() + '</td>';
+      html += '          </tr>';
+    }
+  });
+  
+  html += '        </tbody>';
+  html += '      </table>';
+  html += '    </div>';
+  
+  // 2. 운영비용목록 (중앙)
+  const operatingCosts = [
+    { name: '월세', amount: -1650000, percent: '' },
+    { name: '관리비', amount: -800000, percent: '' },
+    { name: '정기구독', amount: -300000, percent: '' },
+    { name: '세금확보', amount: -600000, percent: '' },
+    { name: '대출이자', amount: -150000, percent: '' },
+    { name: '기부금', amount: -110000, percent: '' },
+    { name: '전화/인터넷', amount: -37500, percent: '' },
+    { name: '생수배달', amount: -18000, percent: '' },
+    { name: '보조T 급여', amount: -1479500, percent: '' },
+    { name: '퇴직연금', amount: -479405, percent: '8.4%' },
+    { name: '4대보험', amount: -570720, percent: '10%' },
+    { name: '내 4대보험', amount: -1027296, percent: '18%' },
+    { name: '노란우산', amount: -450000, percent: '' },
+    { name: '특강비', amount: 0, percent: '' },
+    { name: '기타', amount: -400000, percent: '과외' }
+  ];
+  
+  const totalOperatingCost = operatingCosts.reduce((sum, c) => sum + c.amount, 0);
+  const netIncome = totalDeposit + totalOperatingCost;
+  
+  html += '    <div>';
+  html += '      <table style="width: 100%; border-collapse: collapse; font-size: 13px; border: 1px solid var(--border);">';
+  html += '        <thead>';
+  html += '          <tr style="background: #5F9EA0; color: white;">';
+  html += '            <th style="padding: 10px; text-align: left; border: 1px solid #ccc;">운영비용목록</th>';
+  html += '            <th style="padding: 10px; text-align: right; border: 1px solid #ccc;">금액</th>';
+  html += '            <th style="padding: 10px; text-align: center; border: 1px solid #ccc;">%</th>';
+  html += '          </tr>';
+  html += '        </thead>';
+  html += '        <tbody>';
+  
+  operatingCosts.forEach(cost => {
+    html += '          <tr>';
+    html += '            <td style="padding: 8px; border: 1px solid #ccc;">' + cost.name + '</td>';
+    html += '            <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + cost.amount.toLocaleString() + '</td>';
+    html += '            <td style="padding: 8px; text-align: center; border: 1px solid #ccc;">' + cost.percent + '</td>';
+    html += '          </tr>';
+  });
+  
+  html += '          <tr style="background: #ADD8E6;">';
+  html += '            <td style="padding: 8px; border: 1px solid #ccc; font-weight: 600;">내 월급 계산</td>';
+  html += '            <td colspan="2" style="padding: 8px; text-align: right; border: 1px solid #ccc; font-weight: 600;">' + netIncome.toLocaleString() + '</td>';
+  html += '          </tr>';
+  
+  html += '        </tbody>';
+  html += '      </table>';
+  html += '    </div>';
+  
+  // 3. 계산 기준 (우측)
+  html += '    <div>';
+  html += '      <table style="width: 100%; border-collapse: collapse; font-size: 13px; border: 1px solid var(--border); margin-bottom: 20px;">';
+  html += '        <thead>';
+  html += '          <tr style="background: #5F9EA0; color: white;">';
+  html += '            <th style="padding: 10px; text-align: left; border: 1px solid #ccc;">계산 기준</th>';
+  html += '            <th style="padding: 10px; text-align: center; border: 1px solid #ccc;">비율</th>';
+  html += '          </tr>';
+  html += '        </thead>';
+  html += '        <tbody>';
+  html += '          <tr>';
+  html += '            <td style="padding: 8px; border: 1px solid #ccc;">강사 비율</td>';
+  html += '            <td style="padding: 8px; text-align: center; border: 1px solid #ccc;">48%</td>';
+  html += '          </tr>';
+  html += '          <tr>';
+  html += '            <td style="padding: 8px; border: 1px solid #ccc;">학원 비율</td>';
+  html += '            <td style="padding: 8px; text-align: center; border: 1px solid #ccc;">52%</td>';
+  html += '          </tr>';
+  html += '          <tr>';
+  html += '            <td style="padding: 8px; border: 1px solid #ccc;">보조T 비율</td>';
+  html += '            <td style="padding: 8px; text-align: center; border: 1px solid #ccc;">50%</td>';
+  html += '          </tr>';
+  html += '        </tbody>';
+  html += '      </table>';
+  html += '    </div>';
+  
+  html += '  </div>';
+  
+  // 강사별 계산 결과
+  html += '  <div style="margin-bottom: 30px;">';
+  html += '    <table style="width: 100%; border-collapse: collapse; font-size: 13px; border: 1px solid var(--border);">';
+  html += '      <thead>';
+  html += '        <tr style="background: #5F9EA0; color: white;">';
+  html += '          <th colspan="5" style="padding: 10px; text-align: center; border: 1px solid #ccc;">강사별 계산 결과</th>';
+  html += '        </tr>';
+  html += '        <tr style="background: #ADD8E6;">';
+  html += '          <th style="padding: 10px; text-align: left; border: 1px solid #ccc;">강사</th>';
+  html += '          <th style="padding: 10px; text-align: right; border: 1px solid #ccc;">총 매출</th>';
+  html += '          <th style="padding: 10px; text-align: right; border: 1px solid #ccc;">학원</th>';
+  html += '          <th style="padding: 10px; text-align: right; border: 1px solid #ccc;">강사</th>';
+  html += '          <th style="padding: 10px; text-align: right; border: 1px solid #ccc;">보조T 적용비용</th>';
+  html += '        </tr>';
+  html += '      </thead>';
+  html += '      <tbody>';
+  
+  teachers.forEach(teacher => {
+    const stats = teacherStats[teacher];
+    const academyShare = Math.round(stats.revenue * 0.52);
+    const teacherShare = Math.round(stats.revenue * 0.48);
+    const assistantCost = 0; // TODO: 실제 보조T 비용 계산 필요
     
-    teachers.forEach(teacher => {
-      const stats = teacherStats[teacher];
-      const teacherShare = Math.round(stats.revenue * 0.48);
-      const academyShare = Math.round(stats.revenue * 0.52);
-      
-      html += '      <tr style="border-bottom: 1px solid var(--border);">';
-      html += '        <td style="padding: 10px; font-weight: 600;">' + teacher + '</td>';
-      html += '        <td style="padding: 10px; text-align: center;">' + stats.count + '명</td>';
-      html += '        <td style="padding: 10px; text-align: right;">' + stats.revenue.toLocaleString() + '원</td>';
-      html += '        <td style="padding: 10px; text-align: right;">' + stats.deposit.toLocaleString() + '원</td>';
-      html += '        <td style="padding: 10px; text-align: right;">' + stats.fee.toLocaleString() + '원</td>';
-      html += '        <td style="padding: 10px; text-align: right; color: var(--accent2);">' + teacherShare.toLocaleString() + '원</td>';
-      html += '        <td style="padding: 10px; text-align: right; color: var(--accent);">' + academyShare.toLocaleString() + '원</td>';
-      html += '      </tr>';
-    });
-    
-    html += '    </tbody>';
-    html += '  </table>';
-    html += '</div>';
-  }
+    html += '        <tr>';
+    html += '          <td style="padding: 8px; border: 1px solid #ccc; font-weight: 600;">' + teacher + '</td>';
+    html += '          <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + stats.revenue.toLocaleString() + '</td>';
+    html += '          <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + academyShare.toLocaleString() + '</td>';
+    html += '          <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + teacherShare.toLocaleString() + '</td>';
+  html += '          <td style="padding: 8px; text-align: right; border: 1px solid #ccc;">' + assistantCost.toLocaleString() + '</td>';
+    html += '        </tr>';
+  });
+  
+  html += '      </tbody>';
+  html += '    </table>';
+  html += '  </div>';
+  
+  // 보조T 급여 계산
+  html += '  <div>';
+  html += '    <table style="width: 100%; border-collapse: collapse; font-size: 13px; border: 1px solid var(--border);">';
+  html += '      <thead>';
+  html += '        <tr style="background: #5F9EA0; color: white;">';
+  html += '          <th colspan="6" style="padding: 10px; text-align: center; border: 1px solid #ccc;">보조T 급여 계산</th>';
+  html += '        </tr>';
+  html += '        <tr style="background: #ADD8E6;">';
+  html += '          <th style="padding: 10px; text-align: left; border: 1px solid #ccc;">보조T</th>';
+  html += '          <th style="padding: 10px; text-align: center; border: 1px solid #ccc;">근무시간</th>';
+  html += '          <th style="padding: 10px; text-align: right; border: 1px solid #ccc;">시급</th>';
+  html += '          <th style="padding: 10px; text-align: right; border: 1px solid #ccc;">급여</th>';
+  html += '          <th style="padding: 10px; text-align: center; border: 1px solid #ccc;">담당시간</th>';
+  html += '          <th style="padding: 10px; text-align: right; border: 1px solid #ccc;">적용비용</th>';
+  html += '        </tr>';
+  html += '      </thead>';
+  html += '      <tbody>';
+  html += '        <tr>';
+  html += '          <td colspan="6" style="padding: 16px; text-align: center; color: var(--text-secondary); border: 1px solid #ccc;">보조T 데이터가 없습니다</td>';
+  html += '        </tr>';
+  html += '      </tbody>';
+  html += '    </table>';
+  html += '  </div>';
+  
+  html += '</div>';
+  
+  return html;
   
   return html;
 }
