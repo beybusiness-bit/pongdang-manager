@@ -1011,46 +1011,47 @@ input[type="checkbox"] {
     grid-column: 1 / -1 !important;
   }
   
-  /* 5. 결제날짜, 입금날짜, 결제수단+수수료, 입금금액 */
+  /* 5. 결제날짜, 입금날짜, 결제수단, 수수료, 입금금액 */
   #modal-payment-form .payment-row-5 {
     order: 5;
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 12px !important;
   }
   #modal-payment-form .payment-row-5 .payment-teacher-check-desktop {
     display: none !important;
   }
-  /* 결제날짜 */
-  #modal-payment-form .payment-row-5 > div:nth-child(2) {
-    grid-column: 1;
-  }
-  /* 입금날짜 */
-  #modal-payment-form .payment-row-5 > div:nth-child(3) {
-    grid-column: 2;
-  }
-  /* 결제수단 */
-  #modal-payment-form .payment-row-5 > div:nth-child(4) {
-    grid-column: 1;
-    order: 10;
+  
+  /* 6. 수수료, 입금금액을 5행과 함께 배치 */
+  #modal-payment-form .payment-row-6 {
+    order: 5; /* 5행과 같은 순서 */
+    margin-top: -16px !important; /* 5행의 margin-bottom 상쇄 */
   }
   
-  /* 6. 수수료 (결제수단 옆), 입금금액 (별도 줄) */
+  /* 5행과 6행을 하나의 그리드처럼 동작하도록 */
+  #modal-payment-form .payment-row-5,
   #modal-payment-form .payment-row-6 {
-    order: 6;
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
     gap: 12px !important;
+    margin-bottom: 16px !important;
   }
-  /* 수수료 - 결제수단 옆 (2번째 칼럼) */
+  
+  /* 5행: 결제날짜, 입금날짜, 결제수단 */
+  #modal-payment-form .payment-row-5 > div:nth-child(2) {
+    grid-column: 1;
+  }
+  #modal-payment-form .payment-row-5 > div:nth-child(3) {
+    grid-column: 2;
+  }
+  #modal-payment-form .payment-row-5 > div:nth-child(4) {
+    grid-column: 1;
+  }
+  
+  /* 6행: 수수료(결제수단 옆), 입금금액(별도 줄) */
   #modal-payment-form .payment-row-6 > div:nth-child(1) {
     grid-column: 2;
-    order: 10;
+    margin-top: -72px; /* 결제수단 옆으로 이동 */
   }
-  /* 입금금액 - 별도 줄 */
   #modal-payment-form .payment-row-6 > div:nth-child(2) {
     grid-column: 1 / -1;
-    order: 20;
   }
   
   #modal-payment-form .payment-row {
@@ -1752,8 +1753,8 @@ input[type="checkbox"] {
         </div>
       </div>
       
-      <!-- 3행: 수강반(50%), 횟수(10%), 기본교습비(40%) -->
-      <div class="payment-row payment-row-3" style="display: grid; grid-template-columns: 48% 12% 40%; gap: 12px; margin-bottom: 16px;">
+      <!-- 3행: 수강반, 횟수, 기본교습비 -->
+      <div class="payment-row payment-row-3" style="display: grid; grid-template-columns: 4fr 1fr 3fr; gap: 12px; margin-bottom: 16px;">
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">수강반 *</label>
           <select class="form-input" id="payment-class" onchange="loadClassTuition()">
@@ -1773,7 +1774,7 @@ input[type="checkbox"] {
       </div>
       
       <!-- 4행: 데스크탑(할인, 할인금액, 최종교습비) / 모바일(결제선생, 할인, 할인금액 → 최종교습비) -->
-      <div class="payment-row payment-row-4" style="display: grid; grid-template-columns: 20% 40% 40%; gap: 12px; margin-bottom: 16px;">
+      <div class="payment-row payment-row-4" style="display: grid; grid-template-columns: 1fr 2fr 2fr; gap: 12px; margin-bottom: 16px;">
         <!-- 데스크탑에서는 숨김, 모바일에서 첫번째 -->
         <div class="form-group payment-teacher-check-wrapper" style="margin-bottom: 0; display: none;">
           <label class="form-label">결제선생</label>
@@ -5932,44 +5933,63 @@ function renderEnrollmentLedger(canWrite) {
     return html;
   }
   
-  const selectedMonth = currentPaymentFilter.month;
+  // 탭 영역
+  html += '<div style="margin-bottom: 20px;">';
+  html += '  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">';
+  html += '    <div style="display: flex; gap: 8px; align-items: center;">';
+  html += '      <input type="text" placeholder="월 검색 (예: 2026-04)" id="ledger-month-search" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; width: 150px;" onkeyup="renderPaymentsPage()">';
+  html += '      <button class="btn btn-outline btn-sm" onclick="toggleLedgerSortOrder()" style="padding: 6px 12px;">';
+  html += '        ' + (ledgerSortOrder === 'desc' ? '↓ 최신순' : '↑ 오래된순');
+  html += '      </button>';
+  html += '    </div>';
+  html += '    <button class="btn btn-primary btn-sm" onclick="openAddLedgerMonthModal()">+ 월 추가</button>';
+  html += '  </div>';
   
-  // 해당 월의 모든 결제 데이터
-  const monthPayments = paymentsData.filter(p => p.enrollmentMonth === selectedMonth);
+  // 탭 목록
+  html += '  <div style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 8px; border-bottom: 1px solid var(--border);">';
   
-  // 학교급별로 그룹핑
-  const grouped = {
-    '초등': [],
-    '중등': [],
-    '고등': []
-  };
+  // ledgerMonths가 비어있으면 현재 월 추가
+  if (ledgerMonths.length === 0) {
+    const currentMonth = today().substring(0, 7);
+    ledgerMonths.push(currentMonth);
+    currentLedgerMonth = currentMonth;
+  }
   
-  monthPayments.forEach(p => {
-    const student = studentsData.find(s => s.id === p.studentId);
-    const schoolType = student ? student.schoolType : '기타';
-    if (grouped[schoolType]) {
-      grouped[schoolType].push(p);
-    }
+  // 정렬
+  const sortedMonths = [...ledgerMonths].sort((a, b) => {
+    return ledgerSortOrder === 'desc' ? b.localeCompare(a) : a.localeCompare(b);
   });
   
-  // 툴바
-  html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">';
-  html += '  <div style="display: flex; gap: 12px; align-items: center;">';
-  html += '    <h3 style="margin: 0; font-size: 18px;">월별등록대장</h3>';
-  html += '    <input type="month" class="form-input form-input-sm" value="' + selectedMonth + '" onchange="currentPaymentFilter.month = this.value; renderPaymentsPage()" style="width: 140px;">';
+  // 검색 필터링
+  const searchValue = document.getElementById('ledger-month-search') ? document.getElementById('ledger-month-search').value : '';
+  const filteredMonths = searchValue ? sortedMonths.filter(m => m.includes(searchValue)) : sortedMonths;
+  
+  filteredMonths.forEach(month => {
+    const isActive = month === currentLedgerMonth;
+    const activeStyle = isActive ? 'background: var(--accent); color: white;' : 'background: white; color: var(--text);';
+    html += '    <button class="btn btn-sm" onclick="selectLedgerMonth(\'' + month + '\')" style="' + activeStyle + ' min-width: 100px; padding: 8px 16px; border: 1px solid var(--border);">';
+    html += '      ' + month;
+    html += '    </button>';
+  });
+  
   html += '  </div>';
-  if (canWrite) {
-    html += '  <div style="display: flex; gap: 8px;">';
-    html += '    <button class="btn btn-outline btn-sm" onclick="openAddPaymentModal(); document.getElementById(\'payment-is-new\').checked = true; toggleNewStudentMode(true);">+ 신입 학생</button>';
-    html += '    <button class="btn btn-primary btn-sm" onclick="openAddPaymentModal()">+ 결제 추가</button>';
-    html += '  </div>';
-  }
   html += '</div>';
+  
+  // 현재 선택된 월이 없으면 첫 번째 월 선택
+  if (!currentLedgerMonth && filteredMonths.length > 0) {
+    currentLedgerMonth = filteredMonths[0];
+  }
+  
+  // 선택된 월의 데이터
+  const monthPayments = paymentsData.filter(p => p.enrollmentMonth === currentLedgerMonth);
   
   if (monthPayments.length === 0) {
     html += '<div class="empty-state">';
     html += '  <div class="empty-icon">📋</div>';
-    html += '  <div class="empty-text">' + selectedMonth + '에 등록된 학생이 없습니다</div>';
+    html += '  <div class="empty-text">' + currentLedgerMonth + '에 등록된 학생이 없습니다</div>';
+    if (canWrite) {
+      html += '  <button class="btn btn-primary btn-sm" onclick="openAddPaymentModal()" style="margin-top: 12px;">+ 학생 추가</button>';
+    }
     html += '</div>';
     return html;
   }
@@ -5977,8 +5997,13 @@ function renderEnrollmentLedger(canWrite) {
   // 신입 학생 섹션
   const newStudents = monthPayments.filter(p => p.isNewStudent);
   if (newStudents.length > 0) {
-    html += '<div style="margin-bottom: 32px; padding: 16px; background: #fff9e6; border: 2px solid var(--accent2); border-radius: var(--radius-sm);">';
-    html += '  <h4 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: var(--accent2);">🆕 신입 학생 (' + newStudents.length + '명)</h4>';
+    html += '<div style="margin-bottom: 24px; padding: 16px; background: #fff9e6; border: 2px solid var(--accent2); border-radius: var(--radius-sm);">';
+    html += '  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">';
+    html += '    <h4 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--accent2);">🆕 신입 학생 (' + newStudents.length + '명)</h4>';
+    if (canWrite) {
+      html += '    <button class="btn btn-outline btn-sm" onclick="openAddNewStudentModal()">+ 신입 추가</button>';
+    }
+    html += '  </div>';
     html += '  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px;">';
     
     newStudents.forEach(p => {
@@ -5986,7 +6011,7 @@ function renderEnrollmentLedger(canWrite) {
       const classObj = classesData.find(c => c.id === p.classId);
       const className = classObj ? classObj.name : '-';
       
-      html += '    <div style="padding: 12px; background: white; border: 1px solid var(--accent2); border-radius: var(--radius-sm);">';
+      html += '    <div style="padding: 12px; background: white; border: 1px solid var(--accent2); border-radius: var(--radius-sm); cursor: pointer;" onclick="openEditPaymentModal(\'' + p.id + '\')">';
       html += '      <div style="font-weight: 600; margin-bottom: 6px;">' + studentName + '</div>';
       html += '      <div style="font-size: 12px; color: var(--text-secondary);">';
       html += '        <div>담당: ' + (p.teacherName || '-') + '</div>';
@@ -6000,13 +6025,27 @@ function renderEnrollmentLedger(canWrite) {
     html += '</div>';
   }
   
-  // 학교급별 테이블
+  // 등록대장 테이블 (학교급별 그룹핑)
+  const grouped = { '초등': [], '중등': [], '고등': [] };
+  monthPayments.forEach(p => {
+    const student = studentsData.find(s => s.id === p.studentId);
+    const schoolType = student ? student.schoolType : '기타';
+    if (grouped[schoolType]) {
+      grouped[schoolType].push(p);
+    }
+  });
+  
   ['초등', '중등', '고등'].forEach(schoolType => {
     const payments = grouped[schoolType] || [];
     if (payments.length === 0) return;
     
     html += '<div style="margin-bottom: 32px;">';
-    html += '  <h4 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: var(--accent);">' + schoolType + ' (' + payments.length + '명)</h4>';
+    html += '  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">';
+    html += '    <h4 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--accent);">' + schoolType + ' (' + payments.length + '명)</h4>';
+    if (canWrite) {
+      html += '    <button class="btn btn-outline btn-sm" onclick="openAddPaymentModal()">+ 학생 추가</button>';
+    }
+    html += '  </div>';
     html += '  <div style="overflow-x: auto;">';
     html += '    <table style="width: 100%; border-collapse: collapse; font-size: 12px; background: white; border: 1px solid var(--border);">';
     html += '      <thead>';
@@ -6019,11 +6058,15 @@ function renderEnrollmentLedger(canWrite) {
     html += '          <th style="padding: 8px; text-align: right; width: 90px;">교습비</th>';
     html += '          <th style="padding: 8px; text-align: center; width: 100px;">수강반</th>';
     html += '          <th style="padding: 8px; text-align: center; width: 70px;">할인</th>';
+    html += '          <th style="padding: 8px; text-align: right; width: 60px;">횟수</th>';
     html += '          <th style="padding: 8px; text-align: right; width: 90px;">입금금액</th>';
     html += '          <th style="padding: 8px; text-align: right; width: 60px;">수수료</th>';
     html += '          <th style="padding: 8px; text-align: center; width: 80px;">결제날짜</th>';
     html += '          <th style="padding: 8px; text-align: center; width: 80px;">입금날짜</th>';
     html += '          <th style="padding: 8px; text-align: center; width: 80px;">결제수단</th>';
+    if (canWrite) {
+      html += '          <th style="padding: 8px; text-align: center; width: 60px;">작업</th>';
+    }
     html += '        </tr>';
     html += '      </thead>';
     html += '      <tbody>';
@@ -6034,7 +6077,7 @@ function renderEnrollmentLedger(canWrite) {
     
     payments.forEach((p, idx) => {
       const student = studentsData.find(s => s.id === p.studentId);
-      const studentName = p.isNewStudent ? p.studentName : (student ? student.name : '(삭제)');
+      const studentName = p.studentName || (student ? student.name : '(삭제)');
       const grade = student && student.grade ? student.grade.replace(/[^0-9]/g, '') : '-';
       const classObj = classesData.find(c => c.id === p.classId);
       const className = classObj ? classObj.name : '-';
@@ -6056,11 +6099,17 @@ function renderEnrollmentLedger(canWrite) {
       html += '          <td style="padding: 8px; text-align: right;">' + (p.finalTuition || 0).toLocaleString() + '</td>';
       html += '          <td style="padding: 8px; text-align: center;">' + className + '</td>';
       html += '          <td style="padding: 8px; text-align: center; font-size: 11px;">' + discountName + '</td>';
+      html += '          <td style="padding: 8px; text-align: right;">' + (p.count || '-') + '</td>';
       html += '          <td style="padding: 8px; text-align: right;">' + (p.depositAmount || 0).toLocaleString() + '</td>';
       html += '          <td style="padding: 8px; text-align: right;">' + (p.fee || 0).toLocaleString() + '</td>';
       html += '          <td style="padding: 8px; text-align: center; font-size: 11px;">' + (p.paymentDate || '-') + '</td>';
       html += '          <td style="padding: 8px; text-align: center; font-size: 11px;">' + (p.depositDate || '-') + '</td>';
       html += '          <td style="padding: 8px; text-align: center; font-size: 11px;">' + paymentMethodName + '</td>';
+      if (canWrite) {
+        html += '          <td style="padding: 8px; text-align: center;" onclick="event.stopPropagation();">';
+        html += '            <button class="btn btn-outline btn-sm" onclick="deletePayment(\'' + p.id + '\')" style="padding: 4px 8px; font-size: 11px;">삭제</button>';
+        html += '          </td>';
+      }
       html += '        </tr>';
     });
     
@@ -6068,10 +6117,10 @@ function renderEnrollmentLedger(canWrite) {
     html += '        <tr style="background: var(--bg-hover); font-weight: 600; border-top: 2px solid var(--border);">';
     html += '          <td colspan="5" style="padding: 8px; text-align: center;">' + schoolType + ' 합산 (' + payments.length + '명)</td>';
     html += '          <td style="padding: 8px; text-align: right;">' + subtotalTuition.toLocaleString() + '</td>';
-    html += '          <td colspan="2"></td>';
+    html += '          <td colspan="3"></td>';
     html += '          <td style="padding: 8px; text-align: right;">' + subtotalDeposit.toLocaleString() + '</td>';
     html += '          <td style="padding: 8px; text-align: right;">' + subtotalFee.toLocaleString() + '</td>';
-    html += '          <td colspan="3"></td>';
+    html += '          <td colspan="' + (canWrite ? '4' : '3') + '"></td>';
     html += '        </tr>';
     
     html += '      </tbody>';
@@ -6087,7 +6136,7 @@ function renderEnrollmentLedger(canWrite) {
   const totalFee = monthPayments.reduce((sum, p) => sum + (p.fee || 0), 0);
   
   html += '<div style="margin-top: 32px; padding: 20px; background: var(--bg-side); border-radius: var(--radius-sm); border: 2px solid var(--accent);">';
-  html += '  <h4 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">📊 ' + selectedMonth + ' 전체 통계</h4>';
+  html += '  <h4 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">📊 ' + currentLedgerMonth + ' 전체 통계</h4>';
   html += '  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">';
   html += '    <div>';
   html += '      <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">총 학생 수</div>';
@@ -6108,17 +6157,12 @@ function renderEnrollmentLedger(canWrite) {
   html += '  </div>';
   html += '</div>';
   
-  // 담당별 매출 및 정산
+  // 담당별 매출 현황
   const teacherStats = {};
   monthPayments.forEach(p => {
     const teacher = p.teacherName || '미지정';
     if (!teacherStats[teacher]) {
-      teacherStats[teacher] = {
-        count: 0,
-        revenue: 0,
-        deposit: 0,
-        fee: 0
-      };
+      teacherStats[teacher] = { count: 0, revenue: 0, deposit: 0, fee: 0 };
     }
     teacherStats[teacher].count++;
     teacherStats[teacher].revenue += p.finalTuition || 0;
@@ -6168,7 +6212,6 @@ function renderEnrollmentLedger(canWrite) {
   
   return html;
 }
-
 function renderPaymentRecords(canWrite) {
   let html = '';
   
@@ -6282,7 +6325,8 @@ function renderPaymentRecords(canWrite) {
   
   pagePayments.forEach(p => {
     const student = studentsData.find(s => s.id === p.studentId);
-    const studentName = p.isNewStudent ? p.studentName : (student ? student.name : '(삭제)');
+    // studentName 필드가 있으면 우선 사용, 없으면 학생 데이터에서 가져오기
+    const studentName = p.studentName || (student ? student.name : '(삭제)');
     const schoolType = student ? student.schoolType : '';
     let studentGrade = '';
     if (student && student.grade) {
@@ -7031,6 +7075,40 @@ function savePayment() {
   renderPaymentsPage();
 }
 
+// 월별등록대장 관련 함수
+function toggleLedgerSortOrder() {
+  ledgerSortOrder = ledgerSortOrder === 'desc' ? 'asc' : 'desc';
+  renderPaymentsPage();
+}
+
+function selectLedgerMonth(month) {
+  currentLedgerMonth = month;
+  renderPaymentsPage();
+}
+
+function openAddLedgerMonthModal() {
+  const month = prompt('추가할 월을 입력하세요 (예: 2026-05)');
+  if (!month) return;
+  
+  // 형식 검증
+  if (!/^\d{4}-\d{2}$/.test(month)) {
+    showToast('올바른 형식이 아닙니다 (예: 2026-05)');
+    return;
+  }
+  
+  // 이미 존재하는지 확인
+  if (ledgerMonths.includes(month)) {
+    showToast('이미 존재하는 월입니다');
+    return;
+  }
+  
+  // 추가
+  ledgerMonths.push(month);
+  currentLedgerMonth = month;
+  showToast(month + ' 월이 추가되었습니다');
+  renderPaymentsPage();
+}
+
 function deletePayment(id) {
   if (!confirm('정말 이 결제를 삭제하시겠습니까?')) return;
   
@@ -7284,3 +7362,46 @@ window.addEventListener('load', () => {
 
 </body>
 </html>
+
+// 월별등록대장 관련 함수들
+function toggleLedgerSortOrder() {
+  ledgerSortOrder = ledgerSortOrder === 'desc' ? 'asc' : 'desc';
+  renderPaymentsPage();
+}
+
+function selectLedgerMonth(month) {
+  currentLedgerMonth = month;
+  renderPaymentsPage();
+}
+
+function openAddLedgerMonthModal() {
+  const month = prompt('추가할 월을 입력하세요 (예: 2026-05)');
+  if (!month) return;
+  
+  // 유효성 검사
+  if (!/^\d{4}-\d{2}$/.test(month)) {
+    showToast('올바른 형식이 아닙니다 (예: 2026-05)');
+    return;
+  }
+  
+  // 이미 존재하는지 확인
+  if (ledgerMonths.includes(month)) {
+    showToast('이미 존재하는 월입니다');
+    return;
+  }
+  
+  ledgerMonths.push(month);
+  currentLedgerMonth = month;
+  renderPaymentsPage();
+  showToast(month + ' 월이 추가되었습니다');
+}
+
+function openAddNewStudentModal() {
+  // 결제 추가 모달을 신입 모드로 열기
+  openAddPaymentModal();
+  document.getElementById('payment-is-new').checked = true;
+  toggleNewStudentMode(true);
+  // 등록월을 현재 선택된 월로 설정
+  document.getElementById('payment-enrollment-month').value = currentLedgerMonth;
+}
+
