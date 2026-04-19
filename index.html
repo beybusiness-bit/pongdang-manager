@@ -2299,7 +2299,11 @@ function initApp() {
       if (newHash === 'dashboard') updateDashboard();
       if (newHash === 'students') renderStudentsPage();
       if (newHash === 'textbooks') renderTextbooksPage();
-      if (newHash === 'payments') renderPaymentsPage();
+      if (newHash === 'payments') {
+        // 결제 관리 페이지에 진입할 때마다 월별등록대장은 현재 월로 리셋
+        currentLedgerMonth = today().substring(0, 7);
+        renderPaymentsPage();
+      }
       if (newHash === 'calendar') setTimeout(() => renderCalendar(), 50);
     }
   });
@@ -2986,7 +2990,7 @@ function renderStudentsPage() {
   html += '        oninput="updateStudentFilter(\'search\', this.value)">';
   html += '    </div>';
   html += '    <select class="filter-select" onchange="updateStudentFilter(\'grade\', this.value)">';
-  html += '      <option value="">전체 학년</option>';
+  html += '      <option value="">전체 학교급</option>';
   html += '      <option value="초"' + (currentStudentFilter.grade === '초' ? ' selected' : '') + '>초등</option>';
   html += '      <option value="중"' + (currentStudentFilter.grade === '중' ? ' selected' : '') + '>중등</option>';
   html += '      <option value="고"' + (currentStudentFilter.grade === '고' ? ' selected' : '') + '>고등</option>';
@@ -3022,21 +3026,21 @@ function renderStudentsPage() {
     html += '  </div>';
     html += '</div>';
   } else {
-    html += '<table class="student-table">';
+    html += '<table class="student-table" style="text-align: center;">';
     html += '  <thead>';
     html += '    <tr>';
-    html += '      <th class="checkbox-cell">';
+    html += '      <th class="checkbox-cell" style="text-align: center;">';
     html += '        <input type="checkbox" onclick="toggleAllStudents(this)" ' +
       (selectedStudentIds.length === pageStudents.length && pageStudents.length > 0 ? 'checked' : '') + '>';
     html += '      </th>';
-    html += '      <th>번호</th>';
-    html += '      <th>이름</th>';
-    html += '      <th>학교</th>';
-    html += '      <th>학년</th>';
-    html += '      <th>담당선생님</th>';
-    html += '      <th>요일</th>';
-    html += '      <th>상태</th>';
-    html += '      <th>연락처</th>';
+    html += '      <th style="text-align: center;">번호</th>';
+    html += '      <th style="text-align: center;">이름</th>';
+    html += '      <th style="text-align: center;">학교</th>';
+    html += '      <th style="text-align: center;">학년</th>';
+    html += '      <th style="text-align: center;">담당선생님</th>';
+    html += '      <th style="text-align: center;">요일</th>';
+    html += '      <th style="text-align: center;">상태</th>';
+    html += '      <th style="text-align: center;">연락처</th>';
     html += '    </tr>';
     html += '  </thead>';
     html += '  <tbody>';
@@ -3047,24 +3051,24 @@ function renderStudentsPage() {
       const statusClass = status === '재원' ? 'status-active' : 'status-quit';
       
       html += '<tr style="cursor: pointer;" onclick="openStudentDetail(\'' + student.id + '\')">';
-      html += '  <td class="checkbox-cell" onclick="event.stopPropagation()">';
+      html += '  <td class="checkbox-cell" onclick="event.stopPropagation()" style="text-align: center;">';
       html += '    <input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onclick="toggleStudentSelection(\'' + student.id + '\')">';
       html += '  </td>';
-      html += '  <td>' + (student.number || '-') + '</td>';
-      html += '  <td>';
-      html += '    <div style="display: flex; align-items: center; gap: 8px;">';
+      html += '  <td style="text-align: center;">' + (student.number || '-') + '</td>';
+      html += '  <td style="text-align: center;">';
+      html += '    <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">';
       html += '      ' + getProfileImageHTML(student, 32);
       html += '      <span>' + (student.name || '-') + '</span>';
       html += '    </div>';
       html += '  </td>';
-      html += '  <td>' + (student.school || '-') + '</td>';
-      html += '  <td>' + (student.grade || '-') + '</td>';
-      html += '  <td>' + (student.teacher || '-') + '</td>';
-      html += '  <td>' + (student.days || '-') + '</td>';
-      html += '  <td>';
+      html += '  <td style="text-align: center;">' + (student.school || '-') + '</td>';
+      html += '  <td style="text-align: center;">' + (student.grade || '-') + '</td>';
+      html += '  <td style="text-align: center;">' + (student.teacher || '-') + '</td>';
+      html += '  <td style="text-align: center;">' + (student.days || '-') + '</td>';
+      html += '  <td style="text-align: center;">';
       html += '    <span class="status-badge ' + statusClass + '">' + status + '</span>';
       html += '  </td>';
-      html += '  <td>' + (student.parentPhone || student.phone || '-') + '</td>';
+      html += '  <td style="text-align: center;">' + (student.parentPhone || student.phone || '-') + '</td>';
       html += '</tr>';
     });
     
@@ -3944,8 +3948,11 @@ function renderStudentHistory(student) {
 
 function editStudentFromDetail() {
   if (!currentDetailStudent) return;
+  const studentId = currentDetailStudent.id;
   closeModal('modal-student-detail');
-  openStudentForm(currentDetailStudent.id);
+  setTimeout(() => {
+    openStudentForm(studentId);
+  }, 100);
 }
 
 // 초기 샘플 데이터 로드
@@ -4039,7 +4046,40 @@ function loadSampleData() {
         { id: uid(), type: '등록', date: '2024-12-15', memo: '최초 등록' }
       ],
       createdAt: '2024-12-15'
-    }
+    },
+
+      { id: 'ds001', number: '100', name: '김소예', school: '풍당초등학교', grade: '초3', teacher: '은지T', class: '초등 기본반', days: '화, 목', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds002', number: '101', name: '박세연', school: '풍당초등학교', grade: '초3', teacher: '은지T', class: '초등 기본반', days: '월, 수', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds003', number: '102', name: '김현준', school: '풍당초등학교', grade: '초4', teacher: '찬혁T', class: '초등 기본반', days: '화, 목', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds004', number: '103', name: '이도하', school: '풍당초등학교', grade: '초4', teacher: '찬혁T', class: '초등 기본반', days: '화, 목', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds005', number: '104', name: '김소율', school: '풍당초등학교', grade: '초5', teacher: '은지T', class: '초등 기본반', days: '화, 목', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds006', number: '105', name: '윤서은', school: '풍당초등학교', grade: '초5', teacher: '은지T', class: '초등 기본반', days: '월, 수', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds007', number: '106', name: '이채윤', school: '풍당초등학교', grade: '초5', teacher: '은지T', class: '초등 기본반', days: '화, 목', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds008', number: '107', name: '진세훈', school: '풍당초등학교', grade: '초5', teacher: '은지T', class: '초등 기본반', days: '화, 목', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds009', number: '108', name: '하시윤', school: '풍당초등학교', grade: '초5', teacher: '은지T', class: '초등 기본반', days: '월, 수', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds010', number: '109', name: '강민', school: '풍당초등학교', grade: '초6', teacher: '찬혁T', class: '초등 기본반', days: '화, 목', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds011', number: '110', name: '민성현', school: '풍당초등학교', grade: '초6', teacher: '찬혁T', class: '초등 기본반', days: '화, 목', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds012', number: '111', name: '오서원', school: '풍당초등학교', grade: '초6', teacher: '은지T', class: '초등 기본반', days: '화, 목', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds013', number: '112', name: '최지아', school: '풍당초등학교', grade: '초6', teacher: '은지T', class: '초등 기본반', days: '화, 목', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds014', number: '113', name: '김연하', school: '풍당중학교', grade: '중1', teacher: '은지T', class: '중등 기본반', days: '월, 수', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds015', number: '114', name: '김은채', school: '풍당중학교', grade: '중1', teacher: '찬혁T', class: '중등 기본반', days: '월, 수', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds016', number: '115', name: '김주원', school: '풍당중학교', grade: '중1', teacher: '찬혁T', class: '중등 기본반', days: '월, 수', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds017', number: '116', name: '박도현', school: '풍당중학교', grade: '중1', teacher: '은지T', class: '중등 기본반', days: '화, 목', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds018', number: '117', name: '박서은', school: '풍당중학교', grade: '중1', teacher: '찬혁T', class: '중등 기본반', days: '화, 목', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds019', number: '118', name: '이준우', school: '풍당중학교', grade: '중1', teacher: '찬혁T', class: '중등 기본반', days: '월, 수', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds020', number: '119', name: '정수현', school: '풍당중학교', grade: '중1', teacher: '은지T', class: '중등 기본반', days: '월, 수', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds021', number: '120', name: '최서연', school: '풍당중학교', grade: '중1', teacher: '은지T', class: '중등 기본반', days: '월, 수', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds022', number: '121', name: '김태민', school: '풍당중학교', grade: '중2', teacher: '찬혁T', class: '중등 기본반', days: '화, 목', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds023', number: '122', name: '김예은', school: '풍당중학교', grade: '중2', teacher: '은지T', class: '중등 기본반', days: '화, 목', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds024', number: '123', name: '최서빈', school: '풍당중학교', grade: '중2', teacher: '은지T', class: '중등 기본반', days: '화, 목', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds025', number: '124', name: '조서은', school: '풍당중학교', grade: '중2', teacher: '은지T', class: '중등 기본반', days: '화, 목', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds026', number: '125', name: '김동엽', school: '풍당중학교', grade: '중3', teacher: '찬혁T', class: '중등 기본반', days: '월, 수', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds027', number: '126', name: '최윤석', school: '풍당중학교', grade: '중3', teacher: '찬혁T', class: '중등 기본반', days: '월, 수', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds028', number: '127', name: '최서은', school: '풍당중학교', grade: '중3', teacher: '은지T', class: '중등 기본반', days: '화, 목', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds029', number: '128', name: '조서인', school: '풍당고등학교', grade: '고1', teacher: '찬혁T', class: '고등 기본반', days: '월, 수', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds030', number: '129', name: '김지안', school: '풍당고등학교', grade: '고2', teacher: '찬혁T', class: '고등 기본반', days: '월, 수', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' },
+      { id: 'ds031', number: '130', name: '조진우', school: '풍당고등학교', grade: '고2', teacher: '특강', class: '고등 기본반', days: '월, 수', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' }
+
   ];
   
   // 결제 관리 샘플 데이터 로드
@@ -5863,54 +5903,54 @@ function loadPaymentSampleData() {
   if (!paymentsData || paymentsData.length === 0) {
     paymentsData = [
       // 초등 3학년
-      { id: uid(), studentId: '', studentName: '김소예', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 240000, finalTuition: 240000, discountTypeId: 'dt1', discountAmount: 0, depositAmount: 240000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-02', depositDate: '2026-04-06', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '박세연', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 250000, finalTuition: 250000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 249000, fee: 1000, paymentMethodId: 'pm3', paymentDate: '2026-04-01', depositDate: '2026-04-02', teacherName: '은지T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds001', studentName: '김소예', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 240000, finalTuition: 240000, discountTypeId: 'dt1', discountAmount: 0, depositAmount: 240000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-02', depositDate: '2026-04-06', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds002', studentName: '박세연', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 250000, finalTuition: 250000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 249000, fee: 1000, paymentMethodId: 'pm3', paymentDate: '2026-04-01', depositDate: '2026-04-02', teacherName: '은지T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       
       // 초등 4학년
-      { id: uid(), studentId: '', studentName: '김현준', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 290000, finalTuition: 290000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 288840, fee: 1160, paymentMethodId: 'pm3', paymentDate: '2026-03-19', depositDate: '2026-03-23', teacherName: '찬혁T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '이도하', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 300000, finalTuition: 300000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 300000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-16', depositDate: '', teacherName: '찬혁T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds003', studentName: '김현준', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 290000, finalTuition: 290000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 288840, fee: 1160, paymentMethodId: 'pm3', paymentDate: '2026-03-19', depositDate: '2026-03-23', teacherName: '찬혁T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds004', studentName: '이도하', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 300000, finalTuition: 300000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 300000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-16', depositDate: '', teacherName: '찬혁T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       
       // 초등 5학년
-      { id: uid(), studentId: '', studentName: '김소율', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 290000, finalTuition: 290000, discountTypeId: 'dt1', discountAmount: 0, depositAmount: 290000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-01', depositDate: '2026-04-02', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '윤서은', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 300000, finalTuition: 300000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 298800, fee: 1200, paymentMethodId: 'pm3', paymentDate: '2026-04-01', depositDate: '2026-04-03', teacherName: '은지T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '이채윤', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 300000, finalTuition: 300000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 298800, fee: 1200, paymentMethodId: 'pm3', paymentDate: '2026-04-01', depositDate: '2026-04-03', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: true, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '진세훈', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 290000, finalTuition: 290000, discountTypeId: 'dt3', discountAmount: 0, depositAmount: 290000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-03-25', depositDate: '2026-03-26', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '하시윤', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 300000, finalTuition: 300000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 300000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-05', depositDate: '2026-04-06', teacherName: '은지T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds005', studentName: '김소율', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 290000, finalTuition: 290000, discountTypeId: 'dt1', discountAmount: 0, depositAmount: 290000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-01', depositDate: '2026-04-02', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds006', studentName: '윤서은', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 300000, finalTuition: 300000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 298800, fee: 1200, paymentMethodId: 'pm3', paymentDate: '2026-04-01', depositDate: '2026-04-03', teacherName: '은지T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds007', studentName: '이채윤', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 300000, finalTuition: 300000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 298800, fee: 1200, paymentMethodId: 'pm3', paymentDate: '2026-04-01', depositDate: '2026-04-03', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: true, createdAt: today() },
+      { id: uid(), studentId: 'ds008', studentName: '진세훈', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 290000, finalTuition: 290000, discountTypeId: 'dt3', discountAmount: 0, depositAmount: 290000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-03-25', depositDate: '2026-03-26', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds009', studentName: '하시윤', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 300000, finalTuition: 300000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 300000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-05', depositDate: '2026-04-06', teacherName: '은지T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       
       // 초등 6학년
-      { id: uid(), studentId: '', studentName: '강민', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 300000, finalTuition: 300000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 300000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-01', depositDate: '2026-04-01', teacherName: '찬혁T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '민성현', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 300000, finalTuition: 300000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 299550, fee: 450, paymentMethodId: 'pm3', paymentDate: '2026-04-01', depositDate: '2026-04-03', teacherName: '찬혁T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: true, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '오서원', enrollmentMonth: '2026-04', classId: 'c2', baseTuition: 340000, finalTuition: 340000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 339490, fee: 510, paymentMethodId: 'pm3', paymentDate: '2026-04-06', depositDate: '2026-04-07', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '최지아', enrollmentMonth: '2026-04', classId: 'c2', baseTuition: 330000, finalTuition: 330000, discountTypeId: 'dt2', discountAmount: 0, depositAmount: 328680, fee: 1320, paymentMethodId: 'pm3', paymentDate: '2026-03-19', depositDate: '2026-03-23', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds010', studentName: '강민', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 300000, finalTuition: 300000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 300000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-01', depositDate: '2026-04-01', teacherName: '찬혁T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds011', studentName: '민성현', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 300000, finalTuition: 300000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 299550, fee: 450, paymentMethodId: 'pm3', paymentDate: '2026-04-01', depositDate: '2026-04-03', teacherName: '찬혁T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: true, createdAt: today() },
+      { id: uid(), studentId: 'ds012', studentName: '오서원', enrollmentMonth: '2026-04', classId: 'c2', baseTuition: 340000, finalTuition: 340000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 339490, fee: 510, paymentMethodId: 'pm3', paymentDate: '2026-04-06', depositDate: '2026-04-07', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds013', studentName: '최지아', enrollmentMonth: '2026-04', classId: 'c2', baseTuition: 330000, finalTuition: 330000, discountTypeId: 'dt2', discountAmount: 0, depositAmount: 328680, fee: 1320, paymentMethodId: 'pm3', paymentDate: '2026-03-19', depositDate: '2026-03-23', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       
       // 중등 1학년
-      { id: uid(), studentId: '', studentName: '김연하', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 370000, finalTuition: 370000, discountTypeId: 'dt1', discountAmount: 0, depositAmount: 370000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-01', depositDate: '2026-04-01', teacherName: '은지T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '김은채', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 380000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-01', depositDate: '2026-04-02', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '김주원', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 370000, finalTuition: 370000, discountTypeId: 'dt1', discountAmount: 0, depositAmount: 370000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-01', depositDate: '2026-04-01', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '박도현', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 370000, finalTuition: 370000, discountTypeId: 'dt5', discountAmount: 0, depositAmount: 368520, fee: 1480, paymentMethodId: 'pm3', paymentDate: '2026-04-01', depositDate: '2026-04-03', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: true, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '박서은', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 378480, fee: 1520, paymentMethodId: 'pm3', paymentDate: '2026-04-02', depositDate: '2026-04-06', teacherName: '찬혁T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '이준우', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 300000, finalTuition: 300000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 298800, fee: 1200, paymentMethodId: 'pm3', paymentDate: '2026-04-06', depositDate: '2026-04-08', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '이준우', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 70000, finalTuition: 70000, discountTypeId: 'dt5', discountAmount: 0, depositAmount: 69720, fee: 280, paymentMethodId: 'pm3', paymentDate: '2026-04-06', depositDate: '2026-04-08', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '정수현', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 380000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-01', depositDate: '2026-04-02', teacherName: '은지T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '최서연', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 370000, finalTuition: 370000, discountTypeId: 'dt1', discountAmount: 0, depositAmount: 368520, fee: 1480, paymentMethodId: 'pm3', paymentDate: '2026-04-09', depositDate: '2026-04-10', teacherName: '은지T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds014', studentName: '김연하', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 370000, finalTuition: 370000, discountTypeId: 'dt1', discountAmount: 0, depositAmount: 370000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-01', depositDate: '2026-04-01', teacherName: '은지T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds015', studentName: '김은채', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 380000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-01', depositDate: '2026-04-02', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds016', studentName: '김주원', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 370000, finalTuition: 370000, discountTypeId: 'dt1', discountAmount: 0, depositAmount: 370000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-01', depositDate: '2026-04-01', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds017', studentName: '박도현', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 370000, finalTuition: 370000, discountTypeId: 'dt5', discountAmount: 0, depositAmount: 368520, fee: 1480, paymentMethodId: 'pm3', paymentDate: '2026-04-01', depositDate: '2026-04-03', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: true, createdAt: today() },
+      { id: uid(), studentId: 'ds018', studentName: '박서은', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 378480, fee: 1520, paymentMethodId: 'pm3', paymentDate: '2026-04-02', depositDate: '2026-04-06', teacherName: '찬혁T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds019', studentName: '이준우', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 300000, finalTuition: 300000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 298800, fee: 1200, paymentMethodId: 'pm3', paymentDate: '2026-04-06', depositDate: '2026-04-08', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds019', studentName: '이준우', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 70000, finalTuition: 70000, discountTypeId: 'dt5', discountAmount: 0, depositAmount: 69720, fee: 280, paymentMethodId: 'pm3', paymentDate: '2026-04-06', depositDate: '2026-04-08', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds020', studentName: '정수현', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 380000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-01', depositDate: '2026-04-02', teacherName: '은지T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds021', studentName: '최서연', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 370000, finalTuition: 370000, discountTypeId: 'dt1', discountAmount: 0, depositAmount: 368520, fee: 1480, paymentMethodId: 'pm3', paymentDate: '2026-04-09', depositDate: '2026-04-10', teacherName: '은지T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       
       // 중등 2학년
-      { id: uid(), studentId: '', studentName: '김태민', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 0, fee: 0, paymentMethodId: 'pm1', paymentDate: '', depositDate: '', teacherName: '찬혁T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '김예은', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 379430, fee: 570, paymentMethodId: 'pm3', paymentDate: '2026-04-02', depositDate: '2026-04-06', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '최서빈', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 378480, fee: 1520, paymentMethodId: 'pm3', paymentDate: '2026-04-02', depositDate: '2026-04-06', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: true, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '조서은', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 378480, fee: 1520, paymentMethodId: 'pm3', paymentDate: '2026-04-02', depositDate: '2026-04-06', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: true, createdAt: today() },
+      { id: uid(), studentId: 'ds022', studentName: '김태민', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 0, fee: 0, paymentMethodId: 'pm1', paymentDate: '', depositDate: '', teacherName: '찬혁T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds023', studentName: '김예은', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 379430, fee: 570, paymentMethodId: 'pm3', paymentDate: '2026-04-02', depositDate: '2026-04-06', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds024', studentName: '최서빈', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 378480, fee: 1520, paymentMethodId: 'pm3', paymentDate: '2026-04-02', depositDate: '2026-04-06', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: true, createdAt: today() },
+      { id: uid(), studentId: 'ds025', studentName: '조서은', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 378480, fee: 1520, paymentMethodId: 'pm3', paymentDate: '2026-04-02', depositDate: '2026-04-06', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: true, createdAt: today() },
       
       // 중등 3학년
-      { id: uid(), studentId: '', studentName: '김동엽', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 378480, fee: 1520, paymentMethodId: 'pm3', paymentDate: '2026-04-01', depositDate: '2026-04-03', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: true, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '최윤석', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 370000, finalTuition: 370000, discountTypeId: 'dt3', discountAmount: 0, depositAmount: 368520, fee: 1480, paymentMethodId: 'pm3', paymentDate: '2026-04-04', depositDate: '2026-04-07', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '최서은', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 370000, finalTuition: 370000, discountTypeId: 'dt1', discountAmount: 0, depositAmount: 368520, fee: 1480, paymentMethodId: 'pm3', paymentDate: '2026-04-09', depositDate: '2026-04-13', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds026', studentName: '김동엽', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 378480, fee: 1520, paymentMethodId: 'pm3', paymentDate: '2026-04-01', depositDate: '2026-04-03', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: true, createdAt: today() },
+      { id: uid(), studentId: 'ds027', studentName: '최윤석', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 370000, finalTuition: 370000, discountTypeId: 'dt3', discountAmount: 0, depositAmount: 368520, fee: 1480, paymentMethodId: 'pm3', paymentDate: '2026-04-04', depositDate: '2026-04-07', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds028', studentName: '최서은', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 370000, finalTuition: 370000, discountTypeId: 'dt1', discountAmount: 0, depositAmount: 368520, fee: 1480, paymentMethodId: 'pm3', paymentDate: '2026-04-09', depositDate: '2026-04-13', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       
       // 고등 1학년
-      { id: uid(), studentId: '', studentName: '조서인', enrollmentMonth: '2026-04', classId: 'c4', baseTuition: 480000, finalTuition: 480000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 478080, fee: 1920, paymentMethodId: 'pm3', paymentDate: '2026-04-02', depositDate: '2026-04-06', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds029', studentName: '조서인', enrollmentMonth: '2026-04', classId: 'c4', baseTuition: 480000, finalTuition: 480000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 478080, fee: 1920, paymentMethodId: 'pm3', paymentDate: '2026-04-02', depositDate: '2026-04-06', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       
       // 고등 2학년
-      { id: uid(), studentId: '', studentName: '김지안', enrollmentMonth: '2026-04', classId: 'c4', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 378480, fee: 1520, paymentMethodId: 'pm3', paymentDate: '2026-04-01', depositDate: '2026-04-03', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      { id: uid(), studentId: '', studentName: '조진우', enrollmentMonth: '2026-04', classId: 'c5', baseTuition: 220000, finalTuition: 220000, discountTypeId: 'dt6', discountAmount: 0, depositAmount: 219120, fee: 880, paymentMethodId: 'pm3', paymentDate: '2026-04-03', depositDate: '2026-04-05', teacherName: '특강', days: '월, 수', count: 4, isNewStudent: false, isTeacherPayment: false, createdAt: today() }
+      { id: uid(), studentId: 'ds030', studentName: '김지안', enrollmentMonth: '2026-04', classId: 'c4', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 378480, fee: 1520, paymentMethodId: 'pm3', paymentDate: '2026-04-01', depositDate: '2026-04-03', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
+      { id: uid(), studentId: 'ds031', studentName: '조진우', enrollmentMonth: '2026-04', classId: 'c5', baseTuition: 220000, finalTuition: 220000, discountTypeId: 'dt6', discountAmount: 0, depositAmount: 219120, fee: 880, paymentMethodId: 'pm3', paymentDate: '2026-04-03', depositDate: '2026-04-05', teacherName: '특강', days: '월, 수', count: 4, isNewStudent: false, isTeacherPayment: false, createdAt: today() }
     ];
   }
 }
@@ -6121,11 +6161,12 @@ function renderEnrollmentLedger(canWrite) {
   };
   
   // 소계 행 렌더링 헬퍼
-  const renderSubtotalRow = (label, payments) => {
+  const renderSubtotalRow = (label, payments, bgColor) => {
     const totalTuition = payments.reduce((s, p) => s + (p.finalTuition || 0), 0);
     const totalDeposit = payments.reduce((s, p) => s + (p.depositAmount || 0), 0);
     const totalFee = payments.reduce((s, p) => s + (p.fee || 0), 0);
-    let row = '<tr style="background: var(--bg-hover); font-weight: 600; border-top: 2px solid var(--border);">';
+    const bg = bgColor || 'var(--bg-hover)';
+    let row = '<tr style="background: ' + bg + '; font-weight: 600; border-top: 2px solid var(--border);">';
     row += '<td colspan="3" style="padding: 10px; text-align: center;">' + label + '</td>';
     row += '<td style="padding: 10px; text-align: center;">' + payments.length + '명</td>';
     row += '<td style="padding: 10px;"></td>';
@@ -6138,23 +6179,34 @@ function renderEnrollmentLedger(canWrite) {
     return row;
   };
   
-  // 테이블 헤더 헬퍼 (sticky)
-  const renderTableHeader = () => {
+  // 그룹별 키컬러 매핑
+  // 초등: 노랑, 중등: 연두(녹색), 고등: 주황, 신입: 연한 청록
+  const groupColors = {
+    '초등': { header: '#FFF4B8', subtotal: '#FFEC99', title: '#B58900' },
+    '중등': { header: '#D4F0C5', subtotal: '#BBE8A6', title: '#3E8B3E' },
+    '고등': { header: '#FFD9B3', subtotal: '#FFC28C', title: '#C25A0A' },
+    '신입': { header: '#C8ECE7', subtotal: '#A5DED6', title: '#2E7D72' }
+  };
+  
+  // 테이블 헤더 헬퍼 (sticky + 그룹 키컬러)
+  const renderTableHeader = (groupKey) => {
+    const bg = (groupColors[groupKey] && groupColors[groupKey].header) || 'var(--bg-side)';
+    const thBase = 'padding: 10px; background: ' + bg + '; position: sticky; top: 0; z-index: 10;';
     let h = '<thead>';
-    h += '<tr style="background: var(--bg-side); border-bottom: 2px solid var(--border); position: sticky; top: 0; z-index: 10;">';
-    h += '<th style="padding: 10px; text-align: center; width: 40px; background: var(--bg-side);">No</th>';
-    h += '<th style="padding: 10px; text-align: center; width: 50px; background: var(--bg-side);">학년</th>';
-    h += '<th style="padding: 10px; text-align: center; width: 70px; background: var(--bg-side);">담당T</th>';
-    h += '<th style="padding: 10px; text-align: left; width: 90px; background: var(--bg-side);">학생명</th>';
-    h += '<th style="padding: 10px; text-align: center; width: 70px; background: var(--bg-side);">요일</th>';
-    h += '<th style="padding: 10px; text-align: right; width: 90px; background: var(--bg-side);">교습비</th>';
-    h += '<th style="padding: 10px; text-align: center; width: 100px; background: var(--bg-side);">수강반</th>';
-    h += '<th style="padding: 10px; text-align: right; width: 60px; background: var(--bg-side);">횟수</th>';
-    h += '<th style="padding: 10px; text-align: right; width: 90px; background: var(--bg-side);">입금금액</th>';
-    h += '<th style="padding: 10px; text-align: right; width: 70px; background: var(--bg-side);">수수료</th>';
-    h += '<th style="padding: 10px; text-align: center; width: 85px; background: var(--bg-side);">결제날짜</th>';
-    h += '<th style="padding: 10px; text-align: center; width: 85px; background: var(--bg-side);">입금날짜</th>';
-    h += '<th style="padding: 10px; text-align: center; width: 85px; background: var(--bg-side);">결제수단</th>';
+    h += '<tr style="border-bottom: 2px solid var(--border);">';
+    h += '<th style="' + thBase + ' text-align: center; width: 40px;">No</th>';
+    h += '<th style="' + thBase + ' text-align: center; width: 50px;">학년</th>';
+    h += '<th style="' + thBase + ' text-align: center; width: 70px;">담당T</th>';
+    h += '<th style="' + thBase + ' text-align: left; width: 90px;">학생명</th>';
+    h += '<th style="' + thBase + ' text-align: center; width: 70px;">요일</th>';
+    h += '<th style="' + thBase + ' text-align: right; width: 90px;">교습비</th>';
+    h += '<th style="' + thBase + ' text-align: center; width: 100px;">수강반</th>';
+    h += '<th style="' + thBase + ' text-align: right; width: 60px;">횟수</th>';
+    h += '<th style="' + thBase + ' text-align: right; width: 90px;">입금금액</th>';
+    h += '<th style="' + thBase + ' text-align: right; width: 70px;">수수료</th>';
+    h += '<th style="' + thBase + ' text-align: center; width: 85px;">결제날짜</th>';
+    h += '<th style="' + thBase + ' text-align: center; width: 85px;">입금날짜</th>';
+    h += '<th style="' + thBase + ' text-align: center; width: 85px;">결제수단</th>';
     h += '</tr>';
     h += '</thead>';
     return h;
@@ -6163,14 +6215,15 @@ function renderEnrollmentLedger(canWrite) {
   // 초/중/고 그룹 렌더링
   ['초등', '중등', '고등'].forEach(schoolType => {
     const payments = regularGroups[schoolType] || [];
+    const gc = groupColors[schoolType];
     
     html += '<div style="margin-bottom: 32px;">';
     html += '  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">';
-    html += '    <h4 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--accent);">' + schoolType + ' (' + payments.length + '명)</h4>';
+    html += '    <h4 style="margin: 0; font-size: 16px; font-weight: 600; color: ' + gc.title + ';">' + schoolType + ' (' + payments.length + '명)</h4>';
     html += '  </div>';
     html += '  <div style="overflow-x: auto;">';
     html += '    <table style="width: 100%; border-collapse: collapse; font-size: 13px; background: white; border: 1px solid var(--border);">';
-    html += renderTableHeader();
+    html += renderTableHeader(schoolType);
     html += '      <tbody>';
     
     if (payments.length === 0) {
@@ -6182,7 +6235,7 @@ function renderEnrollmentLedger(canWrite) {
     }
     
     // 합산 행
-    html += renderSubtotalRow(schoolType + ' 합산', payments);
+    html += renderSubtotalRow(schoolType + ' 합산', payments, gc.subtotal);
     
     html += '      </tbody>';
     html += '    </table>';
@@ -6191,13 +6244,14 @@ function renderEnrollmentLedger(canWrite) {
   });
   
   // 신입 그룹 렌더링
+  const newGc = groupColors['신입'];
   html += '<div style="margin-bottom: 32px;">';
   html += '  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">';
-  html += '    <h4 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--accent2);">🆕 신입 (' + newStudentGroup.length + '명)</h4>';
+  html += '    <h4 style="margin: 0; font-size: 16px; font-weight: 600; color: ' + newGc.title + ';">🆕 신입 (' + newStudentGroup.length + '명)</h4>';
   html += '  </div>';
   html += '  <div style="overflow-x: auto;">';
   html += '    <table style="width: 100%; border-collapse: collapse; font-size: 13px; background: white; border: 1px solid var(--border);">';
-  html += renderTableHeader();
+  html += renderTableHeader('신입');
   html += '      <tbody>';
   
   if (newStudentGroup.length === 0) {
@@ -6210,15 +6264,15 @@ function renderEnrollmentLedger(canWrite) {
   
   // 신입 추가 버튼 행
   if (canWrite) {
-    html += '<tr style="background: #fff9e6; border-top: 1px dashed var(--accent2);">';
+    html += '<tr style="background: ' + newGc.header + '; border-top: 1px dashed ' + newGc.title + ';">';
     html += '  <td colspan="13" style="padding: 10px; text-align: center;">';
-    html += '    <button class="btn btn-outline btn-sm" onclick="openAddPaymentModalForMonth(\'' + currentLedgerMonth + '\', true)" style="color: var(--accent2); border-color: var(--accent2);">+ 신입 추가</button>';
+    html += '    <button class="btn btn-outline btn-sm" onclick="openAddPaymentModalForMonth(\'' + currentLedgerMonth + '\', true)" style="color: ' + newGc.title + '; border-color: ' + newGc.title + ';">+ 신입 추가</button>';
     html += '  </td>';
     html += '</tr>';
   }
   
   // 신입 합산 행
-  html += renderSubtotalRow('신입 합산', newStudentGroup);
+  html += renderSubtotalRow('신입 합산', newStudentGroup, newGc.subtotal);
   
   html += '      </tbody>';
   html += '    </table>';
@@ -6315,25 +6369,26 @@ function renderPaymentRecords(canWrite) {
   html += '<div class="payment-table-desktop" style="overflow-x: auto;">';
   html += '<table style="width: max-content; min-width: 100%; border-collapse: collapse; font-size: 13px;">';
   html += '<thead>';
-  html += '  <tr style="background: var(--bg-side); border-bottom: 2px solid var(--border); position: sticky; top: 0; z-index: 10;">';
+  html += '  <tr style="border-bottom: 2px solid var(--border);">';
+  const _thStickyBase = 'position: sticky; top: 0; z-index: 10; background: var(--bg-side);';
   if (canWrite) {
-    html += '    <th style="padding: 12px; width: 40px; text-align: center; background: var(--bg-side);"><input type="checkbox" id="select-all-payments" onchange="toggleSelectAllPayments(this.checked)"></th>';
+    html += '    <th style="' + _thStickyBase + ' padding: 12px; width: 40px; text-align: center;"><input type="checkbox" id="select-all-payments" onchange="toggleSelectAllPayments(this.checked)"></th>';
   }
-  html += '    <th style="padding: 12px; width: 110px; text-align: center; background: var(--bg-side);">학생</th>';
-  html += '    <th style="padding: 12px; width: 50px; text-align: center; background: var(--bg-side);">학교급</th>';
-  html += '    <th style="padding: 12px; width: 40px; text-align: center; background: var(--bg-side);">학년</th>';
-  html += '    <th style="padding: 12px; width: 70px; text-align: center; background: var(--bg-side);">담당T</th>';
-  html += '    <th style="padding: 12px; width: 75px; text-align: center; background: var(--bg-side);">등록월</th>';
-  html += '    <th style="padding: 12px; width: 55px; text-align: center; background: var(--bg-side);">요일</th>';
-  html += '    <th style="padding: 12px; width: 120px; text-align: center; background: var(--bg-side);">수강반</th>';
-  html += '    <th style="padding: 12px; width: 85px; text-align: right; background: var(--bg-side);">기본교습비</th>';
-  html += '    <th style="padding: 12px; width: 85px; text-align: right; background: var(--bg-side);">최종교습비</th>';
-  html += '    <th style="padding: 12px; width: 75px; text-align: center; background: var(--bg-side);">할인</th>';
-  html += '    <th style="padding: 12px; width: 85px; text-align: right; background: var(--bg-side);">입금금액</th>';
-  html += '    <th style="padding: 12px; width: 65px; text-align: right; background: var(--bg-side);">수수료</th>';
-  html += '    <th style="padding: 12px; width: 90px; text-align: center; background: var(--bg-side);">결제날짜</th>';
-  html += '    <th style="padding: 12px; width: 90px; text-align: center; background: var(--bg-side);">입금날짜</th>';
-  html += '    <th style="padding: 12px; width: 75px; text-align: center; background: var(--bg-side);">결제수단</th>';
+  html += '    <th style="' + _thStickyBase + ' padding: 12px; width: 110px; text-align: center;">학생</th>';
+  html += '    <th style="' + _thStickyBase + ' padding: 12px; width: 50px; text-align: center;">학교급</th>';
+  html += '    <th style="' + _thStickyBase + ' padding: 12px; width: 40px; text-align: center;">학년</th>';
+  html += '    <th style="' + _thStickyBase + ' padding: 12px; width: 70px; text-align: center;">담당T</th>';
+  html += '    <th style="' + _thStickyBase + ' padding: 12px; width: 75px; text-align: center;">등록월</th>';
+  html += '    <th style="' + _thStickyBase + ' padding: 12px; width: 55px; text-align: center;">요일</th>';
+  html += '    <th style="' + _thStickyBase + ' padding: 12px; width: 120px; text-align: center;">수강반</th>';
+  html += '    <th style="' + _thStickyBase + ' padding: 12px; width: 85px; text-align: right;">기본교습비</th>';
+  html += '    <th style="' + _thStickyBase + ' padding: 12px; width: 85px; text-align: right;">최종교습비</th>';
+  html += '    <th style="' + _thStickyBase + ' padding: 12px; width: 75px; text-align: center;">할인</th>';
+  html += '    <th style="' + _thStickyBase + ' padding: 12px; width: 85px; text-align: right;">입금금액</th>';
+  html += '    <th style="' + _thStickyBase + ' padding: 12px; width: 65px; text-align: right;">수수료</th>';
+  html += '    <th style="' + _thStickyBase + ' padding: 12px; width: 90px; text-align: center;">결제날짜</th>';
+  html += '    <th style="' + _thStickyBase + ' padding: 12px; width: 90px; text-align: center;">입금날짜</th>';
+  html += '    <th style="' + _thStickyBase + ' padding: 12px; width: 75px; text-align: center;">결제수단</th>';
   html += '  </tr>';
   html += '</thead>';
   html += '<tbody>';
@@ -7130,24 +7185,39 @@ function selectLedgerMonth(month) {
 }
 
 function openAddLedgerMonthModal() {
-  const month = prompt('추가할 월을 입력하세요 (예: 2026-05)');
-  if (!month) return;
+  // 현재 월을 기본값으로 설정하고 앱내 모달 오픈
+  const currentMonth = today().substring(0, 7);
+  const input = document.getElementById('add-ledger-month-input');
+  if (input) input.value = currentMonth;
+  openModal('modal-add-ledger-month');
+}
+
+function addLedgerMonth() {
+  const input = document.getElementById('add-ledger-month-input');
+  const month = input ? input.value : '';
+  
+  if (!month) {
+    showToast('월을 선택해주세요');
+    return;
+  }
   
   // 형식 검증
   if (!/^\d{4}-\d{2}$/.test(month)) {
-    showToast('올바른 형식이 아닙니다 (예: 2026-05)');
+    showToast('올바른 형식이 아닙니다');
     return;
   }
   
   // 이미 존재하는지 확인
   if (ledgerMonths.includes(month)) {
     showToast('이미 존재하는 월입니다');
+    closeModal('modal-add-ledger-month');
     return;
   }
   
   // 추가
   ledgerMonths.push(month);
   currentLedgerMonth = month;
+  closeModal('modal-add-ledger-month');
   showToast(month + ' 월이 추가되었습니다');
   renderPaymentsPage();
 }
@@ -7403,57 +7473,5 @@ window.addEventListener('load', () => {
 });
 </script>
 
-</body>
-</html>
-
-// 월별등록대장 관련 함수들
-function toggleLedgerSortOrder() {
-  ledgerSortOrder = ledgerSortOrder === 'desc' ? 'asc' : 'desc';
-  renderPaymentsPage();
-}
-
-function selectLedgerMonth(month) {
-  currentLedgerMonth = month;
-  renderPaymentsPage();
-}
-
-function openAddLedgerMonthModal() {
-  // 현재 월을 기본값으로 설정
-  const currentMonth = today().substring(0, 7);
-  document.getElementById('add-ledger-month-input').value = currentMonth;
-  openModal('modal-add-ledger-month');
-}
-
-function addLedgerMonth() {
-  const month = document.getElementById('add-ledger-month-input').value;
-  
-  if (!month) {
-    showToast('월을 선택해주세요');
-    return;
-  }
-  
-  // 이미 존재하는지 확인
-  if (ledgerMonths.includes(month)) {
-    showToast('이미 존재하는 월입니다');
-    return;
-  }
-  
-  ledgerMonths.push(month);
-  currentLedgerMonth = month;
-  closeModal('modal-add-ledger-month');
-  renderPaymentsPage();
-  showToast(month + ' 월이 추가되었습니다');
-}
-
-function openAddNewStudentModal() {
-  // 결제 추가 모달을 신입 모드로 열기
-  openAddPaymentModal();
-  document.getElementById('payment-is-new').checked = true;
-  toggleNewStudentMode(true);
-  // 등록월을 현재 선택된 월로 설정
-  document.getElementById('payment-enrollment-month').value = currentLedgerMonth;
-}
-
-</script>
 </body>
 </html>
