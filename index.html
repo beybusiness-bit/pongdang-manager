@@ -604,6 +604,12 @@ body {
 .student-table tbody tr:hover {
   background: var(--bg-hover);
 }
+tr.clickable-row {
+  transition: background 0.2s;
+}
+tr.clickable-row:hover {
+  background: var(--bg-hover) !important;
+}
 .student-table td, .data-table td {
   padding: 14px 12px;
   color: var(--text);
@@ -2985,7 +2991,7 @@ function renderStudentsPage() {
   html += '  <div class="search-filter-group">';
   html += '    <div class="search-box">';
   html += '      <span class="search-icon">🔍</span>';
-  html += '      <input type="text" class="search-input" placeholder="이름, 학생번호 검색..." ';
+  html += '      <input type="text" id="student-search-input" class="search-input" placeholder="이름, 학생번호 검색..." ';
   html += '        value="' + (currentStudentFilter.search || '') + '" ';
   html += '        oninput="updateStudentFilter(\'search\', this.value)">';
   html += '    </div>';
@@ -3237,10 +3243,29 @@ function getFilteredStudents() {
   return filtered;
 }
 
+// 렌더링 중 포커스된 입력 요소(검색창 등)의 포커스와 커서 위치를 보존한다.
+// oninput 같은 이벤트가 매 키스트로크마다 전체 페이지를 리렌더할 때 커서가 튕겨나가는 문제 방지.
+function renderPreservingFocus(renderFn) {
+  const active = document.activeElement;
+  const id = active && active.id ? active.id : null;
+  const start = active && typeof active.selectionStart === 'number' ? active.selectionStart : null;
+  const end = active && typeof active.selectionEnd === 'number' ? active.selectionEnd : null;
+  renderFn();
+  if (id) {
+    const el = document.getElementById(id);
+    if (el) {
+      try { el.focus(); } catch (e) {}
+      if (start !== null && typeof el.setSelectionRange === 'function') {
+        try { el.setSelectionRange(start, end !== null ? end : start); } catch (e) {}
+      }
+    }
+  }
+}
+
 function updateStudentFilter(key, value) {
   currentStudentFilter[key] = value;
   studentPagination.currentPage = 1;
-  renderStudentsPage();
+  renderPreservingFocus(renderStudentsPage);
 }
 
 function updateStudentSort(value) {
@@ -4197,7 +4222,7 @@ function renderTextbooksPage() {
   html += '  <div class="search-filter-group">';
   html += '    <div class="search-box">';
   html += '      <span class="search-icon">🔍</span>';
-  html += '      <input type="text" class="search-input" placeholder="교재명, 저자, ISBN 검색..." ';
+  html += '      <input type="text" id="textbook-search-input" class="search-input" placeholder="교재명, 저자, ISBN 검색..." ';
   html += '        value="' + (currentTextbookFilter.search || '') + '" ';
   html += '        oninput="updateTextbookFilter(\'search\', this.value)">';
   html += '    </div>';
@@ -4451,7 +4476,7 @@ function getFilteredTextbooks() {
 function updateTextbookFilter(key, value) {
   currentTextbookFilter[key] = value;
   textbookPagination.currentPage = 1;
-  renderTextbooksPage();
+  renderPreservingFocus(renderTextbooksPage);
 }
 
 function updateTextbookSort(value) {
@@ -6004,7 +6029,7 @@ function renderEnrollmentLedger(canWrite) {
   html += '<div style="margin-bottom: 20px;">';
   html += '  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">';
   html += '    <div style="display: flex; gap: 8px; align-items: center;">';
-  html += '      <input type="text" placeholder="월 검색 (예: 2026-04)" id="ledger-month-search" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; width: 150px;" onkeyup="renderPaymentsPage()">';
+  html += '      <input type="text" placeholder="월 검색 (예: 2026-04)" id="ledger-month-search" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; width: 150px;" oninput="renderPreservingFocus(renderPaymentsPage)">';
   html += '      <button class="btn btn-outline btn-sm" onclick="toggleLedgerSortOrder()" style="padding: 6px 12px;">';
   html += '        ' + (ledgerSortOrder === 'desc' ? '↓ 최신순' : '↑ 오래된순');
   html += '      </button>';
@@ -6142,7 +6167,7 @@ function renderEnrollmentLedger(canWrite) {
     const paymentMethod = paymentMethodsData.find(pm => pm.id === p.paymentMethodId);
     const paymentMethodName = paymentMethod ? paymentMethod.name : '-';
     
-    let row = '<tr style="cursor: pointer; border-bottom: 1px solid var(--border);" onclick="openEditPaymentModal(\'' + p.id + '\')">';
+    let row = '<tr class="clickable-row" style="cursor: pointer; border-bottom: 1px solid var(--border);" onclick="openEditPaymentModal(\'' + p.id + '\')">';
     row += '<td style="padding: 8px; text-align: center;">' + idx + '</td>';
     row += '<td style="padding: 8px; text-align: center;">' + grade + '</td>';
     row += '<td style="padding: 8px; text-align: center;">' + teacher + '</td>';
@@ -6247,7 +6272,7 @@ function renderEnrollmentLedger(canWrite) {
   const newGc = groupColors['신입'];
   html += '<div style="margin-bottom: 32px;">';
   html += '  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">';
-  html += '    <h4 style="margin: 0; font-size: 16px; font-weight: 600; color: ' + newGc.title + ';">🆕 신입 (' + newStudentGroup.length + '명)</h4>';
+  html += '    <h4 style="margin: 0; font-size: 16px; font-weight: 600; color: ' + newGc.title + ';">신입 (' + newStudentGroup.length + '명)</h4>';
   html += '  </div>';
   html += '  <div style="overflow-x: auto;">';
   html += '    <table style="width: 100%; border-collapse: collapse; font-size: 13px; background: white; border: 1px solid var(--border);">';
@@ -6410,7 +6435,7 @@ function renderPaymentRecords(canWrite) {
     const discountName = discount ? discount.name : '-';
     const isSelected = selectedPaymentIds.includes(p.id);
     
-    html += '<tr style="border-bottom: 1px solid var(--border); cursor: pointer; ' + (isSelected ? 'background: var(--bg-hover);' : '') + '" onclick="openEditPaymentModal(\'' + p.id + '\')">';
+    html += '<tr class="clickable-row" style="border-bottom: 1px solid var(--border); cursor: pointer; ' + (isSelected ? 'background: var(--bg-hover);' : '') + '" onclick="openEditPaymentModal(\'' + p.id + '\')">';
     if (canWrite) {
       html += '  <td style="padding: 12px; text-align: center;" onclick="event.stopPropagation();"><input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onchange="togglePaymentSelection(\'' + p.id + '\', this.checked)"></td>';
     }
@@ -6741,22 +6766,28 @@ function openAddPaymentModalForMonth(month, isNewStudent) {
 // 결제 모달 안에서 "+ 학생 추가" 버튼을 눌렀을 때 호출
 // 학생 추가 모달을 띄우고, 완료 시 학생 목록을 갱신하여 방금 추가한 학생을 자동 선택
 function openStudentFormFromPayment() {
-  // 학생 추가 모달을 띄우되, 학생 관리 페이지 리렌더는 생략
-  // 완료 시 결제 모달의 학생 드롭다운을 갱신하고 방금 추가한 학생 선택
-  openStudentForm(null, {
-    skipRerender: true,
-    onSuccess: function(newStudentId) {
-      // 결제 모달의 학생 드롭다운을 다시 렌더링
-      renderPaymentStudentOptions();
-      // 방금 추가한 학생을 선택
-      const select = document.getElementById('payment-student-id');
-      if (select && newStudentId) {
-        select.value = newStudentId;
-        // 학생 정보 자동 로드 (담당T, 요일 등)
-        loadStudentInfo();
+  console.log('[openStudentFormFromPayment] 호출됨');
+  const studentModal = document.getElementById('modal-student-form');
+  if (!studentModal) {
+    console.error('[openStudentFormFromPayment] modal-student-form 없음');
+    showToast('학생 추가 창을 열 수 없습니다');
+    return;
+  }
+  // 모달 위 모달: 애니메이션 충돌 방지용 약간의 딜레이
+  setTimeout(() => {
+    openStudentForm(null, {
+      skipRerender: true,
+      onSuccess: function(newStudentId) {
+        // 결제 모달의 학생 드롭다운을 다시 렌더링 + 방금 추가한 학생 선택
+        renderPaymentStudentOptions();
+        const select = document.getElementById('payment-student-id');
+        if (select && newStudentId) {
+          select.value = newStudentId;
+          loadStudentInfo();
+        }
       }
-    }
-  });
+    });
+  }, 50);
 }
 
 function renderPaymentStudentOptions() {
