@@ -559,6 +559,10 @@ body {
   flex: 1;
   min-width: 200px;
 }
+/* 데스크톱에서는 wrapper를 투명하게 (원래 레이아웃 유지) */
+.filter-sort-row, .page-action-buttons {
+  display: contents;
+}
 .search-box {
   position: relative;
   flex: 1;
@@ -955,9 +959,38 @@ input[type="checkbox"] {
   }
   .search-filter-group {
     flex-direction: column;
+    gap: 8px;
   }
   .search-box {
     max-width: 100%;
+  }
+  /* 모바일에서 필터/정렬을 한 줄에 배치 */
+  .filter-sort-row {
+    display: flex !important;
+    gap: 8px;
+    width: 100%;
+  }
+  .filter-sort-row > * {
+    flex: 1;
+    min-width: 0;
+  }
+  .filter-sort-row .filter-select,
+  .filter-sort-row .sort-selector,
+  .filter-sort-row .sort-selector select {
+    width: 100%;
+  }
+  /* 모바일에서 CSV/학생추가를 한 줄에 배치 */
+  .page-action-buttons {
+    display: flex !important;
+    gap: 8px;
+    width: 100%;
+  }
+  .page-action-buttons > button {
+    flex: 1;
+  }
+  /* 모바일에서는 상단 mobile-header가 페이지명을 보여주므로 페이지 내 타이틀/설명 숨김 */
+  .page-header {
+    display: none;
   }
   .modal {
     width: 100%;
@@ -1124,6 +1157,62 @@ input[type="checkbox"] {
   background: white;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
+/* 학생 카드뷰 (모바일 전용) */
+.student-cards-mobile { display: none; }
+.student-card {
+  position: relative;
+  padding: 12px;
+  padding-top: 30px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  background: white;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.student-card:hover { background: var(--bg-hover); }
+.student-card-topbar {
+  position: absolute;
+  top: 8px; left: 12px; right: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none; /* only children get events */
+}
+.student-card-topbar > * { pointer-events: auto; }
+.student-card-number {
+  font-size: 12px;
+  color: var(--text3);
+  font-weight: 500;
+}
+.student-card-body {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.student-card-profile {
+  flex-shrink: 0;
+}
+.student-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+  color: var(--text2);
+}
+.student-card-line {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.student-card-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-right: 6px;
+}
 /* 모바일 전용 버튼 기본 숨김 */
 .payment-btn-mobile {
   display: none;
@@ -1143,15 +1232,12 @@ input[type="checkbox"] {
   .dashboard-stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
-  /* 모바일 사이드바 */
-  .sidebar.collapsed {
-    transform: translateX(-100%);
-  }
-  .sidebar:not(.collapsed) {
+
+  /* 모바일 사이드바: 기본은 숨김, .open 클래스일 때만 오버레이로 표시 */
+  .sidebar {
     width: 85%;
     max-width: 320px;
-    transform: translateX(0);
+    z-index: 200;
   }
   .main {
     margin-left: 0;
@@ -1172,6 +1258,47 @@ input[type="checkbox"] {
   }
   .payment-cards-mobile {
     display: block;
+  }
+  /* 학생 관리 모바일: 테이블 숨기고 카드뷰 표시 */
+  .student-table {
+    display: none !important;
+  }
+  .student-cards-mobile {
+    display: block;
+  }
+
+  /* 등록/퇴원 기록 모달 — 모바일에서 테이블을 카드형으로 */
+  #modal-enrollment-record .data-table,
+  #modal-enrollment-record .data-table thead,
+  #modal-enrollment-record .data-table tbody,
+  #modal-enrollment-record .data-table tr,
+  #modal-enrollment-record .data-table td {
+    display: block;
+    width: 100% !important;
+  }
+  #modal-enrollment-record .data-table thead {
+    display: none;
+  }
+  #modal-enrollment-record .data-table tr.enrollment-record-row {
+    border: 1px solid var(--border);
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    background: var(--bg-side);
+  }
+  #modal-enrollment-record .data-table td {
+    padding: 6px 0;
+    border: none;
+  }
+  #modal-enrollment-record .data-table td:before {
+    content: attr(data-label);
+    font-size: 12px;
+    color: var(--text3);
+    display: block;
+    margin-bottom: 4px;
+  }
+  #modal-enrollment-record .data-table .form-input-sm {
+    width: 100%;
   }
 }
 </style>
@@ -2224,13 +2351,12 @@ function openModal(id) {
   m.style.visibility = 'visible';
   m.style.pointerEvents = 'auto';
   m.classList.add('open');
-  
-  console.log('z-index 설정:', maxZ + 10);
-  console.log('display를 flex로 설정, open 클래스 추가 완료');
-  console.log('최종 상태 - display:', m.style.display, 'className:', m.className, 'zIndex:', m.style.zIndex);
-  console.log('computed style display:', window.getComputedStyle(m).display);
-  console.log('computed style visibility:', window.getComputedStyle(m).visibility);
-  console.log('computed style opacity:', window.getComputedStyle(m).opacity);
+
+  // 모달 내부 스크롤을 최상단으로 리셋 (수정 모달 등에서 중간부터 보이는 문제 방지)
+  const modalContent = m.querySelector('.modal');
+  if (modalContent) {
+    requestAnimationFrame(() => { modalContent.scrollTop = 0; });
+  }
 }
 
 function closeModal(id) {
@@ -3016,7 +3142,7 @@ function renderStudentsPage() {
   html += '  <button class="btn btn-outline btn-sm" onclick="clearSelection()">선택 해제</button>';
   html += '</div>';
   
-  // 검색/필터/정렬 영역
+  // 검색/필터/정렬 영역 (모바일에선 검색 / 필터+정렬 / 버튼들 3단으로 접힘)
   html += '<div class="page-actions">';
   html += '  <div class="search-filter-group">';
   html += '    <div class="search-box">';
@@ -3027,27 +3153,31 @@ function renderStudentsPage() {
   html += '        oncompositionstart="this.dataset.composing=\'1\'" ';
   html += '        oncompositionend="this.dataset.composing=\'0\'; handleStudentSearchInput(this)">';
   html += '    </div>';
-  html += '    <select class="filter-select" onchange="updateStudentFilter(\'grade\', this.value)">';
-  html += '      <option value="">전체 학교급</option>';
-  html += '      <option value="초"' + (currentStudentFilter.grade === '초' ? ' selected' : '') + '>초등</option>';
-  html += '      <option value="중"' + (currentStudentFilter.grade === '중' ? ' selected' : '') + '>중등</option>';
-  html += '      <option value="고"' + (currentStudentFilter.grade === '고' ? ' selected' : '') + '>고등</option>';
-  html += '    </select>';
-  html += '    <div class="sort-selector">';
-  html += '      <select onchange="updateStudentSort(this.value)">';
-  html += '        <option value="name-asc"' + (currentStudentSort === 'name-asc' ? ' selected' : '') + '>이름순 (ㄱ→ㅎ)</option>';
-  html += '        <option value="name-desc"' + (currentStudentSort === 'name-desc' ? ' selected' : '') + '>이름순 (ㅎ→ㄱ)</option>';
-  html += '        <option value="number-asc"' + (currentStudentSort === 'number-asc' ? ' selected' : '') + '>번호순 (낮음→높음)</option>';
-  html += '        <option value="number-desc"' + (currentStudentSort === 'number-desc' ? ' selected' : '') + '>번호순 (높음→낮음)</option>';
+  html += '    <div class="filter-sort-row">';
+  html += '      <select class="filter-select" onchange="updateStudentFilter(\'grade\', this.value)">';
+  html += '        <option value="">전체 학교급</option>';
+  html += '        <option value="초"' + (currentStudentFilter.grade === '초' ? ' selected' : '') + '>초등</option>';
+  html += '        <option value="중"' + (currentStudentFilter.grade === '중' ? ' selected' : '') + '>중등</option>';
+  html += '        <option value="고"' + (currentStudentFilter.grade === '고' ? ' selected' : '') + '>고등</option>';
   html += '      </select>';
+  html += '      <div class="sort-selector">';
+  html += '        <select onchange="updateStudentSort(this.value)">';
+  html += '          <option value="name-asc"' + (currentStudentSort === 'name-asc' ? ' selected' : '') + '>이름순 (ㄱ→ㅎ)</option>';
+  html += '          <option value="name-desc"' + (currentStudentSort === 'name-desc' ? ' selected' : '') + '>이름순 (ㅎ→ㄱ)</option>';
+  html += '          <option value="number-asc"' + (currentStudentSort === 'number-asc' ? ' selected' : '') + '>번호순 (낮음→높음)</option>';
+  html += '          <option value="number-desc"' + (currentStudentSort === 'number-desc' ? ' selected' : '') + '>번호순 (높음→낮음)</option>';
+  html += '        </select>';
+  html += '      </div>';
   html += '    </div>';
   html += '  </div>';
-  
+
   if (canWrite) {
-    html += '  <button class="btn btn-outline btn-sm" onclick="openCSVUploadModal(\'students\')">CSV 업로드</button>';
-    html += '  <button class="btn btn-primary btn-sm" onclick="openStudentForm()">+ 학생 추가</button>';
+    html += '  <div class="page-action-buttons">';
+    html += '    <button class="btn btn-outline btn-sm" onclick="openCSVUploadModal(\'students\')">CSV 업로드</button>';
+    html += '    <button class="btn btn-primary btn-sm" onclick="openStudentForm()">+ 학생 추가</button>';
+  html += '  </div>';
   }
-  
+
   html += '</div>';
   
   // 페이저 (상단)
@@ -3112,11 +3242,39 @@ function renderStudentsPage() {
     
     html += '  </tbody>';
     html += '</table>';
-    
+
+    // 모바일 카드뷰 (데스크톱에선 CSS로 숨김)
+    html += '<div class="student-cards-mobile">';
+    pageStudents.forEach(student => {
+      const isSelected = selectedStudentIds.includes(student.id);
+      const grade = student.grade || '';
+      const name = student.name || '-';
+      const school = student.school || '-';
+      const teacher = student.teacher || '-';
+      const days = student.days || '-';
+      html += '<div class="student-card" onclick="openStudentDetail(\'' + student.id + '\')">';
+      html += '  <div class="student-card-topbar">';
+      html += '    <label onclick="event.stopPropagation()">';
+      html += '      <input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onclick="toggleStudentSelection(\'' + student.id + '\')">';
+      html += '    </label>';
+      html += '    <span class="student-card-number">' + (student.number || '-') + '</span>';
+      html += '  </div>';
+      html += '  <div class="student-card-body">';
+      html += '    <div class="student-card-profile">' + getProfileImageHTML(student, 56) + '</div>';
+      html += '    <div class="student-card-info">';
+      html += '      <div class="student-card-line"><span class="student-card-name">' + name + '</span>' + grade + '</div>';
+      html += '      <div class="student-card-line">' + school + '</div>';
+      html += '      <div class="student-card-line">' + teacher + ', ' + days + '</div>';
+      html += '    </div>';
+      html += '  </div>';
+      html += '</div>';
+    });
+    html += '</div>';
+
     // 페이저 (하단)
     html += renderPagination(studentPagination.currentPage, Math.ceil(studentPagination.totalItems / studentPagination.pageSize), 'changePage(PAGE)');
   }
-  
+
   container.innerHTML = html;
 }
 
@@ -3834,20 +3992,20 @@ function renderEnrollmentRecordsTable() {
   
   let html = '';
   tempEnrollmentRecords.forEach((record, index) => {
-    html += '<tr>';
-    html += '  <td>';
+    html += '<tr class="enrollment-record-row">';
+    html += '  <td data-label="유형">';
     html += '    <select class="form-input form-input-sm" onchange="updateTempRecord(' + index + ', \'type\', this.value)">';
     html += '      <option value="등록"' + (record.type === '등록' ? ' selected' : '') + '>등록</option>';
     html += '      <option value="퇴원"' + (record.type === '퇴원' ? ' selected' : '') + '>퇴원</option>';
     html += '    </select>';
     html += '  </td>';
-    html += '  <td>';
+    html += '  <td data-label="날짜">';
     html += '    <input type="date" class="form-input form-input-sm" value="' + (record.date || '') + '" onchange="updateTempRecord(' + index + ', \'date\', this.value)">';
     html += '  </td>';
-    html += '  <td>';
+    html += '  <td data-label="메모">';
     html += '    <input type="text" class="form-input form-input-sm" value="' + (record.memo || '') + '" onchange="updateTempRecord(' + index + ', \'memo\', this.value)" placeholder="메모">';
     html += '  </td>';
-    html += '  <td>';
+    html += '  <td data-label="작업">';
     html += '    <button class="btn btn-danger btn-sm" onclick="deleteTempRecord(' + index + ')">삭제</button>';
     html += '  </td>';
     html += '</tr>';
