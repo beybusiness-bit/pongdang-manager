@@ -1225,6 +1225,7 @@ input[type="checkbox"] {
     <div class="modal-body">
       <form id="student-form" onsubmit="saveStudent(event)">
         <input type="hidden" id="student-form-id">
+        <input type="hidden" id="student-number">
         
         <!-- 학생 정보 섹션 -->
         <div style="margin-bottom: 24px;">
@@ -2052,6 +2053,12 @@ let ledgerMonths = []; // 등록대장에 표시할 월 목록 (예: ['2026-04',
 let currentLedgerMonth = ''; // 현재 선택된 등록대장 월
 let ledgerSortOrder = 'desc'; // 월 정렬 순서 (desc: 최신순, asc: 오래된순)
 let originalStudentDays = ''; // 학생에서 불러온 원래 요일 (변경 감지용)
+
+// 검색창 pending 상태 (한글 IME 문제 회피 — Enter 또는 검색 버튼 누를 때만 적용)
+let pendingStudentSearch = '';
+let pendingTextbookSearch = '';
+let pendingLedgerMonthSearch = '';
+let ledgerMonthSearchApplied = '';
 
 let currentPaymentFilter = {
   search: '',
@@ -2991,10 +2998,12 @@ function renderStudentsPage() {
   html += '  <div class="search-filter-group">';
   html += '    <div class="search-box">';
   html += '      <span class="search-icon">🔍</span>';
-  html += '      <input type="text" id="student-search-input" class="search-input" placeholder="이름, 학생번호 검색..." ';
-  html += '        value="' + (currentStudentFilter.search || '') + '" ';
-  html += '        oninput="updateStudentFilter(\'search\', this.value)">';
+  html += '      <input type="text" id="student-search-input" class="search-input" placeholder="이름, 학생번호 입력 후 Enter" ';
+  html += '        value="' + (pendingStudentSearch || '') + '" ';
+  html += '        oninput="pendingStudentSearch = this.value" ';
+  html += '        onkeydown="if (event.key === \'Enter\') { event.preventDefault(); applyStudentSearch(); }">';
   html += '    </div>';
+  html += '    <button class="btn btn-outline btn-sm" onclick="applyStudentSearch()">검색</button>';
   html += '    <select class="filter-select" onchange="updateStudentFilter(\'grade\', this.value)">';
   html += '      <option value="">전체 학교급</option>';
   html += '      <option value="초"' + (currentStudentFilter.grade === '초' ? ' selected' : '') + '>초등</option>';
@@ -3266,6 +3275,23 @@ function updateStudentFilter(key, value) {
   currentStudentFilter[key] = value;
   studentPagination.currentPage = 1;
   renderPreservingFocus(renderStudentsPage);
+}
+
+// 검색창 적용 함수들 — Enter 키 또는 "검색" 버튼에서 호출됨.
+// 타이핑 도중에는 re-render하지 않아 한글 IME 조합이 깨지지 않음.
+function applyStudentSearch() {
+  currentStudentFilter.search = pendingStudentSearch;
+  studentPagination.currentPage = 1;
+  renderStudentsPage();
+}
+function applyTextbookSearch() {
+  currentTextbookFilter.search = pendingTextbookSearch;
+  textbookPagination.currentPage = 1;
+  renderTextbooksPage();
+}
+function applyLedgerMonthSearch() {
+  ledgerMonthSearchApplied = pendingLedgerMonthSearch;
+  renderPaymentsPage();
 }
 
 function updateStudentSort(value) {
@@ -4222,10 +4248,12 @@ function renderTextbooksPage() {
   html += '  <div class="search-filter-group">';
   html += '    <div class="search-box">';
   html += '      <span class="search-icon">🔍</span>';
-  html += '      <input type="text" id="textbook-search-input" class="search-input" placeholder="교재명, 저자, ISBN 검색..." ';
-  html += '        value="' + (currentTextbookFilter.search || '') + '" ';
-  html += '        oninput="updateTextbookFilter(\'search\', this.value)">';
+  html += '      <input type="text" id="textbook-search-input" class="search-input" placeholder="교재명, 저자, ISBN 입력 후 Enter" ';
+  html += '        value="' + (pendingTextbookSearch || '') + '" ';
+  html += '        oninput="pendingTextbookSearch = this.value" ';
+  html += '        onkeydown="if (event.key === \'Enter\') { event.preventDefault(); applyTextbookSearch(); }">';
   html += '    </div>';
+  html += '    <button class="btn btn-outline btn-sm" onclick="applyTextbookSearch()">검색</button>';
   html += '    <select class="filter-select" onchange="updateTextbookFilter(\'subject\', this.value)">';
   html += '      <option value="">전체 과목</option>';
   html += '      <option value="수학"' + (currentTextbookFilter.subject === '수학' ? ' selected' : '') + '>수학</option>';
@@ -6029,7 +6057,8 @@ function renderEnrollmentLedger(canWrite) {
   html += '<div style="margin-bottom: 20px;">';
   html += '  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">';
   html += '    <div style="display: flex; gap: 8px; align-items: center;">';
-  html += '      <input type="text" placeholder="월 검색 (예: 2026-04)" id="ledger-month-search" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; width: 150px;" oninput="renderPreservingFocus(renderPaymentsPage)">';
+  html += '      <input type="text" placeholder="월 입력 후 Enter (예: 2026-04)" id="ledger-month-search" value="' + (pendingLedgerMonthSearch || '') + '" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; width: 180px;" oninput="pendingLedgerMonthSearch = this.value" onkeydown="if (event.key === \'Enter\') { event.preventDefault(); applyLedgerMonthSearch(); }">';
+  html += '      <button class="btn btn-outline btn-sm" onclick="applyLedgerMonthSearch()" style="padding: 6px 12px;">검색</button>';
   html += '      <button class="btn btn-outline btn-sm" onclick="toggleLedgerSortOrder()" style="padding: 6px 12px;">';
   html += '        ' + (ledgerSortOrder === 'desc' ? '↓ 최신순' : '↑ 오래된순');
   html += '      </button>';
@@ -6056,9 +6085,8 @@ function renderEnrollmentLedger(canWrite) {
     return ledgerSortOrder === 'desc' ? b.localeCompare(a) : a.localeCompare(b);
   });
   
-  // 검색 필터링
-  const searchValue = document.getElementById('ledger-month-search') ? document.getElementById('ledger-month-search').value : '';
-  const filteredMonths = searchValue ? sortedMonths.filter(m => m.includes(searchValue)) : sortedMonths;
+  // 검색 필터링 (applied 상태만 적용 — Enter/검색 버튼 누를 때만 값이 바뀜)
+  const filteredMonths = ledgerMonthSearchApplied ? sortedMonths.filter(m => m.includes(ledgerMonthSearchApplied)) : sortedMonths;
   
   filteredMonths.forEach(month => {
     const isActive = month === currentLedgerMonth;
