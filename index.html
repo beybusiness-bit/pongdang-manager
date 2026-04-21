@@ -153,13 +153,13 @@ body {
   transform: translateX(-100%);
   border: none;
 }
-/* 햄버거 버튼 - 사이드바 외부에 독립 */
-.sidebar-toggle-btn {
-  position: fixed;
-  left: 16px;
-  top: 16px;
-  width: 40px;
-  height: 40px;
+/* 접기 버튼 - 사이드바 내부 우측상단 (사이드바가 열려있을 때 표시) */
+.sidebar-collapse-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
   background: white;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -167,13 +167,39 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  font-size: 16px;
+  color: var(--text);
+  z-index: 2;
+  transition: background 0.15s;
+}
+.sidebar-collapse-btn:hover {
+  background: var(--bg-hover);
+}
+
+/* 펼치기 버튼 - 사이드바 외부 좌측상단 고정 (사이드바가 접혀있을 때만 표시, 데스크톱 전용) */
+.sidebar-expand-btn {
+  display: none;
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  width: 40px;
+  height: 40px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
   font-size: 20px;
   color: var(--text);
   z-index: 101;
-  transition: all 0.25s ease;
+  transition: background 0.15s;
 }
-.sidebar-toggle-btn:hover {
+.sidebar-expand-btn:hover {
   background: var(--bg-hover);
+}
+.sidebar.collapsed ~ .sidebar-expand-btn {
+  display: flex;
 }
 .logo-wrap {
   padding: 20px 20px 20px 24px;
@@ -421,6 +447,10 @@ body {
 
 .page-header {
   margin-bottom: 24px;
+  margin-left: 0;
+}
+/* 사이드바 접혀있을 때만 펼치기 버튼 공간 확보 */
+.sidebar.collapsed ~ .main .page-header {
   margin-left: 60px;
 }
 .page-title {
@@ -905,6 +935,11 @@ input[type="checkbox"] {
   .mobile-header {
     display: flex;
   }
+  /* 모바일에서는 mobile-header 햄버거가 사이드바 열기 역할 → 펼치기 버튼 숨김 */
+  .sidebar-expand-btn,
+  .sidebar.collapsed ~ .sidebar-expand-btn {
+    display: none !important;
+  }
   .page {
     padding: 20px 16px;
   }
@@ -1167,14 +1202,11 @@ input[type="checkbox"] {
 <div class="app" id="app">
   <!-- 사이드바 오버레이 (모바일) -->
   
-  <!-- 햄버거 버튼 (독립) -->
-  <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" onclick="toggleSidebar()">
-    <span id="sidebar-toggle-icon">☰</span>
-  </button>
-  
   <!-- 사이드바 -->
   <nav class="sidebar" id="sidebar">
-    <div class="logo-wrap" style="margin-top: 20px;">
+    <!-- 사이드바 내부 접기 버튼 (우측상단) -->
+    <button class="sidebar-collapse-btn" onclick="toggleSidebar()" title="사이드바 접기">✕</button>
+    <div class="logo-wrap">
       <div class="logo">🎓 퐁당수학</div>
       <div class="logo-sub">학원 관리 시스템</div>
     </div>
@@ -1198,7 +1230,10 @@ input[type="checkbox"] {
       <button class="btn btn-outline btn-logout btn-full" onclick="handleLogout()">로그아웃</button>
     </div>
   </nav>
-  
+
+  <!-- 사이드바 펼치기 버튼 (접혀있을 때만 표시, 데스크톱 전용) -->
+  <button class="sidebar-expand-btn" onclick="toggleSidebar()" title="사이드바 펼치기">☰</button>
+
   <!-- 모바일 헤더 -->
   <div class="mobile-header">
     <svg class="hamburger" onclick="toggleSidebar()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2054,10 +2089,7 @@ let currentLedgerMonth = ''; // 현재 선택된 등록대장 월
 let ledgerSortOrder = 'desc'; // 월 정렬 순서 (desc: 최신순, asc: 오래된순)
 let originalStudentDays = ''; // 학생에서 불러온 원래 요일 (변경 감지용)
 
-// 검색창 pending 상태 (한글 IME 문제 회피 — Enter 또는 검색 버튼 누를 때만 적용)
-let pendingStudentSearch = '';
-let pendingTextbookSearch = '';
-let pendingLedgerMonthSearch = '';
+// 월별등록대장 월 검색 적용값 (현재 필터 값)
 let ledgerMonthSearchApplied = '';
 
 let currentPaymentFilter = {
@@ -2277,14 +2309,8 @@ function initApp() {
   renderPages();
   
   // 사이드바 초기 상태 설정
-  const toggleBtn = document.getElementById('sidebar-toggle-btn');
   if (isSidebarCollapsed) {
     document.getElementById('sidebar').classList.add('collapsed');
-    document.getElementById('sidebar-toggle-icon').textContent = '☰';
-    toggleBtn.style.left = '16px';
-  } else {
-    document.getElementById('sidebar-toggle-icon').textContent = '✕';
-    toggleBtn.style.left = '256px';
   }
   
   // localStorage에서 마지막 페이지 복원 또는 URL 해시 확인
@@ -2463,22 +2489,21 @@ function toggleFavorite(pageId) {
 }
 
 function toggleSidebar() {
-  isSidebarCollapsed = !isSidebarCollapsed;
-  localStorage.setItem('isSidebarCollapsed', JSON.stringify(isSidebarCollapsed));
-  
   const sidebar = document.getElementById('sidebar');
-  const toggleBtn = document.getElementById('sidebar-toggle-btn');
-  const toggleIcon = document.getElementById('sidebar-toggle-icon');
-  
-  if (isSidebarCollapsed) {
-    sidebar.classList.add('collapsed');
-    toggleIcon.textContent = '☰';
-    toggleBtn.style.left = '16px';
+  const isMobile = window.innerWidth <= 768;
+
+  if (isMobile) {
+    // 모바일: .open 클래스로 오버레이 표시/숨김
+    sidebar.classList.toggle('open');
   } else {
-    sidebar.classList.remove('collapsed');
-    toggleIcon.textContent = '✕';
-    // 사이드바가 펼쳐진 상태에서는 사이드바 너비(240px) + 16px
-    toggleBtn.style.left = '256px';
+    // 데스크톱: .collapsed 클래스 토글 + localStorage에 저장
+    isSidebarCollapsed = !isSidebarCollapsed;
+    localStorage.setItem('isSidebarCollapsed', JSON.stringify(isSidebarCollapsed));
+    if (isSidebarCollapsed) {
+      sidebar.classList.add('collapsed');
+    } else {
+      sidebar.classList.remove('collapsed');
+    }
   }
 }
 
@@ -2959,12 +2984,10 @@ function renderStudentsPage() {
   
   let html = '';
   
-  // 뷰 전환 버튼 (항상 왼쪽 상단)
-  html += '<div style="margin-bottom: 16px;">';
-  html += '  <div class="btn-group">';
-  html += '    <button class="btn btn-sm' + (currentStudentView === 'list' ? ' btn-primary' : ' btn-outline') + '" onclick="changeStudentView(\'list\')">일반 뷰</button>';
-  html += '    <button class="btn btn-sm' + (currentStudentView === 'textbooks' ? ' btn-primary' : ' btn-outline') + '" onclick="changeStudentView(\'textbooks\')">교재 사용 현황</button>';
-  html += '  </div>';
+  // 뷰 전환 탭 (결제 관리와 동일한 탭 스타일)
+  html += '<div style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--border);">';
+  html += '  <button class="tab-btn ' + (currentStudentView === 'list' ? 'active' : '') + '" onclick="changeStudentView(\'list\')">일반 뷰</button>';
+  html += '  <button class="tab-btn ' + (currentStudentView === 'textbooks' ? 'active' : '') + '" onclick="changeStudentView(\'textbooks\')">교재 사용 현황</button>';
   html += '</div>';
   
   // 교재 사용 현황 뷰
@@ -2998,12 +3021,12 @@ function renderStudentsPage() {
   html += '  <div class="search-filter-group">';
   html += '    <div class="search-box">';
   html += '      <span class="search-icon">🔍</span>';
-  html += '      <input type="text" id="student-search-input" class="search-input" placeholder="이름, 학생번호 입력 후 Enter" ';
-  html += '        value="' + (pendingStudentSearch || '') + '" ';
-  html += '        oninput="pendingStudentSearch = this.value" ';
-  html += '        onkeydown="if (event.key === \'Enter\') { event.preventDefault(); applyStudentSearch(); }">';
+  html += '      <input type="text" id="student-search-input" class="search-input" placeholder="이름, 학생번호 검색" ';
+  html += '        value="' + (currentStudentFilter.search || '').replace(/"/g, '&quot;') + '" ';
+  html += '        oninput="handleStudentSearchInput(this)" ';
+  html += '        oncompositionstart="this.dataset.composing=\'1\'" ';
+  html += '        oncompositionend="this.dataset.composing=\'0\'; handleStudentSearchInput(this)">';
   html += '    </div>';
-  html += '    <button class="btn btn-outline btn-sm" onclick="applyStudentSearch()">검색</button>';
   html += '    <select class="filter-select" onchange="updateStudentFilter(\'grade\', this.value)">';
   html += '      <option value="">전체 학교급</option>';
   html += '      <option value="초"' + (currentStudentFilter.grade === '초' ? ' selected' : '') + '>초등</option>';
@@ -3277,21 +3300,30 @@ function updateStudentFilter(key, value) {
   renderPreservingFocus(renderStudentsPage);
 }
 
-// 검색창 적용 함수들 — Enter 키 또는 "검색" 버튼에서 호출됨.
-// 타이핑 도중에는 re-render하지 않아 한글 IME 조합이 깨지지 않음.
-function applyStudentSearch() {
-  currentStudentFilter.search = pendingStudentSearch;
+// 실시간 검색 핸들러 (한글 IME 조합 중엔 검색 건너뜀 — data-composing 플래그로 구분)
+// compositionend 시점에 한 번 더 호출되어 확정된 값으로 필터링
+function handleStudentSearchInput(input) {
+  if (input.dataset.composing === '1') return;
+  currentStudentFilter.search = input.value;
   studentPagination.currentPage = 1;
-  renderStudentsPage();
+  renderPreservingFocus(renderStudentsPage);
 }
-function applyTextbookSearch() {
-  currentTextbookFilter.search = pendingTextbookSearch;
+function handleTextbookSearchInput(input) {
+  if (input.dataset.composing === '1') return;
+  currentTextbookFilter.search = input.value;
   textbookPagination.currentPage = 1;
-  renderTextbooksPage();
+  renderPreservingFocus(renderTextbooksPage);
 }
-function applyLedgerMonthSearch() {
-  ledgerMonthSearchApplied = pendingLedgerMonthSearch;
-  renderPaymentsPage();
+function handleLedgerMonthSearchInput(input) {
+  if (input.dataset.composing === '1') return;
+  ledgerMonthSearchApplied = input.value;
+  renderPreservingFocus(renderPaymentsPage);
+}
+function handlePaymentRecordSearchInput(input) {
+  if (input.dataset.composing === '1') return;
+  currentPaymentFilter.search = input.value;
+  paymentPagination.currentPage = 1;
+  renderPreservingFocus(renderPaymentsPage);
 }
 
 function updateStudentSort(value) {
@@ -4248,12 +4280,12 @@ function renderTextbooksPage() {
   html += '  <div class="search-filter-group">';
   html += '    <div class="search-box">';
   html += '      <span class="search-icon">🔍</span>';
-  html += '      <input type="text" id="textbook-search-input" class="search-input" placeholder="교재명, 저자, ISBN 입력 후 Enter" ';
-  html += '        value="' + (pendingTextbookSearch || '') + '" ';
-  html += '        oninput="pendingTextbookSearch = this.value" ';
-  html += '        onkeydown="if (event.key === \'Enter\') { event.preventDefault(); applyTextbookSearch(); }">';
+  html += '      <input type="text" id="textbook-search-input" class="search-input" placeholder="교재명, 저자, ISBN 검색" ';
+  html += '        value="' + (currentTextbookFilter.search || '').replace(/"/g, '&quot;') + '" ';
+  html += '        oninput="handleTextbookSearchInput(this)" ';
+  html += '        oncompositionstart="this.dataset.composing=\'1\'" ';
+  html += '        oncompositionend="this.dataset.composing=\'0\'; handleTextbookSearchInput(this)">';
   html += '    </div>';
-  html += '    <button class="btn btn-outline btn-sm" onclick="applyTextbookSearch()">검색</button>';
   html += '    <select class="filter-select" onchange="updateTextbookFilter(\'subject\', this.value)">';
   html += '      <option value="">전체 과목</option>';
   html += '      <option value="수학"' + (currentTextbookFilter.subject === '수학' ? ' selected' : '') + '>수학</option>';
@@ -6057,8 +6089,7 @@ function renderEnrollmentLedger(canWrite) {
   html += '<div style="margin-bottom: 20px;">';
   html += '  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">';
   html += '    <div style="display: flex; gap: 8px; align-items: center;">';
-  html += '      <input type="text" placeholder="월 입력 후 Enter (예: 2026-04)" id="ledger-month-search" value="' + (pendingLedgerMonthSearch || '') + '" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; width: 180px;" oninput="pendingLedgerMonthSearch = this.value" onkeydown="if (event.key === \'Enter\') { event.preventDefault(); applyLedgerMonthSearch(); }">';
-  html += '      <button class="btn btn-outline btn-sm" onclick="applyLedgerMonthSearch()" style="padding: 6px 12px;">검색</button>';
+  html += '      <input type="text" placeholder="월 검색 (예: 2026-04)" id="ledger-month-search" value="' + (ledgerMonthSearchApplied || '').replace(/"/g, '&quot;') + '" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; width: 180px;" oninput="handleLedgerMonthSearchInput(this)" oncompositionstart="this.dataset.composing=\'1\'" oncompositionend="this.dataset.composing=\'0\'; handleLedgerMonthSearchInput(this)">';
   html += '      <button class="btn btn-outline btn-sm" onclick="toggleLedgerSortOrder()" style="padding: 6px 12px;">';
   html += '        ' + (ledgerSortOrder === 'desc' ? '↓ 최신순' : '↑ 오래된순');
   html += '      </button>';
@@ -6343,7 +6374,7 @@ function renderPaymentRecords(canWrite) {
   // 왼쪽: 필터
   html += '  <div class="payment-filters" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center; flex: 1;">';
   html += '    <input type="month" class="form-input form-input-sm" value="' + currentPaymentFilter.month + '" onchange="currentPaymentFilter.month = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()" style="width: 115px;">';
-  html += '    <input type="text" class="form-input form-input-sm" placeholder="학생명" value="' + currentPaymentFilter.search + '" onchange="currentPaymentFilter.search = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()" style="width: 85px;">';
+  html += '    <input type="text" id="payment-record-search" class="form-input form-input-sm" placeholder="학생명" value="' + (currentPaymentFilter.search || '').replace(/"/g, '&quot;') + '" oninput="handlePaymentRecordSearchInput(this)" oncompositionstart="this.dataset.composing=\'1\'" oncompositionend="this.dataset.composing=\'0\'; handlePaymentRecordSearchInput(this)" style="width: 85px;">';
   html += '    <select class="form-input form-input-sm" style="width: 80px;" onchange="currentPaymentFilter.schoolType = this.value; paymentPagination.currentPage = 1; renderPaymentsPage()">';
   html += '      <option value="">학교급</option>';
   html += '      <option value="초등" ' + (currentPaymentFilter.schoolType === '초등' ? 'selected' : '') + '>초등</option>';
