@@ -562,15 +562,39 @@ id, monthYear, categoryId, amount, memo
 
 **최종 세션 날짜**: 2026-04-24. 이번 세션 커밋: `06dd893 feat: 수강반/학교/선생님 페이지 전면 개편` (브랜치 `claude/review-tasks-feedback-90OWd`).
 
-**작업 브랜치**: `claude/review-tasks-feedback-90OWd`. main(`1ac024d`)보다 1커밋 앞서있음. 다음 세션 시작 시 이 브랜치 체크아웃 후 작업.
-
 ---
 
-### 세션 시작 시 즉시 할 일
+### ⚠️ 브랜치 상황 — 반드시 읽을 것
 
-1. `git checkout claude/review-tasks-feedback-90OWd && git pull origin claude/review-tasks-feedback-90OWd`
-2. 아래 테스트 체크리스트를 사용자에게 정리해서 보여주기
-3. 피드백 반영 → 패치 후 자동 푸시 (섹션 10 규칙)
+현재 코드는 **두 개의 브랜치**로 나뉘어 있다:
+
+| 브랜치 | 최신 커밋 | 설명 |
+|---|---|---|
+| `main` | `1ac024d` | GitHub Pages 배포 브랜치. **이번 세션 작업 없음.** |
+| `claude/review-tasks-feedback-90OWd` | `37ed803` | 이번 세션 작업 포함. **배포 안 됨.** |
+
+**→ 배포 URL(`https://beybusiness-bit.github.io/pongdang-manager/`)에는 이번 세션 개편이 반영되어 있지 않다.**
+
+#### 다음 세션 시작 시 할 일 (순서대로)
+
+1. **feature 브랜치 체크아웃**:
+   ```
+   git checkout claude/review-tasks-feedback-90OWd
+   git pull origin claude/review-tasks-feedback-90OWd
+   ```
+2. **테스트 방법 안내** — 배포 URL이 아닌 **로컬 파일**로 확인해야 함:
+   - 가장 빠른 방법: `index.html`을 Chrome에 드래그해서 열기
+   - 또는 netlify.com/drop 에 드래그 앤 드롭으로 임시 배포
+3. **아래 체크리스트를 사용자에게 보여주고 피드백 받기**
+4. **피드백 수정 완료 후**: feature 브랜치 → main merge 제안:
+   ```
+   git checkout main
+   git merge claude/review-tasks-feedback-90OWd
+   git push origin main
+   ```
+   merge 완료 시 배포 URL에도 반영됨 (~1분 소요).
+
+---
 4. 피드백 마무리되면 feature branch를 main에 merge 제안
 
 ---
