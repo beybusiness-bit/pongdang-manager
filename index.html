@@ -2466,19 +2466,37 @@ input[type="checkbox"] {
   </div>
 </div>
 
-<!-- 학생 직접 추가 모달 (근무일지) -->
+<!-- 학생 추가 모달 (근무일지) -->
 <div class="modal-backdrop" id="modal-add-worklog-student">
-  <div class="modal">
+  <div class="modal modal-large">
     <div class="modal-title" id="add-worklog-student-title">학생 추가</div>
     <div class="modal-body">
-      <div class="form-group">
-        <label class="form-label">학생 검색</label>
-        <input type="text" id="worklog-add-student-search" placeholder="이름 검색..." oninput="renderWorkLogAddStudentList(this.value)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;margin-bottom:8px;">
-        <div id="worklog-add-student-list" style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+        <input type="text" id="wl-add-search" placeholder="이름, 학교, 학년, 선생님, 요일 검색..."
+          oninput="workLogAddStudentSearch=this.value;renderWorkLogAddStudentList();"
+          style="flex:3;min-width:160px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;">
+        <select id="wl-add-grade-filter" onchange="workLogAddStudentGradeFilter=this.value;renderWorkLogAddStudentList();"
+          style="flex:1;min-width:80px;padding:7px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;">
+          <option value="">학교급 전체</option>
+          <option value="초">초등</option>
+          <option value="중">중등</option>
+          <option value="고">고등</option>
+        </select>
+        <select id="wl-add-teacher-filter" onchange="workLogAddStudentTeacherFilter=this.value;renderWorkLogAddStudentList();"
+          style="flex:1;min-width:80px;padding:7px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;">
+          <option value="">선생님 전체</option>
+        </select>
+        <select id="wl-add-sort" onchange="workLogAddStudentSort=this.value;renderWorkLogAddStudentList();"
+          style="flex:1;min-width:80px;padding:7px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;">
+          <option value="name-asc">이름순</option>
+          <option value="grade-asc">학년순</option>
+        </select>
       </div>
+      <div id="worklog-add-student-list" style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('modal-add-worklog-student')">닫기</button>
+      <button class="btn btn-primary btn-sm" onclick="addWorkLogStudentsBulk()">선택 학생 추가</button>
     </div>
   </div>
 </div>
@@ -9691,49 +9709,97 @@ function renderWorkLogStudentBody(container) {
 }
 
 function openAddWorkLogStudentModal() {
-  var searchEl = document.getElementById('worklog-add-student-search');
-  if (searchEl) searchEl.value = '';
-  renderWorkLogAddStudentList('');
+  workLogAddStudentSearch = '';
+  workLogAddStudentGradeFilter = '';
+  workLogAddStudentTeacherFilter = '';
+  workLogAddStudentSort = 'name-asc';
+  selectedAddStudentIds = [];
+  var srch = document.getElementById('wl-add-search');
+  if (srch) srch.value = '';
+  var gf = document.getElementById('wl-add-grade-filter');
+  if (gf) gf.value = '';
+  var tf = document.getElementById('wl-add-teacher-filter');
+  if (tf) {
+    tf.innerHTML = '<option value="">선생님 전체</option>';
+    teachersData.forEach(function(t) {
+      tf.innerHTML += '<option value="' + t.name + '">' + t.name + '</option>';
+    });
+  }
+  renderWorkLogAddStudentList();
   openModal('modal-add-worklog-student');
 }
 
-function renderWorkLogAddStudentList(query) {
+function renderWorkLogAddStudentList() {
   var listEl = document.getElementById('worklog-add-student-list');
   if (!listEl) return;
   var enrolled = getEnrolledStudents();
-  var filtered = query
-    ? enrolled.filter(function(s) { return s.name.indexOf(query) !== -1; })
-    : enrolled;
-  if (filtered.length === 0) {
-    listEl.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:13px;">검색 결과 없음</div>';
+  var schedIds = {};
+  getStudentsByDayOfWeek(currentWorkLogDate).forEach(function(s) { schedIds[s.id] = true; });
+  var q = workLogAddStudentSearch;
+  var gf = workLogAddStudentGradeFilter;
+  var tf = workLogAddStudentTeacherFilter;
+  var candidates = enrolled.filter(function(s) {
+    if (schedIds[s.id]) return false;
+    if (gf && !(s.grade && s.grade.charAt(0) === gf)) return false;
+    if (tf && s.teacher !== tf) return false;
+    if (q) {
+      return (s.name || '').indexOf(q) !== -1 ||
+             (s.school || '').indexOf(q) !== -1 ||
+             (s.grade || '').indexOf(q) !== -1 ||
+             (s.teacher || '').indexOf(q) !== -1 ||
+             (s.days || '').indexOf(q) !== -1;
+    }
+    return true;
+  });
+  if (workLogAddStudentSort === 'grade-asc') {
+    candidates.sort(function(a, b) { return (a.grade || '').localeCompare(b.grade || ''); });
+  } else {
+    candidates.sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); });
+  }
+  if (candidates.length === 0) {
+    listEl.innerHTML = '<div style="padding:14px;color:var(--text3);font-size:13px;">추가 가능한 학생이 없습니다</div>';
     return;
   }
   var html = '';
-  filtered.forEach(function(s) {
+  candidates.forEach(function(s) {
     var alreadyIn = workLogsData.some(function(e) { return e.date === currentWorkLogDate && e.studentId === s.id; });
-    var scheduledToday = getStudentsByDayOfWeek(currentWorkLogDate).some(function(ss) { return ss.id === s.id; });
-    if (scheduledToday) return;
-    var disabled = alreadyIn ? ' style="opacity:0.5;pointer-events:none;"' : '';
-    html += '<div class="clickable-row" style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;"' + disabled + ' onclick="addWorkLogStudentManual(\'' + s.id + '\')">';
-    html += '<div>';
+    var isChecked = selectedAddStudentIds.indexOf(s.id) !== -1;
+    var rowStyle = 'padding:9px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;' + (alreadyIn ? 'opacity:0.45;' : 'cursor:pointer;');
+    html += '<div style="' + rowStyle + '"' + (!alreadyIn ? ' onclick="toggleAddStudentCheck(\'' + s.id + '\')"' : '') + '>';
+    html += '<input type="checkbox" ' + (isChecked ? 'checked' : '') + (alreadyIn ? ' disabled' : '') + ' onclick="event.stopPropagation();toggleAddStudentCheck(\'' + s.id + '\')" style="cursor:pointer;">';
     html += '<span style="font-size:14px;font-weight:500;">' + s.name + '</span>';
-    html += '<span style="font-size:12px;color:var(--text2);margin-left:8px;">' + (s.grade || '') + '</span>';
-    html += '<span style="font-size:12px;color:var(--text3);margin-left:8px;">' + (s.teacher || '') + '</span>';
-    html += '</div>';
-    html += alreadyIn ? '<span style="font-size:12px;color:var(--text3);">이미 추가됨</span>' : '<button class="btn btn-primary btn-sm">추가</button>';
+    html += '<span style="font-size:12px;color:var(--text2);">' + (s.grade || '') + '</span>';
+    html += '<span style="font-size:12px;color:var(--text3);">' + (s.school || '') + '</span>';
+    html += '<span style="font-size:12px;color:var(--text3);">' + (s.teacher || '') + '</span>';
+    html += '<span style="font-size:12px;color:var(--text3);margin-left:auto;">' + (s.days || '') + '</span>';
+    if (alreadyIn) html += '<span style="font-size:11px;color:var(--text3);">이미 추가됨</span>';
     html += '</div>';
   });
-  if (!html) {
-    listEl.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:13px;">추가 가능한 학생이 없습니다</div>';
-    return;
-  }
   listEl.innerHTML = html;
 }
 
+function toggleAddStudentCheck(studentId) {
+  var idx = selectedAddStudentIds.indexOf(studentId);
+  if (idx === -1) selectedAddStudentIds.push(studentId);
+  else selectedAddStudentIds.splice(idx, 1);
+  renderWorkLogAddStudentList();
+}
+
+function addWorkLogStudentsBulk() {
+  if (selectedAddStudentIds.length === 0) { showToast('학생을 선택해주세요'); return; }
+  selectedAddStudentIds.forEach(function(studentId) {
+    if (!getWorkLogEntry(currentWorkLogDate, studentId)) {
+      workLogsData.push({ id: uid(), date: currentWorkLogDate, studentId: studentId, isSpecialClass: false, specialClassName: '', content: '', createdAt: today() });
+    }
+  });
+  selectedAddStudentIds = [];
+  closeModal('modal-add-worklog-student');
+  setTimeout(function() { renderWorkLogBody(); }, 100);
+}
+
 function addWorkLogStudentManual(studentId) {
-  var already = getWorkLogEntry(currentWorkLogDate, studentId);
-  if (!already) {
-    workLogsData.push({ id: uid(), date: currentWorkLogDate, studentId: studentId, status: '', isSpecialClass: false, specialClassName: '', content: '', createdAt: today() });
+  if (!getWorkLogEntry(currentWorkLogDate, studentId)) {
+    workLogsData.push({ id: uid(), date: currentWorkLogDate, studentId: studentId, isSpecialClass: false, specialClassName: '', content: '', createdAt: today() });
   }
   closeModal('modal-add-worklog-student');
   setTimeout(function() { renderWorkLogBody(); }, 100);
