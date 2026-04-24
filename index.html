@@ -9429,6 +9429,131 @@ function renderWorkLogDailyBody(container) {
   }
   container.innerHTML = html;
 }
+
+function renderWorkLogTeacherBody(container) {
+  var html = '';
+  html += '<div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">';
+  html += '<select onchange="currentWorkLogTeacherFilter=this.value;renderWorkLogBody();" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;">';
+  html += '<option value="">전체 선생님</option>';
+  teachersData.forEach(function(t) {
+    html += '<option value="' + t.name + '"' + (currentWorkLogTeacherFilter === t.name ? ' selected' : '') + '>' + t.name + '</option>';
+  });
+  html += '</select>';
+  html += '<input type="month" value="' + currentWorkLogMonth + '" onchange="currentWorkLogMonth=this.value;renderWorkLogBody();" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;">';
+  html += '</div>';
+  var targetStudents = getEnrolledStudents().filter(function(s) {
+    return !currentWorkLogTeacherFilter || s.teacher === currentWorkLogTeacherFilter;
+  });
+  var targetIds = {};
+  targetStudents.forEach(function(s) { targetIds[s.id] = true; });
+  var targetEntries = workLogsData.filter(function(e) {
+    return e.date.slice(0, 7) === currentWorkLogMonth && targetIds[e.studentId];
+  });
+  if (targetEntries.length === 0) {
+    html += '<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-text">기록된 근무일지가 없습니다</div></div>';
+    container.innerHTML = html;
+    return;
+  }
+  var byDate = {};
+  targetEntries.forEach(function(e) {
+    if (!byDate[e.date]) byDate[e.date] = [];
+    byDate[e.date].push(e);
+  });
+  var sortedDates = Object.keys(byDate).sort().reverse();
+  html += '<div style="display:flex;flex-direction:column;gap:16px;">';
+  sortedDates.forEach(function(date) {
+    var entries = byDate[date];
+    var dayN = getDayName(date);
+    var hol = isWorkLogHoliday(date) ? ' (' + getHolidayName(date) + ')' : '';
+    html += '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">';
+    html += '<div style="padding:10px 16px;background:var(--bg-side);font-size:14px;font-weight:600;border-bottom:1px solid var(--border);">';
+    html += date + ' (' + dayN + ')' + hol;
+    html += '</div>';
+    html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">';
+    html += '<thead><tr style="background:var(--bg);border-bottom:1px solid var(--border);">';
+    html += '<th style="padding:8px 12px;text-align:left;font-weight:600;">학생</th>';
+    html += '<th style="padding:8px 12px;text-align:left;font-weight:600;">학년</th>';
+    html += '<th style="padding:8px 12px;text-align:left;font-weight:600;">상태</th>';
+    html += '<th style="padding:8px 12px;text-align:left;font-weight:600;">특강</th>';
+    html += '<th style="padding:8px 12px;text-align:left;font-weight:600;">내용</th>';
+    html += '</tr></thead><tbody>';
+    entries.forEach(function(e) {
+      var st = studentsData.find(function(s) { return s.id === e.studentId; });
+      var stName = st ? st.name : '-';
+      var grade = st ? (st.grade || '') : '';
+      var statusColor = e.status === '출석' ? 'var(--accent)' : e.status === '결석' ? '#e74c3c' : 'var(--accent3)';
+      html += '<tr style="border-bottom:1px solid var(--border);">';
+      html += '<td style="padding:8px 12px;">' + stName + '</td>';
+      html += '<td style="padding:8px 12px;color:var(--text2);">' + grade + '</td>';
+      html += '<td style="padding:8px 12px;color:' + statusColor + ';font-weight:600;">' + (e.status || '') + '</td>';
+      html += '<td style="padding:8px 12px;">' + (e.isSpecialClass ? (e.specialClassName || '특강') : '') + '</td>';
+      html += '<td style="padding:8px 12px;color:var(--text2);">' + (e.content || '') + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div></div>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function handleWorkLogStudentSearch(input) {
+  currentWorkLogStudentFilter = input.value;
+  renderWorkLogBody();
+}
+
+function renderWorkLogStudentBody(container) {
+  var html = '';
+  html += '<div style="margin-bottom:16px;">';
+  html += '<input type="text" id="worklog-student-search" placeholder="학생 이름 검색..." value="' + currentWorkLogStudentFilter.replace(/"/g, '&quot;') + '" oninput="handleWorkLogStudentSearch(this)" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;">';
+  html += '</div>';
+  if (!currentWorkLogStudentFilter) {
+    html += '<div style="color:var(--text3);font-size:14px;text-align:center;padding:20px;">학생 이름을 검색하면 해당 학생의 근무일지를 볼 수 있습니다</div>';
+    container.innerHTML = html;
+    return;
+  }
+  var enrolled = getEnrolledStudents();
+  var filtered = enrolled.filter(function(s) {
+    return s.name.indexOf(currentWorkLogStudentFilter) !== -1 || (s.grade || '').indexOf(currentWorkLogStudentFilter) !== -1;
+  });
+  if (filtered.length === 0) {
+    html += '<div class="empty-state"><div class="empty-text">검색 결과가 없습니다</div></div>';
+    container.innerHTML = html;
+    return;
+  }
+  filtered.forEach(function(student) {
+    var entries = workLogsData.filter(function(e) { return e.studentId === student.id; }).sort(function(a, b) { return b.date.localeCompare(a.date); });
+    html += '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;overflow:hidden;">';
+    html += '<div style="padding:10px 16px;background:var(--bg-side);font-size:14px;font-weight:600;border-bottom:1px solid var(--border);">';
+    html += student.name + ' (' + (student.grade || '') + ')';
+    html += '</div>';
+    if (entries.length === 0) {
+      html += '<div style="padding:16px;color:var(--text3);font-size:13px;">기록된 근무일지가 없습니다</div>';
+    } else {
+      html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">';
+      html += '<thead><tr style="background:var(--bg);border-bottom:1px solid var(--border);">';
+      html += '<th style="padding:8px 12px;text-align:left;font-weight:600;">날짜</th>';
+      html += '<th style="padding:8px 12px;text-align:left;font-weight:600;">상태</th>';
+      html += '<th style="padding:8px 12px;text-align:left;font-weight:600;">특강</th>';
+      html += '<th style="padding:8px 12px;text-align:left;font-weight:600;">내용</th>';
+      html += '</tr></thead><tbody>';
+      entries.forEach(function(e) {
+        var isHS = student.grade && student.grade.charAt(0) === '고';
+        var dateLabel = formatWorkLogDate(e.date, isHS);
+        var dayN = getDayName(e.date);
+        var statusColor = e.status === '출석' ? 'var(--accent)' : e.status === '결석' ? '#e74c3c' : 'var(--accent3)';
+        html += '<tr style="border-bottom:1px solid var(--border);">';
+        html += '<td style="padding:8px 12px;">' + dateLabel + ' (' + dayN + ')</td>';
+        html += '<td style="padding:8px 12px;color:' + statusColor + ';font-weight:600;">' + (e.status || '') + '</td>';
+        html += '<td style="padding:8px 12px;">' + (e.isSpecialClass ? (e.specialClassName || '특강') : '') + '</td>';
+        html += '<td style="padding:8px 12px;color:var(--text2);">' + (e.content || '') + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+    html += '</div>';
+  });
+  container.innerHTML = html;
+}
 </script>
 
 </body>
