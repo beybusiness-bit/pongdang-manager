@@ -5068,14 +5068,11 @@ function loadSampleData() {
   
   // 근무일지 샘플 데이터
   workLogsData = [
-    { id: 'wl1', date: '2026-04-21', studentId: '1', status: '출석', isSpecialClass: false, specialClassName: '', content: '분수의 나눗셈 복습. 이해도 양호.', createdAt: '2026-04-21' },
-    { id: 'wl2', date: '2026-04-21', studentId: '4', status: '결석', isSpecialClass: false, specialClassName: '', content: '감기로 결석 연락 옴', createdAt: '2026-04-21' },
-    { id: 'wl3', date: '2026-04-21', studentId: '7', status: '출석', isSpecialClass: true, specialClassName: '수능특강 풀기', content: '수능특강 수학 3회 풀이. 2등급 수준.', createdAt: '2026-04-21' },
-    { id: 'wl4', date: '2026-04-22', studentId: '2', status: '출석', isSpecialClass: false, specialClassName: '', content: '방정식 단원 진도. 집중력 좋음.', createdAt: '2026-04-22' },
-    { id: 'wl5', date: '2026-04-22', studentId: '5', status: '보충', isSpecialClass: false, specialClassName: '', content: '저번 결석 보충수업 진행', createdAt: '2026-04-22' },
-    { id: 'wl6', date: '2026-04-23', studentId: '1', status: '출석', isSpecialClass: false, specialClassName: '', content: '소수 개념 학습. 이해 빠름.', createdAt: '2026-04-23' },
-    { id: 'wl7', date: '2026-04-23', studentId: '3', status: '출석', isSpecialClass: true, specialClassName: '수능특강 풀기', content: '수능특강 수학 4회 풀이. 시간 관리 미흡.', createdAt: '2026-04-23' },
-    { id: 'wl8', date: '2026-04-24', studentId: '2', status: '출석', isSpecialClass: false, specialClassName: '', content: '1차 방정식 심화 문제 풀이.', createdAt: '2026-04-24' }
+    { id: 'wl1', date: '2026-04-21', studentId: '1', content: '분수의 나눗셈 복습', homework: '연습문제 1~5번', hasTest: true, testName: '분수 개념점검', testDifficulty: '중', testFullScore: 100, testScore: 88, isSpecialClass: false, specialClassName: '', specialClassCount: null, comment: '이해도 양호. 다음 수업에서 소수 연계 예정', createdAt: '2026-04-21' },
+    { id: 'wl3', date: '2026-04-21', studentId: '7', content: '수능특강 수학 3회 풀이', homework: '틀린 문제 오답정리', hasTest: false, testName: '', testDifficulty: '', testFullScore: null, testScore: null, isSpecialClass: true, specialClassName: '수능특강 풀기', specialClassCount: 3, comment: '2등급 수준. 시간 단축 필요', createdAt: '2026-04-21' },
+    { id: 'wl4', date: '2026-04-22', studentId: '2', content: '방정식 단원 진도', homework: '교재 p.42~45', hasTest: false, testName: '', testDifficulty: '', testFullScore: null, testScore: null, isSpecialClass: false, specialClassName: '', specialClassCount: null, comment: '집중력 좋음', createdAt: '2026-04-22' },
+    { id: 'wl6', date: '2026-04-23', studentId: '1', content: '소수 개념 학습', homework: '소수 문제 10문항', hasTest: true, testName: '소수점 기초', testDifficulty: '하', testFullScore: 50, testScore: 48, isSpecialClass: false, specialClassName: '', specialClassCount: null, comment: '이해 빠름', createdAt: '2026-04-23' },
+    { id: 'wl7', date: '2026-04-23', studentId: '3', content: '수능특강 수학 4회 풀이', homework: '오답 2회 반복', hasTest: false, testName: '', testDifficulty: '', testFullScore: null, testScore: null, isSpecialClass: true, specialClassName: '수능특강 풀기', specialClassCount: 4, comment: '시간 관리 미흡. 풀이 속도 연습 필요', createdAt: '2026-04-23' }
   ];
 
   // appState 업데이트
