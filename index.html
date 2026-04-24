@@ -9283,6 +9283,14 @@ function renderWorkLogPage() {
     html += '<button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="openCustomHolidayModal()">휴일 관리</button>';
   }
   html += '</div>';
+  if (currentWorkLogTab === 'student') {
+    html += '<div style="margin-bottom:16px;">';
+    html += '<input type="text" id="worklog-student-search" placeholder="이름, 학교, 학년, 선생님 검색..." ';
+    html += 'value="' + currentWorkLogStudentFilter.replace(/"/g, '&quot;') + '" ';
+    html += 'oninput="handleWorkLogStudentSearch(this)" ';
+    html += 'style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;">';
+    html += '</div>';
+  }
   html += '<div id="worklog-body"></div>';
   container.innerHTML = html;
   renderWorkLogBody();
@@ -9556,22 +9564,25 @@ function renderWorkLogTeacherBody(container) {
 
 function handleWorkLogStudentSearch(input) {
   currentWorkLogStudentFilter = input.value;
-  renderWorkLogBody();
+  var body = document.getElementById('worklog-body');
+  if (body) renderWorkLogStudentBody(body);
 }
 
 function renderWorkLogStudentBody(container) {
   var html = '';
-  html += '<div style="margin-bottom:16px;">';
-  html += '<input type="text" id="worklog-student-search" placeholder="학생 이름 검색..." value="' + currentWorkLogStudentFilter.replace(/"/g, '&quot;') + '" oninput="handleWorkLogStudentSearch(this)" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;">';
-  html += '</div>';
   if (!currentWorkLogStudentFilter) {
-    html += '<div style="color:var(--text3);font-size:14px;text-align:center;padding:20px;">학생 이름을 검색하면 해당 학생의 근무일지를 볼 수 있습니다</div>';
+    html += '<div style="color:var(--text3);font-size:14px;text-align:center;padding:20px;">이름, 학교, 학년, 선생님으로 검색해보세요</div>';
     container.innerHTML = html;
     return;
   }
   var enrolled = getEnrolledStudents();
+  var q = currentWorkLogStudentFilter;
   var filtered = enrolled.filter(function(s) {
-    return s.name.indexOf(currentWorkLogStudentFilter) !== -1 || (s.grade || '').indexOf(currentWorkLogStudentFilter) !== -1;
+    return (s.name || '').indexOf(q) !== -1 ||
+           (s.school || '').indexOf(q) !== -1 ||
+           (s.grade || '').indexOf(q) !== -1 ||
+           (s.teacher || '').indexOf(q) !== -1 ||
+           (s.days || '').indexOf(q) !== -1;
   });
   if (filtered.length === 0) {
     html += '<div class="empty-state"><div class="empty-text">검색 결과가 없습니다</div></div>';
