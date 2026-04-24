@@ -1527,9 +1527,12 @@ input[type="checkbox"] {
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">학교</label>
-              <select class="form-input" id="student-school" onchange="autoFillSchoolLevel()">
-                <option value="">선택</option>
-              </select>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <select class="form-input" id="student-school" onchange="autoFillSchoolLevel()" style="flex:1;">
+                  <option value="">선택</option>
+                </select>
+                <span id="student-school-type-badge" style="font-size:12px; color:var(--text2); white-space:nowrap; flex-shrink:0; display:none;"></span>
+              </div>
             </div>
             <div class="form-group">
               <label class="form-label">학년</label>
@@ -1587,7 +1590,9 @@ input[type="checkbox"] {
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">담당선생님</label>
-              <input type="text" class="form-input" id="student-teacher">
+              <select class="form-input" id="student-teacher">
+                <option value="">선택</option>
+              </select>
             </div>
             <div class="form-group">
               <label class="form-label">수업요일</label>
@@ -1621,7 +1626,9 @@ input[type="checkbox"] {
           <div class="form-row-single">
             <div class="form-group">
               <label class="form-label">수강반</label>
-              <input type="text" class="form-input" id="student-class">
+              <select class="form-input" id="student-class">
+                <option value="">선택</option>
+              </select>
             </div>
           </div>
           
@@ -2061,7 +2068,9 @@ input[type="checkbox"] {
       <div class="payment-row payment-row-2" style="display: grid; grid-template-columns: 35% 65%; gap: 12px; margin-bottom: 16px;">
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">담당T</label>
-          <input type="text" class="form-input" id="payment-teacher">
+          <select class="form-input" id="payment-teacher">
+            <option value="">선택</option>
+          </select>
         </div>
         
         <div class="form-group" style="margin-bottom: 0;">
@@ -4106,30 +4115,31 @@ function autoFillSchoolLevel() {
   const schoolSelect = document.getElementById('student-school');
   const schoolLevelInput = document.getElementById('student-school-level');
   const gradeSelect = document.getElementById('student-grade-num');
-  
+  const badge = document.getElementById('student-school-type-badge');
+  const typeLabel = { '초': '초등학교', '중': '중학교', '고': '고등학교' };
+
   if (!schoolSelect || !schoolLevelInput || !gradeSelect) return;
-  
+
   const selectedSchoolName = schoolSelect.value;
   if (!selectedSchoolName) {
     schoolLevelInput.value = '';
     gradeSelect.innerHTML = '<option value="">학교 선택 후</option>';
+    if (badge) badge.style.display = 'none';
     return;
   }
-  
+
   const school = schoolsData.find(s => s.name === selectedSchoolName);
   if (school && school.type) {
     schoolLevelInput.value = school.type;
-    
-    // 학년 옵션 즉시 업데이트
+    if (badge) {
+      badge.textContent = typeLabel[school.type] || school.type;
+      badge.style.display = 'inline';
+    }
     let html = '<option value="">선택</option>';
     if (school.type === '초') {
-      for (let i = 1; i <= 6; i++) {
-        html += '<option value="' + i + '">' + i + '학년</option>';
-      }
+      for (var i = 1; i <= 6; i++) html += '<option value="' + i + '">' + i + '학년</option>';
     } else if (school.type === '중' || school.type === '고') {
-      for (let i = 1; i <= 3; i++) {
-        html += '<option value="' + i + '">' + i + '학년</option>';
-      }
+      for (var i = 1; i <= 3; i++) html += '<option value="' + i + '">' + i + '학년</option>';
     }
     gradeSelect.innerHTML = html;
   }
@@ -7256,7 +7266,8 @@ function openAddPaymentModal() {
   renderPaymentClassOptions();
   renderPaymentDiscountOptions();
   renderPaymentMethodOptions();
-  
+  loadTeacherOptionsFor('payment-teacher');
+
   // 초기 상태: 기존 학생 선택 모드
   toggleNewStudentMode(false);
   
@@ -7559,7 +7570,8 @@ function openEditPaymentModal(id) {
   renderPaymentClassOptions();
   renderPaymentDiscountOptions();
   renderPaymentMethodOptions();
-  
+  loadTeacherOptionsFor('payment-teacher');
+
   document.getElementById('payment-form-title').textContent = '결제 수정';
   document.getElementById('payment-id').value = payment.id;
   document.getElementById('payment-is-new').checked = payment.isNewStudent || false;
