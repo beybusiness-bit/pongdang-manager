@@ -9324,110 +9324,111 @@ function toggleWorkLogForceOpen(dateStr) {
   renderWorkLogBody();
 }
 
-function setWorkLogStatus(studentId, dateStr, status) {
-  var contentEl = document.getElementById('wl-content-' + studentId);
-  var specialCheckEl = document.getElementById('wl-special-' + studentId);
-  var specialNameEl = document.getElementById('wl-specialname-' + studentId);
-  var content = contentEl ? contentEl.value : '';
-  var isSpecial = specialCheckEl ? specialCheckEl.checked : false;
-  var specialName = isSpecial && specialNameEl ? specialNameEl.value : '';
-  var entry = getWorkLogEntry(dateStr, studentId);
-  if (!entry) {
-    entry = { id: uid(), date: dateStr, studentId: studentId, status: status, isSpecialClass: isSpecial, specialClassName: specialName, content: content, createdAt: today() };
-    workLogsData.push(entry);
-  } else {
-    entry.status = status;
-    entry.isSpecialClass = isSpecial;
-    entry.specialClassName = specialName;
-    entry.content = content;
-  }
-  renderWorkLogBody();
+function toggleWorkLogTest(studentId) {
+  var chk = document.getElementById('wl-hastest-' + studentId);
+  var fields = document.getElementById('wl-test-fields-' + studentId);
+  if (fields) fields.style.display = chk && chk.checked ? 'block' : 'none';
 }
 
-function toggleWorkLogSpecial(studentId, dateStr) {
-  var specialCheckEl = document.getElementById('wl-special-' + studentId);
-  var contentEl = document.getElementById('wl-content-' + studentId);
-  var specialNameEl = document.getElementById('wl-specialname-' + studentId);
-  var isSpecial = specialCheckEl ? specialCheckEl.checked : false;
-  var content = contentEl ? contentEl.value : '';
-  var specialName = '';
-  var entry = getWorkLogEntry(dateStr, studentId);
-  if (!entry) {
-    entry = { id: uid(), date: dateStr, studentId: studentId, status: '', isSpecialClass: isSpecial, specialClassName: specialName, content: content, createdAt: today() };
-    workLogsData.push(entry);
-  } else {
-    entry.isSpecialClass = isSpecial;
-    if (!isSpecial) entry.specialClassName = '';
-    entry.content = content;
-  }
-  renderWorkLogBody();
+function toggleWorkLogSpecial(studentId) {
+  var chk = document.getElementById('wl-special-' + studentId);
+  var fields = document.getElementById('wl-special-fields-' + studentId);
+  if (fields) fields.style.display = chk && chk.checked ? 'flex' : 'none';
 }
 
 function saveWorkLogEntry(studentId, dateStr) {
-  var contentEl = document.getElementById('wl-content-' + studentId);
-  var specialCheckEl = document.getElementById('wl-special-' + studentId);
-  var specialNameEl = document.getElementById('wl-specialname-' + studentId);
-  var content = contentEl ? contentEl.value : '';
-  var isSpecial = specialCheckEl ? specialCheckEl.checked : false;
-  var specialName = isSpecial && specialNameEl ? specialNameEl.value : '';
+  var g = function(id) { var el = document.getElementById(id); return el ? el.value : ''; };
+  var gn = function(id) { var v = g(id); return v === '' ? null : Number(v); };
+  var gc = function(id) { var el = document.getElementById(id); return el ? el.checked : false; };
+  var data = {
+    content: g('wl-content-' + studentId),
+    homework: g('wl-homework-' + studentId),
+    hasTest: gc('wl-hastest-' + studentId),
+    testName: g('wl-testname-' + studentId),
+    testDifficulty: g('wl-testdifficulty-' + studentId),
+    testFullScore: gn('wl-testfullscore-' + studentId),
+    testScore: gn('wl-testscore-' + studentId),
+    isSpecialClass: gc('wl-special-' + studentId),
+    specialClassName: g('wl-specialname-' + studentId),
+    specialClassCount: gn('wl-specialcount-' + studentId),
+    comment: g('wl-comment-' + studentId)
+  };
   var entry = getWorkLogEntry(dateStr, studentId);
   if (!entry) {
-    entry = { id: uid(), date: dateStr, studentId: studentId, status: '', isSpecialClass: isSpecial, specialClassName: specialName, content: content, createdAt: today() };
-    workLogsData.push(entry);
+    workLogsData.push(Object.assign({ id: uid(), date: dateStr, studentId: studentId, createdAt: today() }, data));
   } else {
-    entry.isSpecialClass = isSpecial;
-    entry.specialClassName = specialName;
-    entry.content = content;
+    Object.assign(entry, data);
   }
   showToast('저장되었습니다');
-  renderWorkLogBody();
 }
 
 function buildWorkLogCard(student, dateStr, canWrite) {
   var entry = getWorkLogEntry(dateStr, student.id);
-  var status = entry ? entry.status : '';
-  var content = entry ? entry.content : '';
-  var isSpecial = entry ? entry.isSpecialClass : false;
-  var specialName = entry ? entry.specialClassName : '';
-  var isHighSchool = student.grade && student.grade.charAt(0) === '고';
-  var dateLabel = formatWorkLogDate(dateStr, isHighSchool);
-  var specialCount = 0;
-  if (isSpecial && specialName) {
-    specialCount = getSpecialClassCount(student.id, specialName);
-  }
+  var content = entry ? (entry.content || '') : '';
+  var homework = entry ? (entry.homework || '') : '';
+  var hasTest = entry ? !!entry.hasTest : false;
+  var testName = entry ? (entry.testName || '') : '';
+  var testDiff = entry ? (entry.testDifficulty || '') : '';
+  var testFull = entry && entry.testFullScore != null ? entry.testFullScore : '';
+  var testScore = entry && entry.testScore != null ? entry.testScore : '';
+  var isSpecial = entry ? !!entry.isSpecialClass : false;
+  var specialName = entry ? (entry.specialClassName || '') : '';
+  var specialCount = entry && entry.specialClassCount != null ? entry.specialClassCount : '';
+  var comment = entry ? (entry.comment || '') : '';
+  var sid = student.id;
+  var IS = 'width:100%;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;';
+  var LS = 'display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:3px;';
+  var GS = 'margin-bottom:10px;';
   var html = '';
   html += '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:16px;">';
-  html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">';
+  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">';
   html += '<span style="font-weight:600;font-size:15px;">' + student.name + '</span>';
   html += '<span style="font-size:12px;color:var(--text2);background:var(--bg);padding:2px 8px;border-radius:20px;">' + (student.grade || '') + '</span>';
+  html += '<span style="font-size:12px;color:var(--text3);">' + (student.school || '') + '</span>';
   html += '<span style="font-size:12px;color:var(--text3);">' + (student.teacher || '') + '</span>';
-  html += '<span style="margin-left:auto;font-size:12px;color:var(--text3);">' + dateLabel + '</span>';
   html += '</div>';
   if (!canWrite) {
-    html += '<div style="font-size:13px;color:var(--text2);">' + (status || '미기록') + (content ? '  ' + content : '') + '</div>';
+    if (content) html += '<div style="font-size:13px;margin-bottom:4px;"><b>수업 내용</b> ' + content + '</div>';
+    if (homework) html += '<div style="font-size:13px;margin-bottom:4px;"><b>숙제</b> ' + homework + '</div>';
+    if (hasTest) {
+      var ts = (testName || '') + (testDiff ? ' [' + testDiff + ']' : '') + (testScore !== '' || testFull !== '' ? '  ' + testScore + '/' + testFull : '');
+      if (ts.trim()) html += '<div style="font-size:13px;margin-bottom:4px;"><b>TEST</b> ' + ts + '</div>';
+    }
+    if (isSpecial) html += '<div style="font-size:13px;margin-bottom:4px;"><b>특강</b> ' + (specialName || '') + (specialCount !== '' ? ' ' + specialCount + '회차' : '') + '</div>';
+    if (comment) html += '<div style="font-size:13px;color:var(--text2);">' + comment + '</div>';
+    if (!content && !homework && !hasTest && !isSpecial && !comment) html += '<div style="font-size:13px;color:var(--text3);">미기록</div>';
     html += '</div>';
     return html;
   }
-  html += '<div style="margin-bottom:10px;">';
-  html += '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">';
-  html += '<input type="checkbox" id="wl-special-' + student.id + '" ' + (isSpecial ? 'checked' : '') + ' onchange="toggleWorkLogSpecial(\'' + student.id + '\',\'' + dateStr + '\')">';
-  html += '<span>특강</span></label>';
-  if (isSpecial) {
-    html += '<div style="margin-top:6px;display:flex;align-items:center;gap:8px;">';
-    html += '<input type="text" id="wl-specialname-' + student.id + '" value="' + (specialName || '') + '" placeholder="특강명 입력" style="font-size:13px;padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);flex:1;">';
-    if (specialName) {
-      html += '<span style="font-size:12px;color:var(--text3);">(' + specialCount + '회차)</span>';
-    }
-    html += '</div>';
-  }
-  html += '</div>';
-  html += '<div style="margin-bottom:10px;">';
-  html += '<textarea id="wl-content-' + student.id + '" placeholder="수업 내용 메모" rows="2" style="width:100%;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);resize:vertical;box-sizing:border-box;">' + (content || '') + '</textarea>';
-  html += '</div>';
+  html += '<div style="' + GS + '"><label style="' + LS + '">수업 내용</label>';
+  html += '<textarea id="wl-content-' + sid + '" rows="2" style="' + IS + 'resize:vertical;">' + content + '</textarea></div>';
+  html += '<div style="' + GS + '"><label style="' + LS + '">숙제</label>';
+  html += '<textarea id="wl-homework-' + sid + '" rows="1" style="' + IS + 'resize:vertical;">' + homework + '</textarea></div>';
+  html += '<div style="' + GS + '">';
+  html += '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;margin-bottom:4px;">';
+  html += '<input type="checkbox" id="wl-hastest-' + sid + '" ' + (hasTest ? 'checked' : '') + ' onchange="toggleWorkLogTest(\'' + sid + '\')">';
+  html += '<b>TEST</b></label>';
+  html += '<div id="wl-test-fields-' + sid + '" style="display:' + (hasTest ? 'block' : 'none') + ';padding-left:2px;">';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;">';
+  html += '<div style="flex:2;min-width:100px;"><label style="' + LS + '">TEST 이름</label><input type="text" id="wl-testname-' + sid + '" value="' + testName + '" style="' + IS + '"></div>';
+  html += '<div style="flex:1;min-width:60px;"><label style="' + LS + '">난이도</label><input type="text" id="wl-testdifficulty-' + sid + '" value="' + testDiff + '" placeholder="상/중/하" style="' + IS + '"></div>';
+  html += '</div><div style="display:flex;gap:8px;flex-wrap:wrap;">';
+  html += '<div style="flex:1;min-width:60px;"><label style="' + LS + '">만점</label><input type="number" id="wl-testfullscore-' + sid + '" value="' + testFull + '" min="0" style="' + IS + '"></div>';
+  html += '<div style="flex:1;min-width:60px;"><label style="' + LS + '">점수</label><input type="number" id="wl-testscore-' + sid + '" value="' + testScore + '" min="0" style="' + IS + '"></div>';
+  html += '</div></div></div>';
+  html += '<div style="' + GS + '">';
+  html += '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;margin-bottom:4px;">';
+  html += '<input type="checkbox" id="wl-special-' + sid + '" ' + (isSpecial ? 'checked' : '') + ' onchange="toggleWorkLogSpecial(\'' + sid + '\')">';
+  html += '<b>특강</b></label>';
+  html += '<div id="wl-special-fields-' + sid + '" style="display:' + (isSpecial ? 'flex' : 'none') + ';gap:8px;flex-wrap:wrap;padding-left:2px;">';
+  html += '<div style="flex:2;min-width:100px;"><label style="' + LS + '">특강명</label><input type="text" id="wl-specialname-' + sid + '" value="' + specialName + '" style="' + IS + '"></div>';
+  html += '<div style="flex:1;min-width:60px;"><label style="' + LS + '">회차</label><input type="number" id="wl-specialcount-' + sid + '" value="' + specialCount + '" min="1" style="' + IS + '"></div>';
+  html += '</div></div>';
+  html += '<div style="' + GS + '"><label style="' + LS + '">코멘트</label>';
+  html += '<textarea id="wl-comment-' + sid + '" rows="2" style="' + IS + 'resize:vertical;">' + comment + '</textarea></div>';
   html += '<div style="text-align:right;">';
-  html += '<button class="btn btn-primary btn-sm" onclick="saveWorkLogEntry(\'' + student.id + '\',\'' + dateStr + '\')">저장</button>';
-  html += '</div>';
-  html += '</div>';
+  html += '<button class="btn btn-primary btn-sm" onclick="saveWorkLogEntry(\'' + sid + '\',\'' + dateStr + '\')">저장</button>';
+  html += '</div></div>';
   return html;
 }
 
