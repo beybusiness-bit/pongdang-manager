@@ -2466,6 +2466,48 @@ input[type="checkbox"] {
   </div>
 </div>
 
+<!-- 학생 직접 추가 모달 (근무일지) -->
+<div class="modal-backdrop" id="modal-add-worklog-student">
+  <div class="modal">
+    <div class="modal-title" id="add-worklog-student-title">학생 직접 추가</div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">학생 검색</label>
+        <input type="text" id="worklog-add-student-search" placeholder="이름 검색..." oninput="renderWorkLogAddStudentList(this.value)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;margin-bottom:8px;">
+        <div id="worklog-add-student-list" style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-add-worklog-student')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 커스텀 휴일 관리 모달 -->
+<div class="modal-backdrop" id="modal-custom-holiday">
+  <div class="modal">
+    <div class="modal-title" id="custom-holiday-title">휴일 관리</div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">공휴일 외 방학·보강 등 학원 자체 휴일을 등록합니다.</p>
+      <div class="form-group" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+        <div style="flex:1;min-width:120px;">
+          <label class="form-label">날짜</label>
+          <input type="date" id="new-holiday-date" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;">
+        </div>
+        <div style="flex:2;min-width:140px;">
+          <label class="form-label">이름</label>
+          <input type="text" id="new-holiday-name" placeholder="예: 여름방학, 보강일" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="addCustomHoliday()" style="white-space:nowrap;">추가</button>
+      </div>
+      <div id="custom-holiday-list" style="margin-top:16px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-custom-holiday')">닫기</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ============ 상수 ============
 const AUTH = {
@@ -9553,6 +9595,104 @@ function renderWorkLogStudentBody(container) {
     html += '</div>';
   });
   container.innerHTML = html;
+}
+
+function openAddWorkLogStudentModal() {
+  var searchEl = document.getElementById('worklog-add-student-search');
+  if (searchEl) searchEl.value = '';
+  renderWorkLogAddStudentList('');
+  openModal('modal-add-worklog-student');
+}
+
+function renderWorkLogAddStudentList(query) {
+  var listEl = document.getElementById('worklog-add-student-list');
+  if (!listEl) return;
+  var enrolled = getEnrolledStudents();
+  var filtered = query
+    ? enrolled.filter(function(s) { return s.name.indexOf(query) !== -1; })
+    : enrolled;
+  if (filtered.length === 0) {
+    listEl.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:13px;">검색 결과 없음</div>';
+    return;
+  }
+  var html = '';
+  filtered.forEach(function(s) {
+    var alreadyIn = workLogsData.some(function(e) { return e.date === currentWorkLogDate && e.studentId === s.id; });
+    var scheduledToday = getStudentsByDayOfWeek(currentWorkLogDate).some(function(ss) { return ss.id === s.id; });
+    if (scheduledToday) return;
+    var disabled = alreadyIn ? ' style="opacity:0.5;pointer-events:none;"' : '';
+    html += '<div class="clickable-row" style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;"' + disabled + ' onclick="addWorkLogStudentManual(\'' + s.id + '\')">';
+    html += '<div>';
+    html += '<span style="font-size:14px;font-weight:500;">' + s.name + '</span>';
+    html += '<span style="font-size:12px;color:var(--text2);margin-left:8px;">' + (s.grade || '') + '</span>';
+    html += '<span style="font-size:12px;color:var(--text3);margin-left:8px;">' + (s.teacher || '') + '</span>';
+    html += '</div>';
+    html += alreadyIn ? '<span style="font-size:12px;color:var(--text3);">이미 추가됨</span>' : '<button class="btn btn-primary btn-sm">추가</button>';
+    html += '</div>';
+  });
+  if (!html) {
+    listEl.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:13px;">추가 가능한 학생이 없습니다</div>';
+    return;
+  }
+  listEl.innerHTML = html;
+}
+
+function addWorkLogStudentManual(studentId) {
+  var already = getWorkLogEntry(currentWorkLogDate, studentId);
+  if (!already) {
+    workLogsData.push({ id: uid(), date: currentWorkLogDate, studentId: studentId, status: '', isSpecialClass: false, specialClassName: '', content: '', createdAt: today() });
+  }
+  closeModal('modal-add-worklog-student');
+  setTimeout(function() { renderWorkLogBody(); }, 100);
+}
+
+function openCustomHolidayModal() {
+  renderCustomHolidayList();
+  openModal('modal-custom-holiday');
+}
+
+function renderCustomHolidayList() {
+  var listEl = document.getElementById('custom-holiday-list');
+  if (!listEl) return;
+  if (customHolidaysData.length === 0) {
+    listEl.innerHTML = '<div style="color:var(--text3);font-size:13px;">등록된 휴일이 없습니다</div>';
+    return;
+  }
+  var sorted = customHolidaysData.slice().sort(function(a, b) { return a.date.localeCompare(b.date); });
+  var html = '<div style="display:flex;flex-direction:column;gap:6px;">';
+  sorted.forEach(function(h) {
+    var dayN = getDayName(h.date);
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg);border-radius:var(--radius-sm);">';
+    html += '<span style="font-size:14px;">' + h.date + ' (' + dayN + ')  ' + h.name + '</span>';
+    html += '<button class="btn btn-danger btn-sm" onclick="deleteCustomHoliday(\'' + h.id + '\')">삭제</button>';
+    html += '</div>';
+  });
+  html += '</div>';
+  listEl.innerHTML = html;
+}
+
+function addCustomHoliday() {
+  var dateEl = document.getElementById('new-holiday-date');
+  var nameEl = document.getElementById('new-holiday-name');
+  var date = dateEl ? dateEl.value.trim() : '';
+  var name = nameEl ? nameEl.value.trim() : '';
+  if (!date) { showToast('날짜를 선택해주세요'); return; }
+  if (!name) { showToast('이름을 입력해주세요'); return; }
+  if (customHolidaysData.find(function(h) { return h.date === date; })) {
+    showToast('이미 등록된 날짜입니다'); return;
+  }
+  customHolidaysData.push({ id: uid(), date: date, name: name });
+  if (dateEl) dateEl.value = '';
+  if (nameEl) nameEl.value = '';
+  renderCustomHolidayList();
+  showToast('휴일이 등록되었습니다');
+}
+
+function deleteCustomHoliday(id) {
+  var idx = customHolidaysData.findIndex(function(h) { return h.id === id; });
+  if (idx !== -1) customHolidaysData.splice(idx, 1);
+  renderCustomHolidayList();
+  showToast('휴일이 삭제되었습니다');
 }
 </script>
 
