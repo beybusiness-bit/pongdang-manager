@@ -2469,7 +2469,7 @@ input[type="checkbox"] {
 <!-- 학생 직접 추가 모달 (근무일지) -->
 <div class="modal-backdrop" id="modal-add-worklog-student">
   <div class="modal">
-    <div class="modal-title" id="add-worklog-student-title">학생 직접 추가</div>
+    <div class="modal-title" id="add-worklog-student-title">학생 추가</div>
     <div class="modal-body">
       <div class="form-group">
         <label class="form-label">학생 검색</label>
@@ -2657,6 +2657,18 @@ let currentWorkLogDate = '';
 let currentWorkLogMonth = '';
 let currentWorkLogTeacherFilter = '';
 let currentWorkLogStudentFilter = '';
+let workLogStudentOrder = {};
+let workLogTeacherViewMode = 'day';
+let workLogTeacherViewDate = '';
+let workLogTeacherViewDateFrom = '';
+let workLogTeacherViewDateTo = '';
+let workLogAddStudentSearch = '';
+let workLogAddStudentGradeFilter = '';
+let workLogAddStudentTeacherFilter = '';
+let workLogAddStudentSort = 'name-asc';
+let selectedAddStudentIds = [];
+let wlDragStudentId = null;
+let wlDragSchoolType = null;
 
 let currentPaymentTab = 'register'; // register(월별등록대장) 또는 records(결제기록)
 let ledgerMonths = []; // 등록대장에 표시할 월 목록 (예: ['2026-04', '2026-03'])
@@ -9388,12 +9400,6 @@ function buildWorkLogCard(student, dateStr, canWrite) {
     html += '</div>';
     return html;
   }
-  html += '<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">';
-  ['출석', '결석', '보충'].forEach(function(s) {
-    var cls = status === s ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
-    html += '<button class="' + cls + '" onclick="setWorkLogStatus(\'' + student.id + '\',\'' + dateStr + '\',\'' + s + '\')">' + s + '</button>';
-  });
-  html += '</div>';
   html += '<div style="margin-bottom:10px;">';
   html += '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">';
   html += '<input type="checkbox" id="wl-special-' + student.id + '" ' + (isSpecial ? 'checked' : '') + ' onchange="toggleWorkLogSpecial(\'' + student.id + '\',\'' + dateStr + '\')">';
@@ -9423,7 +9429,6 @@ function renderWorkLogDailyBody(container) {
   var dateStr = currentWorkLogDate;
   var d = new Date(dateStr + 'T00:00:00');
   var dayName = getDayName(dateStr);
-  var displayDate = d.getFullYear() + '년 ' + (d.getMonth() + 1) + '월 ' + d.getDate() + '일 (' + dayName + ')';
   var prevD = new Date(d); prevD.setDate(prevD.getDate() - 1);
   var nextD = new Date(d); nextD.setDate(nextD.getDate() + 1);
   function fmtDate(dt) {
@@ -9433,10 +9438,9 @@ function renderWorkLogDailyBody(container) {
   var nextDateStr = fmtDate(nextD);
   var html = '';
   html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">';
-  html += '<button class="btn btn-outline btn-sm" onclick="changeWorkLogDate(\'' + prevDateStr + '\')">이전</button>';
+  html += '<button class="btn btn-outline btn-sm" onclick="changeWorkLogDate(\'' + prevDateStr + '\')">이전 날</button>';
   html += '<input type="date" value="' + dateStr + '" onchange="changeWorkLogDate(this.value)" style="font-size:14px;padding:5px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);">';
-  html += '<span style="font-size:15px;font-weight:600;color:var(--text);">' + displayDate + '</span>';
-  html += '<button class="btn btn-outline btn-sm" onclick="changeWorkLogDate(\'' + nextDateStr + '\')">다음</button>';
+  html += '<button class="btn btn-outline btn-sm" onclick="changeWorkLogDate(\'' + nextDateStr + '\')">다음 날</button>';
   html += '</div>';
   var holidayForced = workLogForceOpenDates.indexOf(dateStr) !== -1;
   if (isWorkLogHoliday(dateStr) && !holidayForced) {
@@ -9478,7 +9482,7 @@ function renderWorkLogDailyBody(container) {
   }
   if (canWrite) {
     html += '<div style="margin-top:16px;">';
-    html += '<button class="btn btn-outline btn-sm" onclick="openAddWorkLogStudentModal()">+ 학생 직접 추가</button>';
+    html += '<button class="btn btn-outline btn-sm" onclick="openAddWorkLogStudentModal()">+ 학생 추가</button>';
     html += '</div>';
   }
   container.innerHTML = html;
