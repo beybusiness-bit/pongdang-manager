@@ -856,15 +856,16 @@ textarea.form-input {
 /* 페이저 */
 .pagination-container {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 16px 0;
-  gap: 16px;
+  padding: 12px 0;
+  gap: 8px;
 }
 .pagination {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex: 1;
+  justify-content: center;
 }
 .page-btn {
   padding: 8px 12px;
@@ -1033,18 +1034,19 @@ input[type="checkbox"] {
     padding: 10px 8px;
   }
   .pagination-container {
-    flex-direction: column;
-    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 0;
   }
   .pagination {
     justify-content: center;
   }
   .page-btn {
-    padding: 6px 10px;
+    padding: 5px 9px;
     font-size: 13px;
   }
   .page-size-selector {
-    justify-content: center;
+    font-size: 13px;
   }
   
   /* 결제 페이지 모바일 전용 */
@@ -1247,7 +1249,7 @@ input[type="checkbox"] {
 }
 .student-card-body {
   display: flex;
-  gap: 14px;
+  gap: 20px;
   align-items: center;
 }
 .student-card-profile {
@@ -1303,6 +1305,9 @@ input[type="checkbox"] {
 }
 
 @media (max-width: 768px) {
+  .student-photo-desktop { display: none !important; }
+  .student-photo-mobile { display: flex !important; }
+
   .dashboard-stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -1483,9 +1488,17 @@ input[type="checkbox"] {
           <div class="form-row-single">
             <div class="form-group">
               <label class="form-label">프로필 사진</label>
-              <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                 <img id="student-image-preview" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; display: none;">
-                <input type="file" class="form-input" id="student-profile-image" accept="image/*" onchange="handleStudentImageUpload(event)" style="flex: 1;">
+                <input type="file" class="form-input student-photo-desktop" id="student-profile-image" accept="image/*" onchange="handleStudentImageUpload(event)" style="flex: 1; min-width: 0;">
+                <div class="student-photo-mobile" style="display: none; gap: 6px; flex-wrap: wrap;">
+                  <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('student-profile-image-gallery').click()">앨범</button>
+                  <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('student-profile-image-file').click()">파일</button>
+                  <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('student-profile-image-camera').click()">카메라</button>
+                  <input type="file" id="student-profile-image-gallery" accept="image/*" style="display:none;" onchange="handleStudentImageUpload(event)">
+                  <input type="file" id="student-profile-image-file" accept="image/*" style="display:none;" onchange="handleStudentImageUpload(event)">
+                  <input type="file" id="student-profile-image-camera" accept="image/*" capture="environment" style="display:none;" onchange="handleStudentImageUpload(event)">
+                </div>
                 <button type="button" class="btn btn-outline btn-sm" onclick="removeStudentProfileImage()">제거</button>
               </div>
             </div>
@@ -3412,12 +3425,6 @@ function renderStudentsPage() {
   html += '  </div>';
   }
 
-  // 뷰 토글 (데스크탑 전용 — CSS로 모바일 숨김)
-  html += '  <div class="student-view-toggle">';
-  html += '    <button class="btn btn-sm ' + (currentStudentDisplayView === 'card' ? 'btn-primary' : 'btn-outline') + '" onclick="changeStudentDisplayView(\'card\')" title="카드 보기" style="font-size: 18px; padding: 6px 10px; display: inline-flex; align-items: center;">◫</button>';
-  html += '    <button class="btn btn-sm ' + (currentStudentDisplayView === 'list' ? 'btn-primary' : 'btn-outline') + '" onclick="changeStudentDisplayView(\'list\')" title="목록 보기" style="font-size: 18px; padding: 6px 10px; display: inline-flex; align-items: center;">☰</button>';
-  html += '  </div>';
-
   html += '</div>';
 
   // 리스트 본체 마운트 포인트 (검색/필터/정렬/선택 변경 시 이 안만 재렌더)
@@ -3452,8 +3459,11 @@ function renderStudentsListBody() {
   html += '  <button class="btn btn-outline btn-sm" onclick="clearSelection()">선택 해제</button>';
   html += '</div>';
 
-  // 페이저 (상단)
-  html += renderPagination(studentPagination.currentPage, Math.ceil(studentPagination.totalItems / studentPagination.pageSize), 'changePage(PAGE)');
+  // 페이저 (상단) — 뷰토글 + 페이지 + 페이지당개수
+  html += renderPagination(studentPagination.currentPage, Math.ceil(studentPagination.totalItems / studentPagination.pageSize), 'changePage(PAGE)', {
+    leftHtml: renderViewToggleHtml(currentStudentDisplayView, "changeStudentDisplayView('card')", "changeStudentDisplayView('list')", 'student-view-toggle'),
+    rightHtml: renderPageSizeHtml(studentPagination.pageSize, [20,50,100,200,500], 'changePageSize(parseInt(this.value))')
+  });
 
   if (pageStudents.length === 0) {
     html += '<div class="empty-state">';
@@ -3580,52 +3590,73 @@ function renderStudentsListBody() {
     });
     html += '</div>';
 
-    // 페이저 (하단)
-    html += renderPagination(studentPagination.currentPage, Math.ceil(studentPagination.totalItems / studentPagination.pageSize), 'changePage(PAGE)');
+    // 페이저 (하단) — 페이지당개수만
+    html += renderPagination(studentPagination.currentPage, Math.ceil(studentPagination.totalItems / studentPagination.pageSize), 'changePage(PAGE)', {
+      rightHtml: renderPageSizeHtml(studentPagination.pageSize, [20,50,100,200,500], 'changePageSize(parseInt(this.value))')
+    });
   }
 
   mount.innerHTML = html;
 }
 
-function renderPagination(currentPage, totalPages, onClickTemplate) {
+function renderPagination(currentPage, totalPages, onClickTemplate, opts) {
+  const leftHtml = (opts && opts.leftHtml) ? opts.leftHtml : '';
+  const rightHtml = (opts && opts.rightHtml) ? opts.rightHtml : '';
+
   let html = '<div class="pagination-container">';
-  html += '  <div class="pagination">';
-  
+
+  if (leftHtml) html += leftHtml;
+
+  html += '<div class="pagination">';
   const prevPage = currentPage - 1;
   const nextPage = currentPage + 1;
-  const prevDisabled = currentPage === 1 ? 'disabled' : '';
-  const nextDisabled = currentPage === totalPages ? 'disabled' : '';
-  
-  html += '    <button class="page-btn" onclick="' + onClickTemplate.replace('PAGE', prevPage) + '" ' + prevDisabled + '>이전</button>';
-  
-  // 페이지 번호 (모바일에서는 현재 페이지만)
+  html += '<button class="page-btn" onclick="' + onClickTemplate.replace('PAGE', prevPage) + '"' + (currentPage === 1 ? ' disabled' : '') + '>이전</button>';
+
   const isMobile = window.innerWidth <= 768;
-  if (isMobile) {
-    html += '    <span class="page-btn active">' + currentPage + ' / ' + totalPages + '</span>';
+  if (isMobile || totalPages <= 1) {
+    html += '<span class="page-btn active">' + currentPage + ' / ' + totalPages + '</span>';
   } else {
     const startPage = Math.max(1, currentPage - 2);
     const endPage = Math.min(totalPages, currentPage + 2);
-    
     if (startPage > 1) {
-      html += '    <button class="page-btn" onclick="' + onClickTemplate.replace('PAGE', '1') + '">1</button>';
-      if (startPage > 2) html += '    <span class="page-btn" disabled>...</span>';
+      html += '<button class="page-btn" onclick="' + onClickTemplate.replace('PAGE', '1') + '">1</button>';
+      if (startPage > 2) html += '<span class="page-btn" disabled>...</span>';
     }
-    
     for (let i = startPage; i <= endPage; i++) {
-      const active = i === currentPage ? ' active' : '';
-      html += '    <button class="page-btn' + active + '" onclick="' + onClickTemplate.replace('PAGE', i) + '">' + i + '</button>';
+      html += '<button class="page-btn' + (i === currentPage ? ' active' : '') + '" onclick="' + onClickTemplate.replace('PAGE', i) + '">' + i + '</button>';
     }
-    
     if (endPage < totalPages) {
-      if (endPage < totalPages - 1) html += '    <span class="page-btn" disabled>...</span>';
-      html += '    <button class="page-btn" onclick="' + onClickTemplate.replace('PAGE', totalPages) + '">' + totalPages + '</button>';
+      if (endPage < totalPages - 1) html += '<span class="page-btn" disabled>...</span>';
+      html += '<button class="page-btn" onclick="' + onClickTemplate.replace('PAGE', totalPages) + '">' + totalPages + '</button>';
     }
   }
-  
-  html += '    <button class="page-btn" onclick="' + onClickTemplate.replace('PAGE', nextPage) + '" ' + nextDisabled + '>다음</button>';
-  html += '  </div>';
+
+  html += '<button class="page-btn" onclick="' + onClickTemplate.replace('PAGE', nextPage) + '"' + (currentPage === totalPages ? ' disabled' : '') + '>다음</button>';
   html += '</div>';
-  
+
+  if (rightHtml) html += rightHtml;
+
+  html += '</div>';
+  return html;
+}
+
+// 뷰 토글 HTML 생성 헬퍼 (◫/☰)
+function renderViewToggleHtml(currentView, cardFn, listFn, cssClass) {
+  const cls = cssClass || '';
+  return '<div class="' + cls + '" style="display: flex; gap: 4px; flex-shrink: 0;">' +
+    '<button class="btn btn-sm ' + (currentView === 'card' ? 'btn-primary' : 'btn-outline') + '" onclick="' + cardFn + '" title="카드 보기" style="font-size: 17px; padding: 5px 9px; display: inline-flex; align-items: center;">◫</button>' +
+    '<button class="btn btn-sm ' + (currentView === 'list' ? 'btn-primary' : 'btn-outline') + '" onclick="' + listFn + '" title="목록 보기" style="font-size: 17px; padding: 5px 9px; display: inline-flex; align-items: center;">☰</button>' +
+    '</div>';
+}
+
+// 페이지당 개수 선택 HTML 헬퍼
+function renderPageSizeHtml(currentSize, options, onChangeFn) {
+  const opts = options || [20, 50, 100, 200, 500];
+  let html = '<div class="page-size-selector" style="flex-shrink: 0;"><span>페이지당</span><select onchange="' + onChangeFn + '">';
+  opts.forEach(function(n) {
+    html += '<option value="' + n + '"' + (currentSize === n ? ' selected' : '') + '>' + n + '개</option>';
+  });
+  html += '</select></div>';
   return html;
 }
 
@@ -4799,7 +4830,10 @@ function renderTextbooksListBody() {
   html += '</div>';
 
   // 페이저 (상단)
-  html += renderTextbookPagination();
+  html += renderTextbookPagination({
+    leftHtml: renderViewToggleHtml(currentTextbookView, "changeTextbookView('grid')", "changeTextbookView('list')", 'textbook-view-toggle'),
+    rightHtml: renderPageSizeHtml(textbookPagination.pageSize, [20,50,100], 'changeTextbookPageSize(parseInt(this.value))')
+  });
 
   if (pageTextbooks.length === 0) {
     html += '<div class="empty-state">';
@@ -4901,63 +4935,18 @@ function renderTextbooksListBody() {
       html += '</table>';
     }
 
-    html += renderTextbookPagination();
+    html += renderTextbookPagination({
+      rightHtml: renderPageSizeHtml(textbookPagination.pageSize, [20,50,100], 'changeTextbookPageSize(parseInt(this.value))')
+    });
   }
 
   mount.innerHTML = html;
   updateSelectAllCheckbox();
 }
 
-function renderTextbookPagination() {
+function renderTextbookPagination(opts) {
   const totalPages = Math.ceil(textbookPagination.totalItems / textbookPagination.pageSize) || 1;
-  const currentPage = textbookPagination.currentPage;
-  
-  let html = '<div class="pagination-container">';
-  
-  // 뷰 전환 버튼 (아이콘)
-  html += '  <div class="btn-group" style="margin-right: 12px;">';
-  html += '    <button class="btn btn-sm' + (currentTextbookView === 'grid' ? ' btn-primary' : ' btn-outline') + '" onclick="changeTextbookView(\'grid\')" title="썸네일 보기" style="font-size: 20px; padding: 6px 12px; display: inline-flex; align-items: center; justify-content: center; line-height: 1;">◫</button>';
-  html += '    <button class="btn btn-sm' + (currentTextbookView === 'list' ? ' btn-primary' : ' btn-outline') + '" onclick="changeTextbookView(\'list\')" title="목록 보기" style="font-size: 20px; padding: 6px 12px; display: inline-flex; align-items: center; justify-content: center; line-height: 1;">☰</button>';
-  html += '  </div>';
-  
-  html += '  <div class="pagination">';
-  html += '    <button class="page-btn" onclick="changeTextbookPage(' + (currentPage - 1) + ')" ' + (currentPage === 1 ? 'disabled' : '') + '>이전</button>';
-  
-  const isMobile = window.innerWidth <= 768;
-  if (isMobile) {
-    html += '    <span class="page-btn active">' + currentPage + ' / ' + totalPages + '</span>';
-  } else {
-    const startPage = Math.max(1, currentPage - 2);
-    const endPage = Math.min(totalPages, currentPage + 2);
-    
-    if (startPage > 1) {
-      html += '    <button class="page-btn" onclick="changeTextbookPage(1)">1</button>';
-      if (startPage > 2) html += '    <span class="page-btn" disabled>...</span>';
-    }
-    
-    for (let i = startPage; i <= endPage; i++) {
-      html += '    <button class="page-btn' + (i === currentPage ? ' active' : '') + '" onclick="changeTextbookPage(' + i + ')">' + i + '</button>';
-    }
-    
-    if (endPage < totalPages) {
-      if (endPage < totalPages - 1) html += '    <span class="page-btn" disabled>...</span>';
-      html += '    <button class="page-btn" onclick="changeTextbookPage(' + totalPages + ')">' + totalPages + '</button>';
-    }
-  }
-  
-  html += '    <button class="page-btn" onclick="changeTextbookPage(' + (currentPage + 1) + ')" ' + (currentPage === totalPages ? 'disabled' : '') + '>다음</button>';
-  html += '  </div>';
-  html += '  <div class="page-size-selector">';
-  html += '    <span>페이지당</span>';
-  html += '    <select onchange="changeTextbookPageSize(parseInt(this.value))">';
-  html += '      <option value="20"' + (textbookPagination.pageSize === 20 ? ' selected' : '') + '>20개</option>';
-  html += '      <option value="50"' + (textbookPagination.pageSize === 50 ? ' selected' : '') + '>50개</option>';
-  html += '      <option value="100"' + (textbookPagination.pageSize === 100 ? ' selected' : '') + '>100개</option>';
-  html += '    </select>';
-  html += '  </div>';
-  html += '</div>';
-  
-  return html;
+  return renderPagination(textbookPagination.currentPage, totalPages, 'changeTextbookPage(PAGE)', opts);
 }
 
 function getFilteredTextbooks() {
@@ -6873,11 +6862,6 @@ function renderPaymentRecords(canWrite) {
   html += '  </div>';
 
   html += '  <div class="payment-buttons-desktop" style="display: flex; gap: 8px; flex-shrink: 0; align-items: center;">';
-  // 뷰 토글 (데스크탑 전용)
-  html += '  <div class="payment-view-toggle">';
-  html += '    <button class="btn btn-sm ' + (currentPaymentDisplayView === 'card' ? 'btn-primary' : 'btn-outline') + '" onclick="changePaymentDisplayView(\'card\')" title="카드 보기" style="font-size: 18px; padding: 6px 10px; display: inline-flex; align-items: center;">◫</button>';
-  html += '    <button class="btn btn-sm ' + (currentPaymentDisplayView === 'list' ? 'btn-primary' : 'btn-outline') + '" onclick="changePaymentDisplayView(\'list\')" title="목록 보기" style="font-size: 18px; padding: 6px 10px; display: inline-flex; align-items: center;">☰</button>';
-  html += '  </div>';
   if (canWrite) {
     html += '    <button class="btn btn-outline btn-sm" onclick="openCsvUploadModal()">CSV 업로드</button>';
     html += '    <button class="btn btn-primary btn-sm" onclick="openAddPaymentModal()">+ 결제 추가</button>';
@@ -6931,16 +6915,10 @@ function renderPaymentRecordsListBody() {
   const endIdx = startIdx + paymentPagination.pageSize;
   const pagePayments = filteredPayments.slice(startIdx, endIdx);
 
-  // 페이지당 표시 개수 선택 (상단 페이지네이션에 함께)
-  const pageSizeHtml = '<div class="page-size-selector"><span>페이지당</span><select onchange="changePaymentPageSize(parseInt(this.value))">' +
-    '<option value="20"' + (paymentPagination.pageSize === 20 ? ' selected' : '') + '>20개</option>' +
-    '<option value="50"' + (paymentPagination.pageSize === 50 ? ' selected' : '') + '>50개</option>' +
-    '<option value="100"' + (paymentPagination.pageSize === 100 ? ' selected' : '') + '>100개</option>' +
-    '<option value="200"' + (paymentPagination.pageSize === 200 ? ' selected' : '') + '>200개</option>' +
-    '<option value="500"' + (paymentPagination.pageSize === 500 ? ' selected' : '') + '>500개</option>' +
-    '</select></div>';
-
-  html += renderPagination(paymentPagination.currentPage, totalPages, 'changePaymentPage(PAGE)') + pageSizeHtml;
+  html += renderPagination(paymentPagination.currentPage, totalPages, 'changePaymentPage(PAGE)', {
+    leftHtml: renderViewToggleHtml(currentPaymentDisplayView, "changePaymentDisplayView('card')", "changePaymentDisplayView('list')", 'payment-view-toggle'),
+    rightHtml: renderPageSizeHtml(paymentPagination.pageSize, [20,50,100,200,500], 'changePaymentPageSize(parseInt(this.value))')
+  });
 
   if (currentPaymentDisplayView === 'card') {
     // 데스크탑 카드 그리드 (모바일에서는 CSS로 숨김)
@@ -7064,7 +7042,9 @@ function renderPaymentRecordsListBody() {
 
   html += renderPaymentMobileCards(pagePayments, canWrite);
 
-  html += renderPagination(paymentPagination.currentPage, totalPages, 'changePaymentPage(PAGE)') + pageSizeHtml;
+  html += renderPagination(paymentPagination.currentPage, totalPages, 'changePaymentPage(PAGE)', {
+    rightHtml: renderPageSizeHtml(paymentPagination.pageSize, [20,50,100,200,500], 'changePaymentPageSize(parseInt(this.value))')
+  });
 
   bodyMount.innerHTML = html;
 }
