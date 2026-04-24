@@ -9549,15 +9549,30 @@ function wlDrop(ev, targetStudentId, schoolType, dateStr) {
 }
 
 function renderWorkLogTeacherBody(container) {
+  if (!workLogTeacherViewDate) workLogTeacherViewDate = today();
+  if (!workLogTeacherViewDateFrom) workLogTeacherViewDateFrom = today().slice(0,7) + '-01';
+  if (!workLogTeacherViewDateTo) workLogTeacherViewDateTo = today();
+  var isRange = workLogTeacherViewMode === 'range';
   var html = '';
-  html += '<div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">';
-  html += '<select onchange="currentWorkLogTeacherFilter=this.value;renderWorkLogBody();" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;">';
+  var selStyle = 'padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;';
+  html += '<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">';
+  html += '<select onchange="currentWorkLogTeacherFilter=this.value;renderWorkLogBody();" style="' + selStyle + '">';
   html += '<option value="">전체 선생님</option>';
   teachersData.forEach(function(t) {
     html += '<option value="' + t.name + '"' + (currentWorkLogTeacherFilter === t.name ? ' selected' : '') + '>' + t.name + '</option>';
   });
   html += '</select>';
-  html += '<input type="month" value="' + currentWorkLogMonth + '" onchange="currentWorkLogMonth=this.value;renderWorkLogBody();" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;">';
+  html += '<div style="display:flex;gap:4px;">';
+  html += '<button class="tab-btn' + (!isRange ? ' active' : '') + '" onclick="workLogTeacherViewMode=\'day\';renderWorkLogBody();">하루</button>';
+  html += '<button class="tab-btn' + (isRange ? ' active' : '') + '" onclick="workLogTeacherViewMode=\'range\';renderWorkLogBody();">기간</button>';
+  html += '</div>';
+  if (!isRange) {
+    html += '<input type="date" value="' + workLogTeacherViewDate + '" onchange="workLogTeacherViewDate=this.value;renderWorkLogBody();" style="' + selStyle + '">';
+  } else {
+    html += '<input type="date" value="' + workLogTeacherViewDateFrom + '" onchange="workLogTeacherViewDateFrom=this.value;renderWorkLogBody();" style="' + selStyle + '">';
+    html += '<span style="font-size:14px;">~</span>';
+    html += '<input type="date" value="' + workLogTeacherViewDateTo + '" onchange="workLogTeacherViewDateTo=this.value;renderWorkLogBody();" style="' + selStyle + '">';
+  }
   html += '</div>';
   var targetStudents = getEnrolledStudents().filter(function(s) {
     return !currentWorkLogTeacherFilter || s.teacher === currentWorkLogTeacherFilter;
@@ -9565,52 +9580,51 @@ function renderWorkLogTeacherBody(container) {
   var targetIds = {};
   targetStudents.forEach(function(s) { targetIds[s.id] = true; });
   var targetEntries = workLogsData.filter(function(e) {
-    return e.date.slice(0, 7) === currentWorkLogMonth && targetIds[e.studentId];
-  });
+    if (!targetIds[e.studentId]) return false;
+    if (!isRange) return e.date === workLogTeacherViewDate;
+    return e.date >= workLogTeacherViewDateFrom && e.date <= workLogTeacherViewDateTo;
+  }).sort(function(a,b) { return b.date.localeCompare(a.date); });
   if (targetEntries.length === 0) {
     html += '<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-text">기록된 근무일지가 없습니다</div></div>';
     container.innerHTML = html;
     return;
   }
-  var byDate = {};
+  var TD = 'padding:7px 10px;text-align:left;';
+  var TH = TD + 'font-weight:600;background:var(--bg);';
+  html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">';
+  html += '<thead><tr style="border-bottom:1px solid var(--border);">';
+  if (isRange) html += '<th style="' + TH + '">날짜</th>';
+  html += '<th style="' + TH + '">학생명</th>';
+  html += '<th style="' + TH + '">수업 내용</th>';
+  html += '<th style="' + TH + '">숙제</th>';
+  html += '<th style="' + TH + '">TEST</th>';
+  html += '<th style="' + TH + '">난이도</th>';
+  html += '<th style="' + TH + '">결과</th>';
+  html += '<th style="' + TH + '">코멘트</th>';
+  html += '<th style="' + TH + '">특강</th>';
+  html += '<th style="' + TH + '">회차</th>';
+  html += '</tr></thead><tbody>';
   targetEntries.forEach(function(e) {
-    if (!byDate[e.date]) byDate[e.date] = [];
-    byDate[e.date].push(e);
+    var st = studentsData.find(function(s) { return s.id === e.studentId; });
+    var stName = st ? st.name : '-';
+    var result = '';
+    if (e.hasTest && (e.testScore != null || e.testFullScore != null)) {
+      result = (e.testScore != null ? e.testScore : '') + '/' + (e.testFullScore != null ? e.testFullScore : '');
+    }
+    html += '<tr style="border-bottom:1px solid var(--border);">';
+    if (isRange) html += '<td style="' + TD + 'white-space:nowrap;">' + e.date + ' (' + getDayName(e.date) + ')</td>';
+    html += '<td style="' + TD + '">' + stName + '</td>';
+    html += '<td style="' + TD + '">' + (e.content || '') + '</td>';
+    html += '<td style="' + TD + '">' + (e.homework || '') + '</td>';
+    html += '<td style="' + TD + '">' + (e.hasTest ? (e.testName || '') : '') + '</td>';
+    html += '<td style="' + TD + '">' + (e.hasTest ? (e.testDifficulty || '') : '') + '</td>';
+    html += '<td style="' + TD + '">' + result + '</td>';
+    html += '<td style="' + TD + '">' + (e.comment || '') + '</td>';
+    html += '<td style="' + TD + '">' + (e.isSpecialClass ? (e.specialClassName || '') : '') + '</td>';
+    html += '<td style="' + TD + '">' + (e.isSpecialClass && e.specialClassCount != null ? e.specialClassCount : '') + '</td>';
+    html += '</tr>';
   });
-  var sortedDates = Object.keys(byDate).sort().reverse();
-  html += '<div style="display:flex;flex-direction:column;gap:16px;">';
-  sortedDates.forEach(function(date) {
-    var entries = byDate[date];
-    var dayN = getDayName(date);
-    var hol = isWorkLogHoliday(date) ? ' (' + getHolidayName(date) + ')' : '';
-    html += '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">';
-    html += '<div style="padding:10px 16px;background:var(--bg-side);font-size:14px;font-weight:600;border-bottom:1px solid var(--border);">';
-    html += date + ' (' + dayN + ')' + hol;
-    html += '</div>';
-    html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">';
-    html += '<thead><tr style="background:var(--bg);border-bottom:1px solid var(--border);">';
-    html += '<th style="padding:8px 12px;text-align:left;font-weight:600;">학생</th>';
-    html += '<th style="padding:8px 12px;text-align:left;font-weight:600;">학년</th>';
-    html += '<th style="padding:8px 12px;text-align:left;font-weight:600;">상태</th>';
-    html += '<th style="padding:8px 12px;text-align:left;font-weight:600;">특강</th>';
-    html += '<th style="padding:8px 12px;text-align:left;font-weight:600;">내용</th>';
-    html += '</tr></thead><tbody>';
-    entries.forEach(function(e) {
-      var st = studentsData.find(function(s) { return s.id === e.studentId; });
-      var stName = st ? st.name : '-';
-      var grade = st ? (st.grade || '') : '';
-      var statusColor = e.status === '출석' ? 'var(--accent)' : e.status === '결석' ? '#e74c3c' : 'var(--accent3)';
-      html += '<tr style="border-bottom:1px solid var(--border);">';
-      html += '<td style="padding:8px 12px;">' + stName + '</td>';
-      html += '<td style="padding:8px 12px;color:var(--text2);">' + grade + '</td>';
-      html += '<td style="padding:8px 12px;color:' + statusColor + ';font-weight:600;">' + (e.status || '') + '</td>';
-      html += '<td style="padding:8px 12px;">' + (e.isSpecialClass ? (e.specialClassName || '특강') : '') + '</td>';
-      html += '<td style="padding:8px 12px;color:var(--text2);">' + (e.content || '') + '</td>';
-      html += '</tr>';
-    });
-    html += '</tbody></table></div></div>';
-  });
-  html += '</div>';
+  html += '</tbody></table></div>';
   container.innerHTML = html;
 }
 
