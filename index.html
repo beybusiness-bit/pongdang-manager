@@ -1305,9 +1305,6 @@ input[type="checkbox"] {
 }
 
 @media (max-width: 768px) {
-  .student-photo-desktop { display: none !important; }
-  .student-photo-mobile { display: flex !important; }
-
   .dashboard-stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -1353,7 +1350,8 @@ input[type="checkbox"] {
   .student-cards-desktop-header,
   .payment-cards-desktop,
   .student-view-toggle,
-  .payment-view-toggle { display: none !important; }
+  .payment-view-toggle,
+  .textbook-view-toggle { display: none !important; }
   /* 모바일 사이드바 오버레이 배경 */
   #sidebar-overlay { background: rgba(0,0,0,0.3); }
 
@@ -1389,6 +1387,15 @@ input[type="checkbox"] {
   }
   #modal-enrollment-record .data-table .form-input-sm {
     width: 100%;
+  }
+
+  /* 교재 상세 모달 — 모바일에서 이미지 상단 + 정보 하단 */
+  #modal-textbook-detail .modal-body > div {
+    flex-direction: column;
+  }
+  #modal-textbook-detail #detail-textbook-cover {
+    width: 100px !important;
+    height: 133px !important;
   }
 }
 </style>
@@ -1490,15 +1497,9 @@ input[type="checkbox"] {
               <label class="form-label">프로필 사진</label>
               <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                 <img id="student-image-preview" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; display: none;">
-                <input type="file" class="form-input student-photo-desktop" id="student-profile-image" accept="image/*" onchange="handleStudentImageUpload(event)" style="flex: 1; min-width: 0;">
-                <div class="student-photo-mobile" style="display: none; gap: 6px; flex-wrap: wrap;">
-                  <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('student-profile-image-gallery').click()">앨범</button>
-                  <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('student-profile-image-file').click()">파일</button>
-                  <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('student-profile-image-camera').click()">카메라</button>
-                  <input type="file" id="student-profile-image-gallery" accept="image/*" style="display:none;" onchange="handleStudentImageUpload(event)">
-                  <input type="file" id="student-profile-image-file" accept="image/*" style="display:none;" onchange="handleStudentImageUpload(event)">
-                  <input type="file" id="student-profile-image-camera" accept="image/*" capture="environment" style="display:none;" onchange="handleStudentImageUpload(event)">
-                </div>
+                <input type="file" id="student-profile-image" accept="image/*" style="display: none;" onchange="handleStudentImageUpload(event)">
+                <label for="student-profile-image" class="btn btn-outline btn-sm" style="cursor: pointer;">사진 선택</label>
+                <span id="student-image-filename" style="font-size: 13px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px;"></span>
                 <button type="button" class="btn btn-outline btn-sm" onclick="removeStudentProfileImage()">제거</button>
               </div>
             </div>
@@ -1642,9 +1643,96 @@ input[type="checkbox"] {
     <div class="modal-body">
       <form id="textbook-form" onsubmit="saveTextbook(event)">
         <input type="hidden" id="textbook-form-id">
-        
-        
-        
+
+        <!-- 알라딘 도서 검색 -->
+        <div class="form-row-single">
+          <div class="form-group">
+            <label class="form-label">도서 검색 (알라딘)</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" class="form-input" id="aladin-search-query" placeholder="교재명으로 검색...">
+              <button type="button" class="btn btn-outline btn-sm" onclick="searchAladinBooks()" style="white-space: nowrap;">검색</button>
+            </div>
+            <div id="aladin-search-results" style="margin-top: 8px;"></div>
+          </div>
+        </div>
+
+        <!-- 표지 이미지 -->
+        <div class="form-row-single">
+          <div class="form-group">
+            <label class="form-label">표지 이미지</label>
+            <div style="display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap;">
+              <div id="textbook-cover-preview" style="display: none; flex-shrink: 0;">
+                <img id="textbook-cover-img" src="" alt="표지" style="width: 80px; height: 106px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+              </div>
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 200px;">
+                <input type="text" class="form-input" id="textbook-cover-url" placeholder="이미지 URL 또는 파일 업로드" oninput="updateCoverPreview()">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <input type="file" id="textbook-cover-file" accept="image/*" style="display: none;" onchange="handleCoverFileSelect(event)">
+                  <label for="textbook-cover-file" class="btn btn-outline btn-sm" style="cursor: pointer;">사진 선택</label>
+                  <span id="textbook-cover-filename" style="font-size: 13px; color: var(--text2);"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 교재명, 저자 -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">교재명 *</label>
+            <input type="text" class="form-input" id="textbook-title" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">저자</label>
+            <input type="text" class="form-input" id="textbook-author">
+          </div>
+        </div>
+
+        <!-- 출판사, 과목 -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">출판사</label>
+            <input type="text" class="form-input" id="textbook-publisher">
+          </div>
+          <div class="form-group">
+            <label class="form-label">과목</label>
+            <select class="form-input" id="textbook-subject">
+              <option value="">선택</option>
+              <option value="수학">수학</option>
+              <option value="영어">영어</option>
+              <option value="국어">국어</option>
+              <option value="과학">과학</option>
+              <option value="사회">사회</option>
+              <option value="기타">기타</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 학년, 가격 -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">학년</label>
+            <input type="text" class="form-input" id="textbook-grade" placeholder="예: 고1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">가격</label>
+            <input type="number" class="form-input" id="textbook-price" min="0">
+          </div>
+        </div>
+
+        <!-- ISBN, 재고 -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">ISBN</label>
+            <input type="text" class="form-input" id="textbook-isbn">
+          </div>
+          <div class="form-group">
+            <label class="form-label">재고</label>
+            <input type="number" class="form-input" id="textbook-stock" min="0" value="0">
+          </div>
+        </div>
+
+        <!-- 메모 -->
         <div class="form-row-single">
           <div class="form-group">
             <label class="form-label">메모</label>
@@ -4845,7 +4933,7 @@ function renderTextbooksListBody() {
     html += '  </div>';
     html += '</div>';
   } else {
-    if (currentTextbookView === 'grid') {
+    if (currentTextbookView === 'grid' || window.innerWidth <= 768) {
       html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-top: 20px;">';
 
       pageTextbooks.forEach(textbook => {
@@ -5082,11 +5170,6 @@ function updateSelectAllCheckbox() {
   checkbox.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
 }
 
-
-function changeTextbookView(view) {
-  currentTextbookView = view;
-  renderTextbooksPage();
-}
 
 function toggleAllTextbooks() {
   const filteredTextbooks = getFilteredTextbooks();
@@ -5416,6 +5499,8 @@ function handleCoverFileSelect(event) {
       urlInput.value = base64;
       urlInput.setAttribute('placeholder', '✓ ' + file.name + ' 업로드됨');
     }
+    const filenameEl = document.getElementById('textbook-cover-filename');
+    if (filenameEl) filenameEl.textContent = file.name;
     updateCoverPreview();
     showToast('이미지가 업로드되었습니다');
   };
@@ -6041,13 +6126,16 @@ function getProfileImageHTML(student, size) {
 function handleStudentImageUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
-  
+
   if (file.size > 5 * 1024 * 1024) {
     showToast('파일 크기는 5MB 이하여야 합니다');
     event.target.value = '';
     return;
   }
-  
+
+  const filenameEl = document.getElementById('student-image-filename');
+  if (filenameEl) filenameEl.textContent = file.name;
+
   const reader = new FileReader();
   reader.onload = function(e) {
     const preview = document.getElementById('student-image-preview');
@@ -6063,13 +6151,15 @@ function handleStudentImageUpload(event) {
 function removeStudentProfileImage() {
   const input = document.getElementById('student-profile-image');
   const preview = document.getElementById('student-image-preview');
-  
+  const filenameEl = document.getElementById('student-image-filename');
+
   if (input) input.value = '';
   if (preview) {
     preview.src = '';
     preview.style.display = 'none';
   }
-  
+  if (filenameEl) filenameEl.textContent = '';
+
   window.tempStudentProfileImage = null;
 }
 
