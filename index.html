@@ -935,6 +935,70 @@ input[type="checkbox"] {
   font-weight: 500;
 }
 
+/* 관리 카드 그리드 (수강반/학교/선생님) */
+.manage-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.manage-card {
+  position: relative;
+  padding: 18px 16px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: white;
+  cursor: pointer;
+  transition: background 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.manage-card:hover { background: var(--bg-hover); }
+.manage-card-checkbox {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  cursor: pointer;
+}
+.manage-card-icon { font-size: 28px; margin-bottom: 2px; }
+.manage-card-name { font-size: 15px; font-weight: 600; color: var(--text); }
+.manage-card-meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--text2); }
+.manage-card-sub { font-size: 12px; color: var(--text3); }
+
+/* 상세 모달 정보 그리드 */
+.detail-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 24px;
+  padding: 16px;
+  background: var(--bg-side);
+  border-radius: var(--radius-sm);
+}
+.detail-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.detail-info-label {
+  font-size: 11px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .manage-card-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .detail-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* 정렬 선택 */
 .sort-selector {
   display: flex;
@@ -2128,6 +2192,18 @@ input[type="checkbox"] {
             <option value="">선택</option>
           </select>
         </div>
+        <div class="form-group">
+          <label class="form-label">교습비 (원)</label>
+          <input type="number" class="form-input" id="class-tuition" placeholder="예: 280000" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">수업 요일</label>
+          <input type="text" class="form-input" id="class-days" placeholder="예: 월, 수, 금">
+        </div>
+        <div class="form-group">
+          <label class="form-label">수업 시간</label>
+          <input type="text" class="form-input" id="class-time" placeholder="예: 15:00 ~ 17:00">
+        </div>
       </form>
     </div>
     <div class="modal-footer">
@@ -2181,18 +2257,62 @@ input[type="checkbox"] {
           <label class="form-label">유형</label>
           <select class="form-input" id="teacher-type">
             <option value="선생님">선생님</option>
-            <option value="보조쌤">보조쌤</option>
+            <option value="보조선생님">보조선생님</option>
           </select>
         </div>
         <div class="form-group">
           <label class="form-label">연락처</label>
           <input type="tel" class="form-input" id="teacher-phone" placeholder="010-0000-0000">
         </div>
+        <div class="form-group teacher-settlement-group">
+          <label class="form-label">정산비율 (%)</label>
+          <input type="number" class="form-input" id="teacher-settlement-rate" placeholder="예: 70" min="0" max="100">
+        </div>
+        <div class="form-group">
+          <label class="form-label">메모</label>
+          <textarea class="form-input" id="teacher-memo" rows="2" placeholder="기타 메모"></textarea>
+        </div>
       </form>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('modal-teacher-form')">취소</button>
       <button class="btn btn-primary btn-sm" type="submit" form="teacher-form">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 수강반 상세 모달 -->
+<div class="modal-backdrop" id="modal-class-detail">
+  <div class="modal modal-large">
+    <div class="modal-title" id="class-detail-title">수강반 상세</div>
+    <div class="modal-body" id="class-detail-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-class-detail')">닫기</button>
+      <button class="btn btn-primary btn-sm" id="class-detail-edit-btn" onclick="editClassFromDetail()">수정</button>
+    </div>
+  </div>
+</div>
+
+<!-- 학교 상세 모달 -->
+<div class="modal-backdrop" id="modal-school-detail">
+  <div class="modal modal-large">
+    <div class="modal-title" id="school-detail-title">학교 상세</div>
+    <div class="modal-body" id="school-detail-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-school-detail')">닫기</button>
+      <button class="btn btn-primary btn-sm" id="school-detail-edit-btn" onclick="editSchoolFromDetail()">수정</button>
+    </div>
+  </div>
+</div>
+
+<!-- 선생님 상세 모달 -->
+<div class="modal-backdrop" id="modal-teacher-detail">
+  <div class="modal modal-large">
+    <div class="modal-title" id="teacher-detail-title">선생님 상세</div>
+    <div class="modal-body" id="teacher-detail-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-teacher-detail')">닫기</button>
+      <button class="btn btn-primary btn-sm" id="teacher-detail-edit-btn" onclick="editTeacherFromDetail()">수정</button>
     </div>
   </div>
 </div>
@@ -2269,7 +2389,7 @@ const ROLES = {
 const ROLE_NAMES = {
   owner: '학원장',
   teacher: '선생님',
-  assistant: '보조쌤'
+  assistant: '보조선생님'
 };
 
 // ============ 상태 관리 ============
@@ -2362,6 +2482,30 @@ let paymentPagination = {
   totalItems: 0
 };
 
+// 수강반 관리 상태
+let currentClassesFilter = { search: '' };
+let currentClassesSort = 'name-asc';
+let currentClassesDisplayView = 'list';
+let selectedClassIds = [];
+let classesPagination = { currentPage: 1, pageSize: 20, totalItems: 0 };
+let currentDetailClass = null;
+
+// 학교 관리 상태
+let currentSchoolsFilter = { search: '', type: '' };
+let currentSchoolsSort = 'name-asc';
+let currentSchoolsDisplayView = 'list';
+let selectedSchoolIds = [];
+let schoolsPagination = { currentPage: 1, pageSize: 20, totalItems: 0 };
+let currentDetailSchool = null;
+
+// 선생님 관리 상태
+let currentTeachersFilter = { search: '', type: '' };
+let currentTeachersSort = 'name-asc';
+let currentTeachersDisplayView = 'list';
+let selectedTeacherIds = [];
+let teachersPagination = { currentPage: 1, pageSize: 20, totalItems: 0 };
+let currentDetailTeacher = null;
+
 // 캘린더 상태
 let currentCalendarYear = new Date().getFullYear();
 let currentCalendarMonth = new Date().getMonth() + 1;
@@ -2429,6 +2573,12 @@ function initDefaultPermissions() {
   // 급여 관리는 기본적으로 본인 데이터만
   permissions.teacher.salary = { read: true, write: false, ownOnly: true };
   permissions.assistant.salary = { read: true, write: false, ownOnly: true };
+
+  // 선생님 페이지: 선생님 역할은 본인 항목만 볼 수 있음
+  permissions.teacher.teachers = { read: true, write: true, ownOnly: true };
+  // 수강반/학교는 선생님도 읽기 가능, 쓰기 불가
+  permissions.teacher.classes = { read: true, write: false, ownOnly: false };
+  permissions.teacher.schools = { read: true, write: false, ownOnly: false };
 }
 
 // ============ 유틸 함수 ============
@@ -3168,7 +3318,7 @@ function renderPermissionsTable() {
   html += '<tr style="background: var(--bg-side); border-bottom: 2px solid var(--border);">';
   html += '<th style="padding: 12px; text-align: left; font-weight: 600;">메뉴</th>';
   html += '<th style="padding: 12px; text-align: center; font-weight: 600;">선생님</th>';
-  html += '<th style="padding: 12px; text-align: center; font-weight: 600;">보조쌤</th>';
+  html += '<th style="padding: 12px; text-align: center; font-weight: 600;">보조선생님</th>';
   html += '</tr>';
   html += '</thead>';
   html += '<tbody>';
@@ -4412,16 +4562,16 @@ function loadSampleData() {
   
   // 선생님 샘플 데이터
   teachersData = [
-    { id: '1', name: '김선생', type: '선생님', icon: '✍️' },
-    { id: '2', name: '이선생', type: '선생님', icon: '📝' },
-    { id: '3', name: '박선생', type: '선생님', icon: '✏️' }
+    { id: '1', name: '김선생', type: '선생님', phone: '010-1234-5678', settlementRate: 70, icon: '✍️' },
+    { id: '2', name: '이선생', type: '선생님', phone: '010-2345-6789', settlementRate: 65, icon: '📝' },
+    { id: '3', name: '박선생', type: '보조선생님', phone: '010-3456-7890', settlementRate: 50, icon: '✏️' }
   ];
-  
+
   // 수강반 샘플 데이터
   classesData = [
-    { id: '1', name: '초등반A', teacher: '김선생' },
-    { id: '2', name: '중등반B', teacher: '이선생' },
-    { id: '3', name: '고등반C', teacher: '박선생' }
+    { id: '1', name: '초등반A', teacher: '김선생', tuition: 250000, days: '월, 수, 금', time: '15:00 ~ 17:00' },
+    { id: '2', name: '중등반B', teacher: '이선생', tuition: 300000, days: '화, 목', time: '16:00 ~ 18:00' },
+    { id: '3', name: '고등반C', teacher: '박선생', tuition: 350000, days: '월, 수, 금', time: '19:00 ~ 21:00' }
   ];
   
   // 학생 샘플 데이터
@@ -7918,37 +8068,237 @@ function downloadPaymentsCsv() {
 
 // ============ 수강반 관리 ============
 
+function getFilteredClasses() {
+  let list = classesData.slice();
+  const s = currentClassesFilter.search.toLowerCase();
+  if (s) list = list.filter(c => (c.name || '').toLowerCase().includes(s) || (c.teacher || '').toLowerCase().includes(s));
+  list.sort((a, b) => {
+    if (currentClassesSort === 'name-asc') return (a.name || '').localeCompare(b.name || '', 'ko');
+    if (currentClassesSort === 'name-desc') return (b.name || '').localeCompare(a.name || '', 'ko');
+    if (currentClassesSort === 'tuition-asc') return (a.tuition || 0) - (b.tuition || 0);
+    if (currentClassesSort === 'tuition-desc') return (b.tuition || 0) - (a.tuition || 0);
+    return 0;
+  });
+  return list;
+}
+
 function renderClassesPage() {
   const container = document.getElementById('classes-page-content');
   if (!container) return;
   const canWrite = permissions[currentUser.role].classes?.write;
 
-  let html = '<div class="page-actions" style="display:flex;justify-content:flex-end;margin-bottom:16px;">';
-  if (canWrite) html += '<button class="btn btn-primary btn-sm" onclick="openClassForm()">+ 수강반 추가</button>';
+  let html = '<div class="page-actions">';
+  html += '  <div class="search-filter-group">';
+  html += '    <div class="search-box">';
+  html += '      <span class="search-icon">🔍</span>';
+  html += '      <input type="text" id="classes-search-input" class="search-input" placeholder="반 이름, 선생님 검색" ';
+  html += '        value="' + (currentClassesFilter.search || '').replace(/"/g, '&quot;') + '" ';
+  html += '        oninput="handleClassesSearchInput(this)">';
+  html += '    </div>';
+  html += '    <div class="filter-sort-row">';
+  html += '      <select class="filter-select" onchange="updateClassesSort(this.value)">';
+  html += '        <option value="name-asc"' + (currentClassesSort === 'name-asc' ? ' selected' : '') + '>이름순 (ㄱ→ㅎ)</option>';
+  html += '        <option value="name-desc"' + (currentClassesSort === 'name-desc' ? ' selected' : '') + '>이름순 (ㅎ→ㄱ)</option>';
+  html += '        <option value="tuition-asc"' + (currentClassesSort === 'tuition-asc' ? ' selected' : '') + '>교습비 (낮음→높음)</option>';
+  html += '        <option value="tuition-desc"' + (currentClassesSort === 'tuition-desc' ? ' selected' : '') + '>교습비 (높음→낮음)</option>';
+  html += '      </select>';
+  html += '    </div>';
+  html += '  </div>';
+  if (canWrite) {
+    html += '  <div class="page-action-buttons">';
+    html += '    <button class="btn btn-primary btn-sm" onclick="openClassForm()">+ 수강반 추가</button>';
+    html += '  </div>';
+  }
+  html += '</div>';
+  html += '<div id="classes-list-body"></div>';
+
+  container.innerHTML = html;
+  renderClassesListBody();
+}
+
+function renderClassesListBody() {
+  const mount = document.getElementById('classes-list-body');
+  if (!mount) return;
+
+  const filtered = getFilteredClasses();
+  classesPagination.totalItems = filtered.length;
+  const totalPages = Math.ceil(filtered.length / classesPagination.pageSize) || 1;
+  if (classesPagination.currentPage > totalPages) classesPagination.currentPage = totalPages;
+
+  const start = (classesPagination.currentPage - 1) * classesPagination.pageSize;
+  const page = filtered.slice(start, start + classesPagination.pageSize);
+
+  const canWrite = permissions[currentUser.role].classes?.write;
+  const isMobile = window.innerWidth <= 768;
+  const displayView = isMobile ? 'card' : currentClassesDisplayView;
+
+  let html = '';
+
+  html += '<div class="bulk-actions-bar' + (selectedClassIds.length > 0 ? ' show' : '') + '">';
+  html += '  <span class="bulk-count">' + selectedClassIds.length + '개 선택됨</span>';
+  html += '  <button class="btn btn-outline btn-sm" onclick="clearClassSelection()">선택 해제</button>';
   html += '</div>';
 
-  if (classesData.length === 0) {
-    html += '<div style="text-align:center;padding:40px;color:var(--text3);">등록된 수강반이 없습니다.</div>';
+  html += renderPagination(classesPagination.currentPage, totalPages, 'changeClassesPage(PAGE)', {
+    leftHtml: isMobile ? '' : renderViewToggleHtml(currentClassesDisplayView, "changeClassesDisplayView('card')", "changeClassesDisplayView('list')", 'classes-view-toggle'),
+    rightHtml: renderPageSizeHtml(classesPagination.pageSize, [20, 50, 100], 'changeClassesPageSize(parseInt(this.value))')
+  });
+
+  if (page.length === 0) {
+    html += '<div class="empty-state"><div class="empty-icon">🏫</div><div class="empty-text">' + (currentClassesFilter.search ? '검색 결과가 없습니다' : '등록된 수강반이 없습니다') + '</div></div>';
+  } else if (displayView === 'card') {
+    const allSel = page.length > 0 && page.every(c => selectedClassIds.includes(c.id));
+    html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">';
+    html += '  <label onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:6px;">';
+    html += '    <input type="checkbox" onclick="toggleAllClasses(this)"' + (allSel ? ' checked' : '') + '>';
+    html += '    <span>전체 선택</span>';
+    html += '  </label>';
+    html += '</div>';
+    html += '<div class="manage-card-grid">';
+    page.forEach(cls => {
+      const isSel = selectedClassIds.includes(cls.id);
+      const tuitionStr = cls.tuition ? Number(cls.tuition).toLocaleString() + '원' : '-';
+      html += '<div class="manage-card clickable-row" onclick="openClassDetail(\'' + cls.id + '\')">';
+      html += '  <label class="manage-card-checkbox" onclick="event.stopPropagation()">';
+      html += '    <input type="checkbox"' + (isSel ? ' checked' : '') + ' onclick="toggleClassSelection(\'' + cls.id + '\')">';
+      html += '  </label>';
+      html += '  <div class="manage-card-icon">🏫</div>';
+      html += '  <div class="manage-card-name">' + (cls.name || '-') + '</div>';
+      html += '  <div class="manage-card-meta">';
+      html += '    <span>' + (cls.teacher || '-') + '</span>';
+      html += '    <span>' + tuitionStr + '</span>';
+      html += '  </div>';
+      if (cls.days) html += '  <div class="manage-card-sub">' + cls.days + (cls.time ? ' ' + cls.time : '') + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
   } else {
+    const allSel = page.length > 0 && page.every(c => selectedClassIds.includes(c.id));
     html += '<div style="overflow-x:auto;"><table class="data-table"><thead><tr>';
-    html += '<th>반 이름</th><th>담당 선생님</th>';
-    if (canWrite) html += '<th>작업</th>';
+    html += '<th style="text-align:center;width:40px;"><input type="checkbox" onclick="toggleAllClasses(this)"' + (allSel ? ' checked' : '') + '></th>';
+    html += '<th>반 이름</th><th>담당선생님</th><th>교습비</th><th>요일/시간</th>';
     html += '</tr></thead><tbody>';
-    classesData.forEach(cls => {
-      html += '<tr>';
+    page.forEach(cls => {
+      const isSel = selectedClassIds.includes(cls.id);
+      const tuitionStr = cls.tuition ? Number(cls.tuition).toLocaleString() + '원' : '-';
+      const schedule = [cls.days, cls.time].filter(Boolean).join(' ');
+      html += '<tr class="clickable-row" onclick="openClassDetail(\'' + cls.id + '\')">';
+      html += '<td style="text-align:center;" onclick="event.stopPropagation()"><input type="checkbox"' + (isSel ? ' checked' : '') + ' onclick="toggleClassSelection(\'' + cls.id + '\')">' + '</td>';
       html += '<td>' + (cls.name || '-') + '</td>';
       html += '<td>' + (cls.teacher || '-') + '</td>';
-      if (canWrite) {
-        html += '<td style="white-space:nowrap;">';
-        html += '<button class="btn btn-outline btn-sm" onclick="openClassForm(\'' + cls.id + '\')">수정</button> ';
-        html += '<button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;border:none;" onclick="deleteClass(\'' + cls.id + '\')">삭제</button>';
-        html += '</td>';
-      }
+      html += '<td>' + tuitionStr + '</td>';
+      html += '<td>' + (schedule || '-') + '</td>';
       html += '</tr>';
     });
     html += '</tbody></table></div>';
   }
-  container.innerHTML = html;
+
+  html += renderPagination(classesPagination.currentPage, totalPages, 'changeClassesPage(PAGE)', {
+    rightHtml: renderPageSizeHtml(classesPagination.pageSize, [20, 50, 100], 'changeClassesPageSize(parseInt(this.value))')
+  });
+
+  mount.innerHTML = html;
+}
+
+function handleClassesSearchInput(input) {
+  currentClassesFilter.search = input.value;
+  classesPagination.currentPage = 1;
+  renderClassesListBody();
+}
+function updateClassesSort(val) {
+  currentClassesSort = val;
+  classesPagination.currentPage = 1;
+  renderClassesListBody();
+}
+function changeClassesPage(p) {
+  const total = Math.ceil(classesPagination.totalItems / classesPagination.pageSize) || 1;
+  if (p < 1 || p > total) return;
+  classesPagination.currentPage = p;
+  renderClassesListBody();
+}
+function changeClassesPageSize(n) {
+  classesPagination.pageSize = n;
+  classesPagination.currentPage = 1;
+  renderClassesListBody();
+}
+function changeClassesDisplayView(v) {
+  currentClassesDisplayView = v;
+  renderClassesListBody();
+}
+function toggleClassSelection(id) {
+  const idx = selectedClassIds.indexOf(id);
+  if (idx === -1) selectedClassIds.push(id);
+  else selectedClassIds.splice(idx, 1);
+  renderClassesListBody();
+}
+function toggleAllClasses(cb) {
+  const filtered = getFilteredClasses();
+  const start = (classesPagination.currentPage - 1) * classesPagination.pageSize;
+  const page = filtered.slice(start, start + classesPagination.pageSize);
+  if (cb.checked) {
+    page.forEach(c => { if (!selectedClassIds.includes(c.id)) selectedClassIds.push(c.id); });
+  } else {
+    const pageIds = page.map(c => c.id);
+    selectedClassIds = selectedClassIds.filter(id => !pageIds.includes(id));
+  }
+  renderClassesListBody();
+}
+function clearClassSelection() {
+  selectedClassIds = [];
+  renderClassesListBody();
+}
+
+function openClassDetail(classId) {
+  const cls = classesData.find(c => c.id === classId);
+  if (!cls) return;
+  currentDetailClass = cls;
+  const canWrite = permissions[currentUser.role].classes?.write;
+  const title = document.getElementById('class-detail-title');
+  const body = document.getElementById('class-detail-body');
+  const editBtn = document.getElementById('class-detail-edit-btn');
+  if (!title || !body) return;
+  if (editBtn) editBtn.style.display = canWrite ? '' : 'none';
+
+  title.textContent = cls.name || '수강반 상세';
+  const tuitionStr = cls.tuition ? Number(cls.tuition).toLocaleString() + '원' : '-';
+  const schedule = [cls.days, cls.time].filter(Boolean).join(' ');
+
+  const students = studentsData.filter(s => s.class === cls.name);
+
+  let html = '<div class="detail-info-grid">';
+  html += '<div class="detail-info-item"><span class="detail-info-label">반 이름</span><span>' + (cls.name || '-') + '</span></div>';
+  html += '<div class="detail-info-item"><span class="detail-info-label">담당선생님</span><span>' + (cls.teacher || '-') + '</span></div>';
+  html += '<div class="detail-info-item"><span class="detail-info-label">교습비</span><span>' + tuitionStr + '</span></div>';
+  html += '<div class="detail-info-item"><span class="detail-info-label">요일/시간</span><span>' + (schedule || '-') + '</span></div>';
+  html += '</div>';
+
+  html += '<div style="margin-top:20px;">';
+  html += '<h4 style="font-size:14px;font-weight:600;margin-bottom:10px;">수강 학생 (' + students.length + '명)</h4>';
+  if (students.length === 0) {
+    html += '<div style="color:var(--text3);font-size:14px;">이 수강반에 배정된 학생이 없습니다.</div>';
+  } else {
+    html += '<div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>이름</th><th>학년</th><th>담당선생님</th><th>요일</th></tr></thead><tbody>';
+    students.forEach(s => {
+      html += '<tr class="clickable-row" onclick="closeModal(\'modal-class-detail\'); setTimeout(function(){ openStudentDetail(\'' + s.id + '\') }, 150)">';
+      html += '<td>' + (s.name || '-') + '</td>';
+      html += '<td>' + (s.grade || '-') + '</td>';
+      html += '<td>' + (s.teacher || '-') + '</td>';
+      html += '<td>' + (s.days || '-') + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  html += '</div>';
+
+  body.innerHTML = html;
+  openModal('modal-class-detail');
+}
+
+function editClassFromDetail() {
+  if (!currentDetailClass) return;
+  const id = currentDetailClass.id;
+  closeModal('modal-class-detail');
+  setTimeout(() => openClassForm(id), 100);
 }
 
 function openClassForm(classId) {
@@ -7956,7 +8306,6 @@ function openClassForm(classId) {
   const form = document.getElementById('class-form');
   if (!title || !form) return;
 
-  // 선생님 옵션 로드
   const teacherSel = document.getElementById('class-teacher');
   let tHtml = '<option value="">선택</option>';
   teachersData.forEach(t => { tHtml += '<option value="' + t.name + '">' + t.name + '</option>'; });
@@ -7969,11 +8318,19 @@ function openClassForm(classId) {
     document.getElementById('class-form-id').value = cls.id;
     document.getElementById('class-name').value = cls.name || '';
     document.getElementById('class-teacher').value = cls.teacher || '';
+    document.getElementById('class-tuition').value = cls.tuition || '';
+    document.getElementById('class-days').value = cls.days || '';
+    document.getElementById('class-time').value = cls.time || '';
   } else {
     title.textContent = '수강반 추가';
     form.reset();
     document.getElementById('class-form-id').value = '';
   }
+
+  // 정산비율 필드: owner만 표시
+  const settlementGroups = document.querySelectorAll('.teacher-settlement-group');
+  settlementGroups.forEach(g => { g.style.display = currentUser.role === 'owner' ? '' : 'none'; });
+
   openModal('modal-class-form');
 }
 
@@ -7982,7 +8339,10 @@ function saveClass(e) {
   const id = document.getElementById('class-form-id').value;
   const data = {
     name: document.getElementById('class-name').value,
-    teacher: document.getElementById('class-teacher').value
+    teacher: document.getElementById('class-teacher').value,
+    tuition: parseInt(document.getElementById('class-tuition').value) || 0,
+    days: document.getElementById('class-days').value,
+    time: document.getElementById('class-time').value
   };
   if (id) {
     const idx = classesData.findIndex(c => c.id === id);
@@ -7991,52 +8351,273 @@ function saveClass(e) {
     classesData.push(Object.assign({ id: uid() }, data));
   }
   closeModal('modal-class-form');
-  renderClassesPage();
+  renderClassesListBody();
   showToast(id ? '수강반이 수정되었습니다' : '수강반이 추가되었습니다');
 }
 
 function deleteClass(classId) {
   if (!confirm('이 수강반을 삭제하시겠습니까?')) return;
   classesData = classesData.filter(c => c.id !== classId);
-  renderClassesPage();
+  selectedClassIds = selectedClassIds.filter(id => id !== classId);
+  renderClassesListBody();
   showToast('수강반이 삭제되었습니다');
 }
 
 // ============ 학교 관리 ============
+
+const SCHOOL_TYPE_LABEL = { '초': '초등학교', '중': '중학교', '고': '고등학교' };
+const SCHOOL_TYPE_COLOR = { '초': '#B58900', '중': '#3E8B3E', '고': '#C25A0A' };
+const SCHOOL_TYPE_BG = { '초': '#FFF4B8', '중': '#D4F0C5', '고': '#FFD9B3' };
+
+function getFilteredSchools() {
+  let list = schoolsData.slice();
+  const s = currentSchoolsFilter.search.toLowerCase();
+  if (s) list = list.filter(sc => (sc.name || '').toLowerCase().includes(s));
+  if (currentSchoolsFilter.type) list = list.filter(sc => sc.type === currentSchoolsFilter.type);
+  list.sort((a, b) => {
+    if (currentSchoolsSort === 'name-asc') return (a.name || '').localeCompare(b.name || '', 'ko');
+    if (currentSchoolsSort === 'name-desc') return (b.name || '').localeCompare(a.name || '', 'ko');
+    if (currentSchoolsSort === 'count-desc') {
+      const ca = studentsData.filter(st => st.school === a.name).length;
+      const cb = studentsData.filter(st => st.school === b.name).length;
+      return cb - ca;
+    }
+    return 0;
+  });
+  return list;
+}
 
 function renderSchoolsPage() {
   const container = document.getElementById('schools-page-content');
   if (!container) return;
   const canWrite = permissions[currentUser.role].schools?.write;
 
-  const typeLabel = { '초': '초등학교', '중': '중학교', '고': '고등학교' };
+  let html = '<div class="page-actions">';
+  html += '  <div class="search-filter-group">';
+  html += '    <div class="search-box">';
+  html += '      <span class="search-icon">🔍</span>';
+  html += '      <input type="text" id="schools-search-input" class="search-input" placeholder="학교 이름 검색" ';
+  html += '        value="' + (currentSchoolsFilter.search || '').replace(/"/g, '&quot;') + '" ';
+  html += '        oninput="handleSchoolsSearchInput(this)">';
+  html += '    </div>';
+  html += '    <div class="filter-sort-row">';
+  html += '      <select class="filter-select" onchange="updateSchoolsFilter(\'type\', this.value)">';
+  html += '        <option value="">전체 학교급</option>';
+  html += '        <option value="초"' + (currentSchoolsFilter.type === '초' ? ' selected' : '') + '>초등</option>';
+  html += '        <option value="중"' + (currentSchoolsFilter.type === '중' ? ' selected' : '') + '>중등</option>';
+  html += '        <option value="고"' + (currentSchoolsFilter.type === '고' ? ' selected' : '') + '>고등</option>';
+  html += '      </select>';
+  html += '      <select class="filter-select" onchange="updateSchoolsSort(this.value)">';
+  html += '        <option value="name-asc"' + (currentSchoolsSort === 'name-asc' ? ' selected' : '') + '>이름순 (ㄱ→ㅎ)</option>';
+  html += '        <option value="name-desc"' + (currentSchoolsSort === 'name-desc' ? ' selected' : '') + '>이름순 (ㅎ→ㄱ)</option>';
+  html += '        <option value="count-desc"' + (currentSchoolsSort === 'count-desc' ? ' selected' : '') + '>학생수 많은순</option>';
+  html += '      </select>';
+  html += '    </div>';
+  html += '  </div>';
+  if (canWrite) {
+    html += '  <div class="page-action-buttons">';
+    html += '    <button class="btn btn-primary btn-sm" onclick="openSchoolForm()">+ 학교 추가</button>';
+    html += '  </div>';
+  }
+  html += '</div>';
+  html += '<div id="schools-list-body"></div>';
 
-  let html = '<div class="page-actions" style="display:flex;justify-content:flex-end;margin-bottom:16px;">';
-  if (canWrite) html += '<button class="btn btn-primary btn-sm" onclick="openSchoolForm()">+ 학교 추가</button>';
+  container.innerHTML = html;
+  renderSchoolsListBody();
+}
+
+function renderSchoolsListBody() {
+  const mount = document.getElementById('schools-list-body');
+  if (!mount) return;
+
+  const filtered = getFilteredSchools();
+  schoolsPagination.totalItems = filtered.length;
+  const totalPages = Math.ceil(filtered.length / schoolsPagination.pageSize) || 1;
+  if (schoolsPagination.currentPage > totalPages) schoolsPagination.currentPage = totalPages;
+
+  const start = (schoolsPagination.currentPage - 1) * schoolsPagination.pageSize;
+  const page = filtered.slice(start, start + schoolsPagination.pageSize);
+
+  const canWrite = permissions[currentUser.role].schools?.write;
+  const isMobile = window.innerWidth <= 768;
+  const displayView = isMobile ? 'card' : currentSchoolsDisplayView;
+
+  let html = '';
+
+  html += '<div class="bulk-actions-bar' + (selectedSchoolIds.length > 0 ? ' show' : '') + '">';
+  html += '  <span class="bulk-count">' + selectedSchoolIds.length + '개 선택됨</span>';
+  html += '  <button class="btn btn-outline btn-sm" onclick="clearSchoolSelection()">선택 해제</button>';
   html += '</div>';
 
-  if (schoolsData.length === 0) {
-    html += '<div style="text-align:center;padding:40px;color:var(--text3);">등록된 학교가 없습니다.</div>';
+  html += renderPagination(schoolsPagination.currentPage, totalPages, 'changeSchoolsPage(PAGE)', {
+    leftHtml: isMobile ? '' : renderViewToggleHtml(currentSchoolsDisplayView, "changeSchoolsDisplayView('card')", "changeSchoolsDisplayView('list')", 'schools-view-toggle'),
+    rightHtml: renderPageSizeHtml(schoolsPagination.pageSize, [20, 50, 100], 'changeSchoolsPageSize(parseInt(this.value))')
+  });
+
+  if (page.length === 0) {
+    html += '<div class="empty-state"><div class="empty-icon">🏢</div><div class="empty-text">' + (currentSchoolsFilter.search || currentSchoolsFilter.type ? '검색 결과가 없습니다' : '등록된 학교가 없습니다') + '</div></div>';
+  } else if (displayView === 'card') {
+    const allSel = page.length > 0 && page.every(sc => selectedSchoolIds.includes(sc.id));
+    html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">';
+    html += '  <label onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:6px;">';
+    html += '    <input type="checkbox" onclick="toggleAllSchools(this)"' + (allSel ? ' checked' : '') + '>';
+    html += '    <span>전체 선택</span>';
+    html += '  </label>';
+    html += '</div>';
+    html += '<div class="manage-card-grid">';
+    page.forEach(sc => {
+      const isSel = selectedSchoolIds.includes(sc.id);
+      const typeLabel = SCHOOL_TYPE_LABEL[sc.type] || sc.type || '-';
+      const typeBg = SCHOOL_TYPE_BG[sc.type] || '#f0f0f0';
+      const typeColor = SCHOOL_TYPE_COLOR[sc.type] || '#555';
+      const cnt = studentsData.filter(s => s.school === sc.name).length;
+      html += '<div class="manage-card clickable-row" onclick="openSchoolDetail(\'' + sc.id + '\')">';
+      html += '  <label class="manage-card-checkbox" onclick="event.stopPropagation()">';
+      html += '    <input type="checkbox"' + (isSel ? ' checked' : '') + ' onclick="toggleSchoolSelection(\'' + sc.id + '\')">';
+      html += '  </label>';
+      html += '  <div class="manage-card-icon">🏢</div>';
+      html += '  <div class="manage-card-name">' + (sc.name || '-') + '</div>';
+      html += '  <div class="manage-card-meta">';
+      html += '    <span style="background:' + typeBg + ';color:' + typeColor + ';padding:2px 8px;border-radius:12px;font-size:12px;">' + typeLabel + '</span>';
+      html += '    <span>학생 ' + cnt + '명</span>';
+      html += '  </div>';
+      html += '</div>';
+    });
+    html += '</div>';
   } else {
+    const allSel = page.length > 0 && page.every(sc => selectedSchoolIds.includes(sc.id));
     html += '<div style="overflow-x:auto;"><table class="data-table"><thead><tr>';
-    html += '<th>학교 이름</th><th>학교급</th>';
-    if (canWrite) html += '<th>작업</th>';
+    html += '<th style="text-align:center;width:40px;"><input type="checkbox" onclick="toggleAllSchools(this)"' + (allSel ? ' checked' : '') + '></th>';
+    html += '<th>학교 이름</th><th>학교급</th><th>학생수</th>';
     html += '</tr></thead><tbody>';
-    schoolsData.forEach(school => {
-      html += '<tr>';
-      html += '<td>' + (school.name || '-') + '</td>';
-      html += '<td>' + (typeLabel[school.type] || school.type || '-') + '</td>';
-      if (canWrite) {
-        html += '<td style="white-space:nowrap;">';
-        html += '<button class="btn btn-outline btn-sm" onclick="openSchoolForm(\'' + school.id + '\')">수정</button> ';
-        html += '<button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;border:none;" onclick="deleteSchool(\'' + school.id + '\')">삭제</button>';
-        html += '</td>';
-      }
+    page.forEach(sc => {
+      const isSel = selectedSchoolIds.includes(sc.id);
+      const typeLabel = SCHOOL_TYPE_LABEL[sc.type] || sc.type || '-';
+      const typeBg = SCHOOL_TYPE_BG[sc.type] || '#f0f0f0';
+      const typeColor = SCHOOL_TYPE_COLOR[sc.type] || '#555';
+      const cnt = studentsData.filter(s => s.school === sc.name).length;
+      html += '<tr class="clickable-row" onclick="openSchoolDetail(\'' + sc.id + '\')">';
+      html += '<td style="text-align:center;" onclick="event.stopPropagation()"><input type="checkbox"' + (isSel ? ' checked' : '') + ' onclick="toggleSchoolSelection(\'' + sc.id + '\')">' + '</td>';
+      html += '<td>' + (sc.name || '-') + '</td>';
+      html += '<td><span style="background:' + typeBg + ';color:' + typeColor + ';padding:2px 8px;border-radius:12px;font-size:12px;">' + typeLabel + '</span></td>';
+      html += '<td>' + cnt + '명</td>';
       html += '</tr>';
     });
     html += '</tbody></table></div>';
   }
-  container.innerHTML = html;
+
+  html += renderPagination(schoolsPagination.currentPage, totalPages, 'changeSchoolsPage(PAGE)', {
+    rightHtml: renderPageSizeHtml(schoolsPagination.pageSize, [20, 50, 100], 'changeSchoolsPageSize(parseInt(this.value))')
+  });
+
+  mount.innerHTML = html;
+}
+
+function handleSchoolsSearchInput(input) {
+  currentSchoolsFilter.search = input.value;
+  schoolsPagination.currentPage = 1;
+  renderSchoolsListBody();
+}
+function updateSchoolsFilter(key, val) {
+  currentSchoolsFilter[key] = val;
+  schoolsPagination.currentPage = 1;
+  renderSchoolsListBody();
+}
+function updateSchoolsSort(val) {
+  currentSchoolsSort = val;
+  schoolsPagination.currentPage = 1;
+  renderSchoolsListBody();
+}
+function changeSchoolsPage(p) {
+  const total = Math.ceil(schoolsPagination.totalItems / schoolsPagination.pageSize) || 1;
+  if (p < 1 || p > total) return;
+  schoolsPagination.currentPage = p;
+  renderSchoolsListBody();
+}
+function changeSchoolsPageSize(n) {
+  schoolsPagination.pageSize = n;
+  schoolsPagination.currentPage = 1;
+  renderSchoolsListBody();
+}
+function changeSchoolsDisplayView(v) {
+  currentSchoolsDisplayView = v;
+  renderSchoolsListBody();
+}
+function toggleSchoolSelection(id) {
+  const idx = selectedSchoolIds.indexOf(id);
+  if (idx === -1) selectedSchoolIds.push(id);
+  else selectedSchoolIds.splice(idx, 1);
+  renderSchoolsListBody();
+}
+function toggleAllSchools(cb) {
+  const filtered = getFilteredSchools();
+  const start = (schoolsPagination.currentPage - 1) * schoolsPagination.pageSize;
+  const page = filtered.slice(start, start + schoolsPagination.pageSize);
+  if (cb.checked) {
+    page.forEach(sc => { if (!selectedSchoolIds.includes(sc.id)) selectedSchoolIds.push(sc.id); });
+  } else {
+    const pageIds = page.map(sc => sc.id);
+    selectedSchoolIds = selectedSchoolIds.filter(id => !pageIds.includes(id));
+  }
+  renderSchoolsListBody();
+}
+function clearSchoolSelection() {
+  selectedSchoolIds = [];
+  renderSchoolsListBody();
+}
+
+function openSchoolDetail(schoolId) {
+  const sc = schoolsData.find(s => s.id === schoolId);
+  if (!sc) return;
+  currentDetailSchool = sc;
+  const canWrite = permissions[currentUser.role].schools?.write;
+  const title = document.getElementById('school-detail-title');
+  const body = document.getElementById('school-detail-body');
+  const editBtn = document.getElementById('school-detail-edit-btn');
+  if (!title || !body) return;
+  if (editBtn) editBtn.style.display = canWrite ? '' : 'none';
+
+  title.textContent = sc.name || '학교 상세';
+  const typeLabel = SCHOOL_TYPE_LABEL[sc.type] || sc.type || '-';
+  const typeBg = SCHOOL_TYPE_BG[sc.type] || '#f0f0f0';
+  const typeColor = SCHOOL_TYPE_COLOR[sc.type] || '#555';
+
+  const students = studentsData.filter(s => s.school === sc.name);
+  students.sort((a, b) => (a.grade || '').localeCompare(b.grade || '', 'ko') || (a.name || '').localeCompare(b.name || '', 'ko'));
+
+  let html = '<div class="detail-info-grid">';
+  html += '<div class="detail-info-item"><span class="detail-info-label">학교 이름</span><span>' + (sc.name || '-') + '</span></div>';
+  html += '<div class="detail-info-item"><span class="detail-info-label">학교급</span><span style="background:' + typeBg + ';color:' + typeColor + ';padding:2px 8px;border-radius:12px;font-size:12px;">' + typeLabel + '</span></div>';
+  html += '<div class="detail-info-item"><span class="detail-info-label">재원 학생수</span><span>' + students.length + '명</span></div>';
+  html += '</div>';
+
+  html += '<div style="margin-top:20px;">';
+  html += '<h4 style="font-size:14px;font-weight:600;margin-bottom:10px;">재원 학생</h4>';
+  if (students.length === 0) {
+    html += '<div style="color:var(--text3);font-size:14px;">이 학교에 등록된 학생이 없습니다.</div>';
+  } else {
+    html += '<div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>이름</th><th>학년</th><th>담당선생님</th><th>수강반</th></tr></thead><tbody>';
+    students.forEach(s => {
+      html += '<tr class="clickable-row" onclick="closeModal(\'modal-school-detail\'); setTimeout(function(){ openStudentDetail(\'' + s.id + '\') }, 150)">';
+      html += '<td>' + (s.name || '-') + '</td>';
+      html += '<td>' + (s.grade || '-') + '</td>';
+      html += '<td>' + (s.teacher || '-') + '</td>';
+      html += '<td>' + (s.class || '-') + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  html += '</div>';
+
+  body.innerHTML = html;
+  openModal('modal-school-detail');
+}
+
+function editSchoolFromDetail() {
+  if (!currentDetailSchool) return;
+  const id = currentDetailSchool.id;
+  closeModal('modal-school-detail');
+  setTimeout(() => openSchoolForm(id), 100);
 }
 
 function openSchoolForm(schoolId) {
@@ -8073,51 +8654,286 @@ function saveSchool(e) {
     schoolsData.push(Object.assign({ id: uid() }, data));
   }
   closeModal('modal-school-form');
-  renderSchoolsPage();
+  renderSchoolsListBody();
   showToast(id ? '학교 정보가 수정되었습니다' : '학교가 추가되었습니다');
 }
 
 function deleteSchool(schoolId) {
   if (!confirm('이 학교를 삭제하시겠습니까?')) return;
   schoolsData = schoolsData.filter(s => s.id !== schoolId);
-  renderSchoolsPage();
+  selectedSchoolIds = selectedSchoolIds.filter(id => id !== schoolId);
+  renderSchoolsListBody();
   showToast('학교가 삭제되었습니다');
 }
 
 // ============ 선생님 관리 ============
 
+function getVisibleTeachers() {
+  // ownOnly: teacher role은 본인 항목만 볼 수 있음
+  const perm = permissions[currentUser.role].teachers;
+  if (perm && perm.ownOnly && currentUser.role !== 'owner') {
+    return teachersData.filter(t => t.name === currentUser.name);
+  }
+  return teachersData;
+}
+
+function getFilteredTeachers() {
+  let list = getVisibleTeachers();
+  const s = currentTeachersFilter.search.toLowerCase();
+  if (s) list = list.filter(t => (t.name || '').toLowerCase().includes(s) || (t.phone || '').includes(s));
+  if (currentTeachersFilter.type) list = list.filter(t => t.type === currentTeachersFilter.type);
+  list.sort((a, b) => {
+    if (currentTeachersSort === 'name-asc') return (a.name || '').localeCompare(b.name || '', 'ko');
+    if (currentTeachersSort === 'name-desc') return (b.name || '').localeCompare(a.name || '', 'ko');
+    return 0;
+  });
+  return list;
+}
+
 function renderTeachersPage() {
   const container = document.getElementById('teachers-page-content');
   if (!container) return;
   const canWrite = permissions[currentUser.role].teachers?.write;
+  const isOwner = currentUser.role === 'owner';
 
-  let html = '<div class="page-actions" style="display:flex;justify-content:flex-end;margin-bottom:16px;">';
-  if (canWrite) html += '<button class="btn btn-primary btn-sm" onclick="openTeacherForm()">+ 선생님 추가</button>';
+  let html = '<div class="page-actions">';
+  html += '  <div class="search-filter-group">';
+  html += '    <div class="search-box">';
+  html += '      <span class="search-icon">🔍</span>';
+  html += '      <input type="text" id="teachers-search-input" class="search-input" placeholder="이름, 연락처 검색" ';
+  html += '        value="' + (currentTeachersFilter.search || '').replace(/"/g, '&quot;') + '" ';
+  html += '        oninput="handleTeachersSearchInput(this)">';
+  html += '    </div>';
+  html += '    <div class="filter-sort-row">';
+  html += '      <select class="filter-select" onchange="updateTeachersFilter(\'type\', this.value)">';
+  html += '        <option value="">전체 유형</option>';
+  html += '        <option value="선생님"' + (currentTeachersFilter.type === '선생님' ? ' selected' : '') + '>선생님</option>';
+  html += '        <option value="보조선생님"' + (currentTeachersFilter.type === '보조선생님' ? ' selected' : '') + '>보조선생님</option>';
+  html += '      </select>';
+  html += '      <select class="filter-select" onchange="updateTeachersSort(this.value)">';
+  html += '        <option value="name-asc"' + (currentTeachersSort === 'name-asc' ? ' selected' : '') + '>이름순 (ㄱ→ㅎ)</option>';
+  html += '        <option value="name-desc"' + (currentTeachersSort === 'name-desc' ? ' selected' : '') + '>이름순 (ㅎ→ㄱ)</option>';
+  html += '      </select>';
+  html += '    </div>';
+  html += '  </div>';
+  if (isOwner) {
+    html += '  <div class="page-action-buttons">';
+    html += '    <button class="btn btn-primary btn-sm" onclick="openTeacherForm()">+ 선생님 추가</button>';
+    html += '  </div>';
+  }
   html += '</div>';
+  html += '<div id="teachers-list-body"></div>';
 
-  if (teachersData.length === 0) {
-    html += '<div style="text-align:center;padding:40px;color:var(--text3);">등록된 선생님이 없습니다.</div>';
-  } else {
-    html += '<div style="overflow-x:auto;"><table class="data-table"><thead><tr>';
-    html += '<th>이름</th><th>유형</th><th>연락처</th>';
-    if (canWrite) html += '<th>작업</th>';
-    html += '</tr></thead><tbody>';
-    teachersData.forEach(teacher => {
-      html += '<tr>';
-      html += '<td>' + (teacher.name || '-') + '</td>';
-      html += '<td>' + (teacher.type || '-') + '</td>';
-      html += '<td>' + (teacher.phone || '-') + '</td>';
-      if (canWrite) {
-        html += '<td style="white-space:nowrap;">';
-        html += '<button class="btn btn-outline btn-sm" onclick="openTeacherForm(\'' + teacher.id + '\')">수정</button> ';
-        html += '<button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;border:none;" onclick="deleteTeacher(\'' + teacher.id + '\')">삭제</button>';
-        html += '</td>';
+  container.innerHTML = html;
+  renderTeachersListBody();
+}
+
+function renderTeachersListBody() {
+  const mount = document.getElementById('teachers-list-body');
+  if (!mount) return;
+
+  const filtered = getFilteredTeachers();
+  teachersPagination.totalItems = filtered.length;
+  const totalPages = Math.ceil(filtered.length / teachersPagination.pageSize) || 1;
+  if (teachersPagination.currentPage > totalPages) teachersPagination.currentPage = totalPages;
+
+  const start = (teachersPagination.currentPage - 1) * teachersPagination.pageSize;
+  const page = filtered.slice(start, start + teachersPagination.pageSize);
+
+  const isOwner = currentUser.role === 'owner';
+  const isMobile = window.innerWidth <= 768;
+  const displayView = isMobile ? 'card' : currentTeachersDisplayView;
+
+  let html = '';
+
+  if (isOwner) {
+    html += '<div class="bulk-actions-bar' + (selectedTeacherIds.length > 0 ? ' show' : '') + '">';
+    html += '  <span class="bulk-count">' + selectedTeacherIds.length + '명 선택됨</span>';
+    html += '  <button class="btn btn-outline btn-sm" onclick="clearTeacherSelection()">선택 해제</button>';
+    html += '</div>';
+  }
+
+  html += renderPagination(teachersPagination.currentPage, totalPages, 'changeTeachersPage(PAGE)', {
+    leftHtml: (isOwner && !isMobile) ? renderViewToggleHtml(currentTeachersDisplayView, "changeTeachersDisplayView('card')", "changeTeachersDisplayView('list')", 'teachers-view-toggle') : '',
+    rightHtml: renderPageSizeHtml(teachersPagination.pageSize, [20, 50, 100], 'changeTeachersPageSize(parseInt(this.value))')
+  });
+
+  if (page.length === 0) {
+    html += '<div class="empty-state"><div class="empty-icon">👩‍🏫</div><div class="empty-text">' + (currentTeachersFilter.search || currentTeachersFilter.type ? '검색 결과가 없습니다' : '등록된 선생님이 없습니다') + '</div></div>';
+  } else if (displayView === 'card') {
+    if (isOwner) {
+      const allSel = page.length > 0 && page.every(t => selectedTeacherIds.includes(t.id));
+      html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">';
+      html += '  <label onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:6px;">';
+      html += '    <input type="checkbox" onclick="toggleAllTeachers(this)"' + (allSel ? ' checked' : '') + '>';
+      html += '    <span>전체 선택</span>';
+      html += '  </label>';
+      html += '</div>';
+    }
+    html += '<div class="manage-card-grid">';
+    page.forEach(t => {
+      const isSel = selectedTeacherIds.includes(t.id);
+      const studentCnt = studentsData.filter(s => s.teacher === t.name).length;
+      const typeColor = t.type === '선생님' ? '#1a6fc4' : '#6b46c1';
+      const typeBg = t.type === '선생님' ? '#dbeafe' : '#ede9fe';
+      html += '<div class="manage-card clickable-row" onclick="openTeacherDetail(\'' + t.id + '\')">';
+      if (isOwner) {
+        html += '  <label class="manage-card-checkbox" onclick="event.stopPropagation()">';
+        html += '    <input type="checkbox"' + (isSel ? ' checked' : '') + ' onclick="toggleTeacherSelection(\'' + t.id + '\')">';
+        html += '  </label>';
       }
+      html += '  <div class="manage-card-icon">' + (t.icon || '👩‍🏫') + '</div>';
+      html += '  <div class="manage-card-name">' + (t.name || '-') + '</div>';
+      html += '  <div class="manage-card-meta">';
+      html += '    <span style="background:' + typeBg + ';color:' + typeColor + ';padding:2px 8px;border-radius:12px;font-size:12px;">' + (t.type || '-') + '</span>';
+      html += '    <span>학생 ' + studentCnt + '명</span>';
+      html += '  </div>';
+      if (t.phone) html += '  <div class="manage-card-sub">' + t.phone + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  } else {
+    const allSel = page.length > 0 && page.every(t => selectedTeacherIds.includes(t.id));
+    html += '<div style="overflow-x:auto;"><table class="data-table"><thead><tr>';
+    if (isOwner) html += '<th style="text-align:center;width:40px;"><input type="checkbox" onclick="toggleAllTeachers(this)"' + (allSel ? ' checked' : '') + '></th>';
+    html += '<th>이름</th><th>유형</th><th>연락처</th><th>담당 학생수</th>';
+    if (isOwner) html += '<th>정산비율</th>';
+    html += '</tr></thead><tbody>';
+    page.forEach(t => {
+      const isSel = selectedTeacherIds.includes(t.id);
+      const studentCnt = studentsData.filter(s => s.teacher === t.name).length;
+      const typeColor = t.type === '선생님' ? '#1a6fc4' : '#6b46c1';
+      const typeBg = t.type === '선생님' ? '#dbeafe' : '#ede9fe';
+      html += '<tr class="clickable-row" onclick="openTeacherDetail(\'' + t.id + '\')">';
+      if (isOwner) html += '<td style="text-align:center;" onclick="event.stopPropagation()"><input type="checkbox"' + (isSel ? ' checked' : '') + ' onclick="toggleTeacherSelection(\'' + t.id + '\')">' + '</td>';
+      html += '<td><span style="display:flex;align-items:center;gap:6px;">' + (t.icon || '👩‍🏫') + ' ' + (t.name || '-') + '</span></td>';
+      html += '<td><span style="background:' + typeBg + ';color:' + typeColor + ';padding:2px 8px;border-radius:12px;font-size:12px;">' + (t.type || '-') + '</span></td>';
+      html += '<td>' + (t.phone || '-') + '</td>';
+      html += '<td>' + studentCnt + '명</td>';
+      if (isOwner) html += '<td>' + (t.settlementRate != null ? t.settlementRate + '%' : '-') + '</td>';
       html += '</tr>';
     });
     html += '</tbody></table></div>';
   }
-  container.innerHTML = html;
+
+  html += renderPagination(teachersPagination.currentPage, totalPages, 'changeTeachersPage(PAGE)', {
+    rightHtml: renderPageSizeHtml(teachersPagination.pageSize, [20, 50, 100], 'changeTeachersPageSize(parseInt(this.value))')
+  });
+
+  mount.innerHTML = html;
+}
+
+function handleTeachersSearchInput(input) {
+  currentTeachersFilter.search = input.value;
+  teachersPagination.currentPage = 1;
+  renderTeachersListBody();
+}
+function updateTeachersFilter(key, val) {
+  currentTeachersFilter[key] = val;
+  teachersPagination.currentPage = 1;
+  renderTeachersListBody();
+}
+function updateTeachersSort(val) {
+  currentTeachersSort = val;
+  teachersPagination.currentPage = 1;
+  renderTeachersListBody();
+}
+function changeTeachersPage(p) {
+  const total = Math.ceil(teachersPagination.totalItems / teachersPagination.pageSize) || 1;
+  if (p < 1 || p > total) return;
+  teachersPagination.currentPage = p;
+  renderTeachersListBody();
+}
+function changeTeachersPageSize(n) {
+  teachersPagination.pageSize = n;
+  teachersPagination.currentPage = 1;
+  renderTeachersListBody();
+}
+function changeTeachersDisplayView(v) {
+  currentTeachersDisplayView = v;
+  renderTeachersListBody();
+}
+function toggleTeacherSelection(id) {
+  const idx = selectedTeacherIds.indexOf(id);
+  if (idx === -1) selectedTeacherIds.push(id);
+  else selectedTeacherIds.splice(idx, 1);
+  renderTeachersListBody();
+}
+function toggleAllTeachers(cb) {
+  const filtered = getFilteredTeachers();
+  const start = (teachersPagination.currentPage - 1) * teachersPagination.pageSize;
+  const page = filtered.slice(start, start + teachersPagination.pageSize);
+  if (cb.checked) {
+    page.forEach(t => { if (!selectedTeacherIds.includes(t.id)) selectedTeacherIds.push(t.id); });
+  } else {
+    const pageIds = page.map(t => t.id);
+    selectedTeacherIds = selectedTeacherIds.filter(id => !pageIds.includes(id));
+  }
+  renderTeachersListBody();
+}
+function clearTeacherSelection() {
+  selectedTeacherIds = [];
+  renderTeachersListBody();
+}
+
+function openTeacherDetail(teacherId) {
+  const t = teachersData.find(tc => tc.id === teacherId);
+  if (!t) return;
+  currentDetailTeacher = t;
+  const isOwner = currentUser.role === 'owner';
+  const canWrite = permissions[currentUser.role].teachers?.write;
+  const ownOnly = permissions[currentUser.role].teachers?.ownOnly;
+  const canEdit = isOwner || (canWrite && (!ownOnly || t.name === currentUser.name));
+  const title = document.getElementById('teacher-detail-title');
+  const body = document.getElementById('teacher-detail-body');
+  const editBtn = document.getElementById('teacher-detail-edit-btn');
+  if (!title || !body) return;
+  if (editBtn) editBtn.style.display = canEdit ? '' : 'none';
+
+  title.textContent = t.name || '선생님 상세';
+
+  const typeColor = t.type === '선생님' ? '#1a6fc4' : '#6b46c1';
+  const typeBg = t.type === '선생님' ? '#dbeafe' : '#ede9fe';
+
+  let students = studentsData.filter(s => s.teacher === t.name);
+  students.sort((a, b) => (a.grade || '').localeCompare(b.grade || '', 'ko') || (a.name || '').localeCompare(b.name || '', 'ko'));
+
+  let html = '<div class="detail-info-grid">';
+  html += '<div class="detail-info-item"><span class="detail-info-label">이름</span><span>' + (t.icon || '') + ' ' + (t.name || '-') + '</span></div>';
+  html += '<div class="detail-info-item"><span class="detail-info-label">유형</span><span style="background:' + typeBg + ';color:' + typeColor + ';padding:2px 8px;border-radius:12px;font-size:12px;">' + (t.type || '-') + '</span></div>';
+  html += '<div class="detail-info-item"><span class="detail-info-label">연락처</span><span>' + (t.phone || '-') + '</span></div>';
+  if (isOwner) html += '<div class="detail-info-item"><span class="detail-info-label">정산비율</span><span>' + (t.settlementRate != null ? t.settlementRate + '%' : '-') + '</span></div>';
+  if (t.memo) html += '<div class="detail-info-item" style="grid-column:1/-1;"><span class="detail-info-label">메모</span><span>' + t.memo + '</span></div>';
+  html += '</div>';
+
+  html += '<div style="margin-top:20px;">';
+  html += '<h4 style="font-size:14px;font-weight:600;margin-bottom:10px;">담당 학생 (' + students.length + '명)</h4>';
+  if (students.length === 0) {
+    html += '<div style="color:var(--text3);font-size:14px;">담당 학생이 없습니다.</div>';
+  } else {
+    html += '<div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>이름</th><th>학년</th><th>학교</th><th>수강반</th><th>요일</th></tr></thead><tbody>';
+    students.forEach(s => {
+      html += '<tr class="clickable-row" onclick="closeModal(\'modal-teacher-detail\'); setTimeout(function(){ openStudentDetail(\'' + s.id + '\') }, 150)">';
+      html += '<td>' + (s.name || '-') + '</td>';
+      html += '<td>' + (s.grade || '-') + '</td>';
+      html += '<td>' + (s.school || '-') + '</td>';
+      html += '<td>' + (s.class || '-') + '</td>';
+      html += '<td>' + (s.days || '-') + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  html += '</div>';
+
+  body.innerHTML = html;
+  openModal('modal-teacher-detail');
+}
+
+function editTeacherFromDetail() {
+  if (!currentDetailTeacher) return;
+  const id = currentDetailTeacher.id;
+  closeModal('modal-teacher-detail');
+  setTimeout(() => openTeacherForm(id), 100);
 }
 
 function openTeacherForm(teacherId) {
@@ -8125,14 +8941,20 @@ function openTeacherForm(teacherId) {
   const form = document.getElementById('teacher-form');
   if (!title || !form) return;
 
+  // 정산비율 필드: owner만 표시
+  const settlementGroups = document.querySelectorAll('.teacher-settlement-group');
+  settlementGroups.forEach(g => { g.style.display = currentUser.role === 'owner' ? '' : 'none'; });
+
   if (teacherId) {
-    const teacher = teachersData.find(t => t.id === teacherId);
+    const teacher = teachersData.find(tc => tc.id === teacherId);
     if (!teacher) return;
     title.textContent = '선생님 수정';
     document.getElementById('teacher-form-id').value = teacher.id;
     document.getElementById('teacher-name').value = teacher.name || '';
     document.getElementById('teacher-type').value = teacher.type || '선생님';
     document.getElementById('teacher-phone').value = teacher.phone || '';
+    document.getElementById('teacher-settlement-rate').value = teacher.settlementRate != null ? teacher.settlementRate : '';
+    document.getElementById('teacher-memo').value = teacher.memo || '';
   } else {
     title.textContent = '선생님 추가';
     form.reset();
@@ -8144,26 +8966,33 @@ function openTeacherForm(teacherId) {
 function saveTeacher(e) {
   e.preventDefault();
   const id = document.getElementById('teacher-form-id').value;
+  const isOwner = currentUser.role === 'owner';
   const data = {
     name: document.getElementById('teacher-name').value,
     type: document.getElementById('teacher-type').value,
-    phone: document.getElementById('teacher-phone').value
+    phone: document.getElementById('teacher-phone').value,
+    memo: document.getElementById('teacher-memo').value
   };
+  if (isOwner) {
+    const rate = document.getElementById('teacher-settlement-rate').value;
+    data.settlementRate = rate !== '' ? parseInt(rate) : null;
+  }
   if (id) {
-    const idx = teachersData.findIndex(t => t.id === id);
+    const idx = teachersData.findIndex(tc => tc.id === id);
     if (idx !== -1) teachersData[idx] = Object.assign(teachersData[idx], data);
   } else {
     teachersData.push(Object.assign({ id: uid() }, data));
   }
   closeModal('modal-teacher-form');
-  renderTeachersPage();
+  renderTeachersListBody();
   showToast(id ? '선생님 정보가 수정되었습니다' : '선생님이 추가되었습니다');
 }
 
 function deleteTeacher(teacherId) {
   if (!confirm('이 선생님을 삭제하시겠습니까?')) return;
-  teachersData = teachersData.filter(t => t.id !== teacherId);
-  renderTeachersPage();
+  teachersData = teachersData.filter(tc => tc.id !== teacherId);
+  selectedTeacherIds = selectedTeacherIds.filter(id => id !== teacherId);
+  renderTeachersListBody();
   showToast('선생님이 삭제되었습니다');
 }
 
