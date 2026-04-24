@@ -331,7 +331,27 @@ const today = () => {
 - `.manage-card-grid`, `.detail-info-grid` CSS 신규 추가
 - 관련 상태 변수: `currentClassesFilter/Sort/DisplayView`, `classesPagination`, `selectedClassIds`, `currentDetailClass` (학교·선생님도 동일 패턴)
 
-🔲 **8단계: 근무일지**
+✅ **8단계: 근무일지** (2026-04-24 세션 구현 완료, 사용자 테스트 대기)
+
+구현 내용:
+- 일별 뷰 / 선생님별 뷰 / 학생별 뷰 3탭 구조
+- **공휴일**: `KR_HOLIDAYS_MAP` (2025~2027) 하드코딩 + `customHolidaysData` (학원장 직접 관리). 공휴일엔 일별 뷰 상단 배너 표시 + 학생 목록 미표시. `workLogForceOpenDates` 배열로 공휴일인데 수업하는 날 예외 처리.
+- **재원 학생 기준**: `getStudentStatus(student) !== '퇴원'` — enrollmentRecords 최신 항목 type 기반
+- **일별 뷰**: 날짜 이동(이전 날/다음 날), 학교급(초/중/고/기타) 그룹별 표시, 그룹 내 드래그 순서 조정 (`workLogStudentOrder` 키: `'YYYY-MM-DD_학교급'`). "학생 추가" 버튼 → 검색/필터/정렬+체크박스 다중선택 모달
+- **카드 입력 항목**: 수업 내용(textarea), 숙제(textarea), TEST 체크박스(→ TEST이름/난이도/만점/점수 필드 토글), 특강 체크박스(→ 특강명/회차 필드 토글), 코멘트(textarea). 저장 버튼 클릭 시 `saveWorkLogEntry()` 호출 후 toast만 표시 (리렌더 없음)
+- **체크박스 토글**: DOM 직접 조작 (`element.style.display`) — 리렌더 없음. 다른 필드 값 보존.
+- **읽기 전용 표시**: 값이 있는 필드만 표시, 빈 필드 숨김
+- **선생님별 뷰**: 하루/기간 모드 전환. 하루=날짜 컬럼 없음, 기간=날짜 컬럼 좌측. 컬럼: (날짜), 학생명, 수업내용, 숙제, TEST, 난이도, 결과(점수/만점), 코멘트, 특강, 회차. 빈 셀은 공백 (대시 없음)
+- **학생별 뷰**: 학생 검색 shell+body 패턴 (IME 보존). 검색 범위: 이름/학교/학년/선생님/요일
+- **휴일 관리**: "휴일 관리" 버튼 → 커스텀 휴일 추가/삭제 모달. 학원장만 접근 가능.
+- **학생 추가 모달**: 검색(전체속성: 이름/학교/학년/선생님/요일), 학교급 필터, 선생님 필터, 정렬(이름/학년), 체크박스 다중선택, "선택 학생 추가" 일괄 추가
+
+🔜 **피드백톡 주차 표기 기능 (9단계로 이관, 스펙 보존)**:
+- 근무일지 카드에서 날짜 표기 / 주차 표기 선택 가능 (기본값: 날짜 표기)
+- 주차 표기 선택 시: `getWeekNumberInMonth()` 함수로 해당 날의 월-주차 자동 계산 (예: "26년 4월 2주차")
+- 수동 입력 가능: "3~4주차" 등 직접 오버라이드
+- 피드백톡(9단계) 구현 시 이 기능도 함께 추가
+
 🔲 **9단계: 피드백톡 시스템**
 🔲 **10단계: 문자 CRM 연동**
 🔲 **11단계: 회의록**
@@ -425,8 +445,27 @@ id, name, defaultValue, sortOrder
 id, monthYear, categoryId, amount, memo
 ```
 
-### 그 외 시트 (8단계 이후 본격 사용 예정)
-근무일지, 피드백, 회의록, 시험대비 체크리스트, 공지사항, 급여 등
+### WorkLogs (근무일지)
+```
+id, date (YYYY-MM-DD), studentId,
+content (수업 내용), homework (숙제),
+hasTest (boolean), testName, testDifficulty, testFullScore (number|null), testScore (number|null),
+isSpecialClass (boolean), specialClassName, specialClassCount (number|null, 회차 직접입력),
+comment (코멘트), createdAt
+```
+- 한 `(date, studentId)` 쌍에 대해 1개 항목이 원칙. `getWorkLogEntry(date, studentId)` 헬퍼로 조회.
+- `specialClassCount`: 자동 계산 아님. 사용자가 직접 입력.
+- `saveWorkLogEntry()` 호출 시 신규면 push, 기존이면 `Object.assign(entry, data)` 업데이트. 리렌더 없음.
+
+### CustomHolidays (커스텀 휴일)
+```
+id, date (YYYY-MM-DD), name
+```
+- `KR_HOLIDAYS_MAP` (2025~2027 하드코딩) + `customHolidaysData` 배열 조합으로 공휴일 판단.
+- `workLogForceOpenDates` 배열: 공휴일인데 수업하는 날 예외 처리용 날짜 배열 (YYYY-MM-DD).
+
+### 그 외 시트 (9단계 이후 본격 사용 예정)
+피드백, 회의록, 시험대비 체크리스트, 공지사항, 급여 등
 
 ---
 
@@ -500,8 +539,16 @@ id, monthYear, categoryId, amount, memo
 - **선생님 상세**: 담당 학생 목록. 정산비율은 학원장만 보임 (isOwner 분기). 학생 이름 클릭 시 선생님 상세 닫힘 + 학생 상세 오픈.
 - **ownOnly 권한**: 선생님 역할은 `teachersData` 중 본인 이름(currentUser.name)과 일치하는 항목만 목록에 표시. 수강반·학교는 선생님도 읽기 가능(쓰기 불가).
 - **교습비 자동 연동**: 수강반에 `tuition` 필드 저장 → 결제 모달에서 수강반 선택 시 `loadClassTuition()`이 `data-tuition`으로 교습비 자동 세팅.
-- **카드 뷰 CSS**: `.manage-card-grid` (3열 그리드), `.manage-card`, `.manage-card-checkbox` (우상단 절대위치), `.manage-card-icon/name/meta/sub`. 모바일에서는 2열로 전환.
+- **카드 뷰 CSS**: `.manage-card-grid` (3열 그리드), `.manage-card`, `.manage-card-checkbox` (우상단 절대위치), `.manage-card-icon/name/meta/sub`. 모바일에서는 2열로 전환. 모바일에서는 이모지 아이콘 숨김 (`display: none`).
 - **상세 모달 정보 CSS**: `.detail-info-grid` (2열 그리드), `.detail-info-item`, `.detail-info-label`. 모바일에서 1열로 전환.
+
+### 근무일지 (WorkLog) 구현 패턴
+- **카드 체크박스 토글 (TEST/특강)**: 리렌더 없이 DOM 직접 조작. `toggleWorkLogTest(studentId)`, `toggleWorkLogSpecial(studentId)` → `element.style.display` 변경. 이유: 리렌더 시 사용자가 입력 중인 다른 필드 값 소실.
+- **저장 (`saveWorkLogEntry`)**: 모든 입력 필드 값 읽어서 entry 업데이트 후 `showToast()` 표시만. 리렌더 없음.
+- **드래그 순서 (`workLogStudentOrder`)**: 키 = `'YYYY-MM-DD_학교급'`. 그룹 내 studentId 배열 저장. 드래그 완료 시 `renderWorkLogBody()` 호출 (리스트 body만 재렌더).
+- **학생별 탭 검색**: shell+body 패턴. `renderWorkLogPage()` 쉘에 검색 input 고정. `handleWorkLogStudentSearch(input)` → `renderWorkLogStudentBody(body)` 만 호출 → IME 보존.
+- **공휴일 판단**: `isHoliday(dateStr)` = `KR_HOLIDAYS_MAP[year][MM-DD]` 존재 OR `customHolidaysData` 포함. `workLogForceOpenDates`에 있으면 공휴일이어도 수업일로 처리.
+- **`getWeekNumberInMonth(dateStr)`**: 해당 날짜의 월 내 주차 계산 함수. 피드백톡 9단계에서 사용 예정. 현재는 존재하지만 호출처 없음.
 
 ---
 
@@ -560,95 +607,66 @@ id, monthYear, categoryId, amount, memo
 
 ## 11. 다음 세션 시작점
 
-**최종 세션 날짜**: 2026-04-24. 이번 세션 커밋: `06dd893 feat: 수강반/학교/선생님 페이지 전면 개편` (브랜치 `claude/review-tasks-feedback-90OWd`).
+**최종 세션 날짜**: 2026-04-24. 최신 커밋: `3df7a29 fix: 더미 데이터 신규 근무일지 구조 반영` (`main` 브랜치).
+
+**배포 상태**: main 브랜치 = GitHub Pages 배포 브랜치. 8단계 근무일지 포함한 모든 작업이 `main`에 반영·배포되어 있음.
+
+### 다음 세션 시작 시 할 일
+
+1. `git pull origin main` 후 `index.html`을 Chrome에서 직접 열거나 배포 URL로 확인
+2. 아래 체크리스트를 사용자에게 보여주고 근무일지 피드백 수집
+3. 피드백 반영 후 9단계(피드백톡) 진입
 
 ---
 
-### ⚠️ 브랜치 상황 — 반드시 읽을 것
+### 검증 체크리스트 (8단계 근무일지, 사용자 테스트 미완료)
 
-현재 코드는 **두 개의 브랜치**로 나뉘어 있다:
+> 배포 URL: `https://beybusiness-bit.github.io/pongdang-manager/` (main 기준)
 
-| 브랜치 | 최신 커밋 | 설명 |
-|---|---|---|
-| `main` | `1ac024d` | GitHub Pages 배포 브랜치. **이번 세션 작업 없음.** |
-| `claude/review-tasks-feedback-90OWd` | `37ed803` | 이번 세션 작업 포함. **배포 안 됨.** |
+**📅 일별 뷰**
+- [ ] 오늘 날짜로 진입, 이전 날 / 다음 날 이동 정상
+- [ ] 공휴일 날짜 진입 시 상단에 공휴일 배너 표시 + 학생 목록 없음
+- [ ] 재원 학생만 목록 표시 (퇴원생 제외)
+- [ ] 학교급(초/중/고/기타) 그룹별 분리 표시
+- [ ] 그룹 내 카드 드래그로 순서 변경 → 재렌더 후 순서 유지
+- [ ] "학생 추가" 버튼 → 모달: 검색(한글 IME 정상), 학교급 필터, 선생님 필터, 정렬 동작
+- [ ] 학생 추가 모달: 체크박스 다중선택 → "선택 학생 추가" 클릭 시 일괄 추가
+- [ ] 이미 추가된 학생: "이미 추가됨" 뱃지 표시
+- [ ] 카드 - 수업 내용 / 숙제 입력 후 저장 → toast 표시, 카드 리렌더 없음
+- [ ] TEST 체크박스 토글 → 필드(이름/난이도/만점/점수) 토글. 다른 필드 값 유지됨.
+- [ ] 특강 체크박스 토글 → 필드(특강명/회차) 토글. 다른 필드 값 유지됨.
+- [ ] 저장 후 읽기 전용 전환: 값 있는 필드만 표시
 
-**→ 배포 URL(`https://beybusiness-bit.github.io/pongdang-manager/`)에는 이번 세션 개편이 반영되어 있지 않다.**
+**👩‍🏫 선생님별 뷰**
+- [ ] 선생님 필터 드롭다운 동작
+- [ ] "하루" 모드: 날짜 컬럼 없음, 나머지 컬럼(학생명/수업내용/숙제/TEST/난이도/결과/코멘트/특강/회차) 표시
+- [ ] "기간" 모드: 날짜 컬럼 좌측, from-to 날짜 선택기 동작
+- [ ] 빈 셀: 대시 없이 공백으로 표시
 
-#### 다음 세션 시작 시 할 일 (순서대로)
+**👤 학생별 뷰**
+- [ ] 학생 검색창에 한글 입력 시 IME 깨짐 없음 (shell+body 패턴)
+- [ ] 검색 범위: 이름/학교/학년/선생님/요일 모두 검색됨
+- [ ] 학생 선택 시 해당 학생의 근무일지 목록 표시
 
-1. **feature 브랜치 체크아웃**:
-   ```
-   git checkout claude/review-tasks-feedback-90OWd
-   git pull origin claude/review-tasks-feedback-90OWd
-   ```
-2. **테스트 방법 안내** — 배포 URL이 아닌 **로컬 파일**로 확인해야 함:
-   - 가장 빠른 방법: `index.html`을 Chrome에 드래그해서 열기
-   - 또는 netlify.com/drop 에 드래그 앤 드롭으로 임시 배포
-3. **아래 체크리스트를 사용자에게 보여주고 피드백 받기**
-4. **피드백 수정 완료 후**: feature 브랜치 → main merge 제안:
-   ```
-   git checkout main
-   git merge claude/review-tasks-feedback-90OWd
-   git push origin main
-   ```
-   merge 완료 시 배포 URL에도 반영됨 (~1분 소요).
-
----
-4. 피드백 마무리되면 feature branch를 main에 merge 제안
-
----
-
-### 검증 체크리스트 (2026-04-24 세션 배포분)
-
-> `claude/review-tasks-feedback-90OWd` 브랜치 기준. 배포 URL은 main 기준이므로 **로컬에서 index.html 직접 열거나 netlify drop으로 임시 배포** 후 확인 권장.
-
-**🏫 수강반 페이지**
-- [ ] 페이지 진입 시 목록 정상 표시 (반 이름, 담당선생님, 교습비)
-- [ ] 검색창에 한글 입력 시 IME 깨짐 없이 실시간 필터링
-- [ ] 정렬 (이름순/교습비순) 변경 시 즉시 반영
-- [ ] 카드뷰 ↔ 목록뷰 전환 (데스크탑) 정상
-- [ ] 모바일에서 카드뷰만 표시
-- [ ] 체크박스 선택 → 일괄선택 바 노출 → 선택 해제
-- [ ] 행/카드 클릭 → 수강반 상세 모달 오픈
-- [ ] 상세 모달: 반 정보 + 소속 학생 목록 표시
-- [ ] 상세 모달 내 학생 이름 클릭 → 학생 상세 모달로 전환
-- [ ] 상세 모달 "수정" → 수강반 수정 폼 오픈 (교습비/요일/시간 필드 포함)
-- [ ] 수강반 추가/수정/삭제 후 목록 갱신
-
-**🏢 학교 페이지**
-- [ ] 페이지 진입 시 목록 정상 표시 (학교명, 학교급 배지, 학생수)
-- [ ] 학교급 필터 (전체/초등/중등/고등) 동작
-- [ ] 검색창 IME 정상
-- [ ] 카드/목록 뷰 전환, 모바일 카드뷰
-- [ ] 행 클릭 → 학교 상세 모달 (재원 학생 목록 포함)
-- [ ] 상세 모달 내 학생 이름 클릭 → 학생 상세
-- [ ] 학교 추가/수정/삭제 후 목록 갱신
-
-**👩‍🏫 선생님 페이지**
-- [ ] 페이지 진입 시 목록 정상 표시 (이름, 유형 배지, 연락처, 담당 학생수)
-- [ ] 학원장 로그인 시: 정산비율 컬럼 표시
-- [ ] 유형 필터 (선생님/보조선생님) 동작
-- [ ] 행 클릭 → 선생님 상세 모달 (담당 학생 목록 포함)
-- [ ] 상세 모달: 학원장은 정산비율 표시, 선생님은 미표시
-- [ ] 상세 모달 내 학생 이름 클릭 → 학생 상세
-- [ ] 선생님 추가 폼: 정산비율·메모 필드 존재
-- [ ] 선생님 추가/수정/삭제 후 목록 갱신
-
-**🔄 기존 페이지 회귀 확인**
-- [ ] 결제 모달에서 수강반 선택 시 교습비 자동 입력 (loadClassTuition 연동)
-- [ ] 학생 추가/수정 폼의 선생님 셀렉트 옵션이 정상 로드
-- [ ] 기존 학생/교재/결제 페이지 정상 동작 (목록, 검색, CRUD)
+**🗓 휴일 관리 (학원장만)**
+- [ ] "휴일 관리" 버튼 클릭 → 모달 오픈
+- [ ] 커스텀 휴일 추가 (날짜 + 이름) → 목록에 표시
+- [ ] 커스텀 휴일 삭제 → 목록에서 제거
+- [ ] 추가한 휴일 날짜로 일별 뷰 이동 시 공휴일 배너 표시
 
 ---
 
 ### 코드만 봐선 파악 안 되는 맥락
 
 - **사용자 피드백 스타일**: 번호 매긴 리스트로 한 번에 여러 개 지시. 각 번호 축약·생략·자의적 해석 금지. "따로 언급 안 한 건 마음에 든 것".
-- **shell+body 검색 패턴**: 검색 input은 shell에 고정(재렌더 안 함), 리스트만 body 재렌더. 수강반/학교/선생님 3페이지 모두 동일 패턴 적용. 새 검색창 추가 시 반드시 이 패턴 따를 것.
+- **shell+body 검색 패턴**: 검색 input은 shell에 고정(재렌더 안 함), 리스트만 body 재렌더. 수강반/학교/선생님/근무일지학생탭 모두 동일 패턴 적용.
+- **근무일지 카드 체크박스**: DOM 직접 조작. `toggleWorkLogTest()` / `toggleWorkLogSpecial()` → `style.display` 변경. 리렌더 절대 금지.
+- **근무일지 저장**: `saveWorkLogEntry()` 호출 후 toast만. 리렌더 없음. 이게 의도된 설계임.
 - **모달 스티키 헤더**: `migrateModalHeaders()` (DOMContentLoaded 1회 실행)가 정적 HTML 모달의 `.modal-footer` 버튼을 `.modal-title` 우측으로 이동시킴. 새 모달 추가 시 확인 필요.
 - **보조선생님**: 구 `'보조쌤'`에서 변경됨. DB의 `type` 필드값도 `'보조선생님'`으로 저장.
 - **정산비율**: `teacher.settlementRate` (정수%). 학원장만 조회·수정. 선생님 역할에는 노출 안 됨.
 - **ownOnly 선생님**: `getVisibleTeachers()`가 teacher 역할 시 `currentUser.name` 매칭으로 본인만 반환.
 - **`.claude/` 폴더 untracked**: `.gitignore`에 추가 미완료.
 - **`renderPreservingFocus`**: 데드코드. 호출처 없음. 삭제해도 무방.
+- **`getWeekNumberInMonth()`**: 존재하지만 현재 호출처 없음. 9단계 피드백톡에서 사용 예정.
+- **GitHub 푸시 인증**: 세션이 바뀌면 원격 URL이 초기화될 수 있음. `~/.claude/settings.json`의 SessionStart hook이 토큰 기반 URL 복원을 처리함. 토큰은 사용자에게 직접 받을 것 (CLAUDE.md에 기록 금지).
