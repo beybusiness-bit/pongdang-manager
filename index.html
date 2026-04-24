@@ -9127,6 +9127,113 @@ window.addEventListener('load', () => {
   
   initApp();
 });
+
+// ============ 근무일지 ============
+
+function isKrHoliday(dateStr) {
+  var year = dateStr.slice(0, 4);
+  var md = dateStr.slice(5);
+  return !!(KR_HOLIDAYS_MAP[year] && KR_HOLIDAYS_MAP[year][md]);
+}
+
+function isCustomHoliday(dateStr) {
+  return customHolidaysData.some(function(h) { return h.date === dateStr; });
+}
+
+function getHolidayName(dateStr) {
+  var year = dateStr.slice(0, 4);
+  var md = dateStr.slice(5);
+  if (KR_HOLIDAYS_MAP[year] && KR_HOLIDAYS_MAP[year][md]) return KR_HOLIDAYS_MAP[year][md];
+  var custom = customHolidaysData.find(function(h) { return h.date === dateStr; });
+  if (custom) return custom.name;
+  return '';
+}
+
+function isWorkLogHoliday(dateStr) {
+  return isKrHoliday(dateStr) || isCustomHoliday(dateStr);
+}
+
+function getDayName(dateStr) {
+  var days = ['일', '월', '화', '수', '목', '금', '토'];
+  var d = new Date(dateStr + 'T00:00:00');
+  return days[d.getDay()];
+}
+
+function getWeekNumberInMonth(dateStr) {
+  var d = new Date(dateStr + 'T00:00:00');
+  var firstDay = new Date(d.getFullYear(), d.getMonth(), 1);
+  var firstDayOfWeek = firstDay.getDay();
+  var weekNum = Math.ceil((d.getDate() + firstDayOfWeek) / 7);
+  return weekNum;
+}
+
+function formatWorkLogDate(dateStr, isHighSchool) {
+  var d = new Date(dateStr + 'T00:00:00');
+  var yy = String(d.getFullYear()).slice(2);
+  var m = d.getMonth() + 1;
+  if (isHighSchool) {
+    var weekNum = getWeekNumberInMonth(dateStr);
+    return yy + '년 ' + m + '월 ' + weekNum + '주차';
+  }
+  return yy + '년 ' + m + '월 ' + d.getDate() + '일';
+}
+
+function getEnrolledStudents() {
+  return studentsData.filter(function(s) { return getStudentStatus(s) !== '퇴원'; });
+}
+
+function getStudentsByDayOfWeek(dateStr) {
+  var d = new Date(dateStr + 'T00:00:00');
+  var dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+  var dayName = dayNames[d.getDay()];
+  return getEnrolledStudents().filter(function(s) {
+    if (!s.days) return false;
+    return s.days.split(',').map(function(dd) { return dd.trim(); }).includes(dayName);
+  });
+}
+
+function getWorkLogEntry(date, studentId) {
+  return workLogsData.find(function(e) { return e.date === date && e.studentId === studentId; }) || null;
+}
+
+function getSpecialClassCount(studentId, specialClassName) {
+  return workLogsData.filter(function(e) {
+    return e.studentId === studentId && e.isSpecialClass && e.specialClassName === specialClassName;
+  }).length;
+}
+
+function renderWorkLogPage() {
+  if (!currentWorkLogDate) currentWorkLogDate = today();
+  if (!currentWorkLogMonth) currentWorkLogMonth = today().slice(0, 7);
+  var container = document.getElementById('worklog-page-content');
+  if (!container) return;
+  var canWrite = permissions[currentUser.role].worklog && permissions[currentUser.role].worklog.write;
+  var html = '';
+  html += '<div class="tab-bar" style="margin-bottom:16px;display:flex;align-items:center;flex-wrap:wrap;gap:4px;">';
+  html += '<button class="tab-btn' + (currentWorkLogTab === 'daily' ? ' active' : '') + '" onclick="switchWorkLogTab(\'daily\')">일별</button>';
+  html += '<button class="tab-btn' + (currentWorkLogTab === 'teacher' ? ' active' : '') + '" onclick="switchWorkLogTab(\'teacher\')">선생님별</button>';
+  html += '<button class="tab-btn' + (currentWorkLogTab === 'student' ? ' active' : '') + '" onclick="switchWorkLogTab(\'student\')">학생별</button>';
+  if (canWrite) {
+    html += '<button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="openCustomHolidayModal()">휴일 관리</button>';
+  }
+  html += '</div>';
+  html += '<div id="worklog-body"></div>';
+  container.innerHTML = html;
+  renderWorkLogBody();
+}
+
+function switchWorkLogTab(tab) {
+  currentWorkLogTab = tab;
+  renderWorkLogPage();
+}
+
+function renderWorkLogBody() {
+  var container = document.getElementById('worklog-body');
+  if (!container) return;
+  if (currentWorkLogTab === 'daily') renderWorkLogDailyBody(container);
+  else if (currentWorkLogTab === 'teacher') renderWorkLogTeacherBody(container);
+  else renderWorkLogStudentBody(container);
+}
 </script>
 
 </body>
