@@ -5036,13 +5036,25 @@ function loadSampleData() {
   monthlyRegisterTabs = ['2026-04', '2026-03', '2026-05'];
   currentMonthTab = '2026-04';
   
+  // 근무일지 샘플 데이터
+  workLogsData = [
+    { id: 'wl1', date: '2026-04-21', studentId: '1', status: '출석', isSpecialClass: false, specialClassName: '', content: '분수의 나눗셈 복습. 이해도 양호.', createdAt: '2026-04-21' },
+    { id: 'wl2', date: '2026-04-21', studentId: '4', status: '결석', isSpecialClass: false, specialClassName: '', content: '감기로 결석 연락 옴', createdAt: '2026-04-21' },
+    { id: 'wl3', date: '2026-04-21', studentId: '7', status: '출석', isSpecialClass: true, specialClassName: '수능특강 풀기', content: '수능특강 수학 3회 풀이. 2등급 수준.', createdAt: '2026-04-21' },
+    { id: 'wl4', date: '2026-04-22', studentId: '2', status: '출석', isSpecialClass: false, specialClassName: '', content: '방정식 단원 진도. 집중력 좋음.', createdAt: '2026-04-22' },
+    { id: 'wl5', date: '2026-04-22', studentId: '5', status: '보충', isSpecialClass: false, specialClassName: '', content: '저번 결석 보충수업 진행', createdAt: '2026-04-22' },
+    { id: 'wl6', date: '2026-04-23', studentId: '1', status: '출석', isSpecialClass: false, specialClassName: '', content: '소수 개념 학습. 이해 빠름.', createdAt: '2026-04-23' },
+    { id: 'wl7', date: '2026-04-23', studentId: '3', status: '출석', isSpecialClass: true, specialClassName: '수능특강 풀기', content: '수능특강 수학 4회 풀이. 시간 관리 미흡.', createdAt: '2026-04-23' },
+    { id: 'wl8', date: '2026-04-24', studentId: '2', status: '출석', isSpecialClass: false, specialClassName: '', content: '1차 방정식 심화 문제 풀이.', createdAt: '2026-04-24' }
+  ];
+
   // appState 업데이트
   appState.students = studentsData;
   appState.teachers = teachersData;
   appState.payments = paymentsData;
   appState.feedbackTalks = feedbackData;
   appState.examPreps = [];
-  appState.workLogs = [];
+  appState.workLogs = workLogsData;
   appState.meetings = [];
 }
 
