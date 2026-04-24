@@ -9483,18 +9483,69 @@ function renderWorkLogDailyBody(container) {
   if (allStudents.length === 0) {
     html += '<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-text">이 날 수업 학생이 없습니다</div></div>';
   } else {
-    html += '<div style="display:flex;flex-direction:column;gap:12px;">';
-    allStudents.forEach(function(student) {
-      html += buildWorkLogCard(student, dateStr, canWrite);
+    var groups = [
+      { key: '초', label: '초등', headerBg: '#FFF4B8', titleColor: '#B58900' },
+      { key: '중', label: '중등', headerBg: '#D4F0C5', titleColor: '#3E8B3E' },
+      { key: '고', label: '고등', headerBg: '#FFD9B3', titleColor: '#C25A0A' },
+      { key: '', label: '기타', headerBg: '#E8E8E8', titleColor: '#555' }
+    ];
+    groups.forEach(function(grp) {
+      var grpStudents = allStudents.filter(function(s) {
+        var first = s.grade ? s.grade.charAt(0) : '';
+        return grp.key ? first === grp.key : (first !== '초' && first !== '중' && first !== '고');
+      });
+      if (grpStudents.length === 0) return;
+      var orderKey = dateStr + '_' + grp.key;
+      if (!workLogStudentOrder[orderKey]) {
+        workLogStudentOrder[orderKey] = grpStudents.map(function(s) { return s.id; });
+      }
+      var storedOrder = workLogStudentOrder[orderKey];
+      var ordered = storedOrder.map(function(id) { return grpStudents.find(function(s) { return s.id === id; }); }).filter(Boolean);
+      grpStudents.forEach(function(s) { if (storedOrder.indexOf(s.id) === -1) { ordered.push(s); storedOrder.push(s.id); } });
+      html += '<div style="margin-bottom:20px;">';
+      html += '<div style="background:' + grp.headerBg + ';color:' + grp.titleColor + ';font-size:13px;font-weight:700;padding:6px 12px;border-radius:var(--radius-sm);margin-bottom:10px;">' + grp.label + ' (' + ordered.length + '명)</div>';
+      html += '<div style="display:flex;flex-direction:column;gap:10px;" id="wl-group-' + grp.key + '">';
+      ordered.forEach(function(student) {
+        html += '<div draggable="true" data-sid="' + student.id + '" data-stype="' + grp.key + '" data-date="' + dateStr + '"';
+        html += ' ondragstart="wlDragStart(event,\'' + student.id + '\',\'' + grp.key + '\')"';
+        html += ' ondragover="wlDragOver(event)"';
+        html += ' ondrop="wlDrop(event,\'' + student.id + '\',\'' + grp.key + '\',\'' + dateStr + '\')"';
+        html += ' style="cursor:grab;">';
+        html += buildWorkLogCard(student, dateStr, canWrite);
+        html += '</div>';
+      });
+      html += '</div></div>';
     });
-    html += '</div>';
   }
   if (canWrite) {
-    html += '<div style="margin-top:16px;">';
+    html += '<div style="margin-top:8px;">';
     html += '<button class="btn btn-outline btn-sm" onclick="openAddWorkLogStudentModal()">+ 학생 추가</button>';
     html += '</div>';
   }
   container.innerHTML = html;
+}
+
+function wlDragStart(ev, studentId, schoolType) {
+  wlDragStudentId = studentId;
+  wlDragSchoolType = schoolType;
+  ev.dataTransfer.effectAllowed = 'move';
+}
+function wlDragOver(ev) {
+  ev.preventDefault();
+  ev.dataTransfer.dropEffect = 'move';
+}
+function wlDrop(ev, targetStudentId, schoolType, dateStr) {
+  ev.preventDefault();
+  if (!wlDragStudentId || wlDragStudentId === targetStudentId || wlDragSchoolType !== schoolType) return;
+  var key = dateStr + '_' + schoolType;
+  var order = workLogStudentOrder[key];
+  if (!order) return;
+  var fi = order.indexOf(wlDragStudentId);
+  var ti = order.indexOf(targetStudentId);
+  if (fi === -1 || ti === -1) return;
+  order.splice(fi, 1);
+  order.splice(ti, 0, wlDragStudentId);
+  renderWorkLogBody();
 }
 
 function renderWorkLogTeacherBody(container) {
