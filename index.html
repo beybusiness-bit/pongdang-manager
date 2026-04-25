@@ -2501,6 +2501,18 @@ input[type="checkbox"] {
   </div>
 </div>
 
+<!-- 근무일지 항목 수정 모달 -->
+<div class="modal-backdrop" id="modal-worklog-entry">
+  <div class="modal" style="max-width:500px;width:95%;">
+    <div class="modal-title" id="worklog-entry-modal-title">근무일지</div>
+    <div class="modal-body" id="worklog-entry-modal-body" style="padding:20px;max-height:60vh;overflow-y:auto;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-worklog-entry')">닫기</button>
+      <button class="btn btn-primary" id="worklog-entry-save-btn">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- 커스텀 휴일 관리 모달 -->
 <div class="modal-backdrop" id="modal-custom-holiday">
   <div class="modal">
@@ -2687,6 +2699,8 @@ let workLogAddStudentSort = 'name-asc';
 let selectedAddStudentIds = [];
 let wlDragStudentId = null;
 let wlDragSchoolType = null;
+let workLogGroupCollapsed = {};
+let wlIsDragging = false;
 
 let currentPaymentTab = 'register'; // register(월별등록대장) 또는 records(결제기록)
 let ledgerMonths = []; // 등록대장에 표시할 월 목록 (예: ['2026-04', '2026-03'])
@@ -9293,19 +9307,10 @@ function renderWorkLogPage() {
   html += '<div class="tab-bar" style="margin-bottom:16px;display:flex;align-items:center;flex-wrap:wrap;gap:4px;">';
   html += '<button class="tab-btn' + (currentWorkLogTab === 'daily' ? ' active' : '') + '" onclick="switchWorkLogTab(\'daily\')">일별</button>';
   html += '<button class="tab-btn' + (currentWorkLogTab === 'teacher' ? ' active' : '') + '" onclick="switchWorkLogTab(\'teacher\')">선생님별</button>';
-  html += '<button class="tab-btn' + (currentWorkLogTab === 'student' ? ' active' : '') + '" onclick="switchWorkLogTab(\'student\')">학생별</button>';
   if (canWrite) {
     html += '<button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="openCustomHolidayModal()">휴일 관리</button>';
   }
   html += '</div>';
-  if (currentWorkLogTab === 'student') {
-    html += '<div style="margin-bottom:16px;">';
-    html += '<input type="text" id="worklog-student-search" placeholder="이름, 학교, 학년, 선생님 검색..." ';
-    html += 'value="' + currentWorkLogStudentFilter.replace(/"/g, '&quot;') + '" ';
-    html += 'oninput="handleWorkLogStudentSearch(this)" ';
-    html += 'style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;">';
-    html += '</div>';
-  }
   html += '<div id="worklog-body"></div>';
   container.innerHTML = html;
   renderWorkLogBody();
@@ -9320,8 +9325,7 @@ function renderWorkLogBody() {
   var container = document.getElementById('worklog-body');
   if (!container) return;
   if (currentWorkLogTab === 'daily') renderWorkLogDailyBody(container);
-  else if (currentWorkLogTab === 'teacher') renderWorkLogTeacherBody(container);
-  else renderWorkLogStudentBody(container);
+  else renderWorkLogTeacherBody(container);
 }
 
 function changeWorkLogDate(dateStr) {
@@ -9452,7 +9456,6 @@ function renderWorkLogDailyBody(container) {
   var canWrite = permissions[currentUser.role].worklog && permissions[currentUser.role].worklog.write;
   var dateStr = currentWorkLogDate;
   var d = new Date(dateStr + 'T00:00:00');
-  var dayName = getDayName(dateStr);
   var prevD = new Date(d); prevD.setDate(prevD.getDate() - 1);
   var nextD = new Date(d); nextD.setDate(nextD.getDate() + 1);
   function fmtDate(dt) {
@@ -9465,6 +9468,9 @@ function renderWorkLogDailyBody(container) {
   html += '<button class="btn btn-outline btn-sm" onclick="changeWorkLogDate(\'' + prevDateStr + '\')">이전 날</button>';
   html += '<input type="date" value="' + dateStr + '" onchange="changeWorkLogDate(this.value)" style="font-size:14px;padding:5px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);">';
   html += '<button class="btn btn-outline btn-sm" onclick="changeWorkLogDate(\'' + nextDateStr + '\')">다음 날</button>';
+  if (canWrite) {
+    html += '<button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="openAddWorkLogStudentModal()">+ 학생 추가</button>';
+  }
   html += '</div>';
   var holidayForced = workLogForceOpenDates.indexOf(dateStr) !== -1;
   if (isWorkLogHoliday(dateStr) && !holidayForced) {
@@ -9517,19 +9523,28 @@ function renderWorkLogDailyBody(container) {
       var storedOrder = workLogStudentOrder[orderKey];
       var ordered = storedOrder.map(function(id) { return grpStudents.find(function(s) { return s.id === id; }); }).filter(Boolean);
       grpStudents.forEach(function(s) { if (storedOrder.indexOf(s.id) === -1) { ordered.push(s); storedOrder.push(s.id); } });
+      var isCollapsed = !!workLogGroupCollapsed[grp.key];
       html += '<div style="margin-bottom:20px;">';
-      html += '<div style="background:' + grp.headerBg + ';color:' + grp.titleColor + ';font-size:13px;font-weight:700;padding:6px 12px;border-radius:var(--radius-sm);margin-bottom:10px;">' + grp.label + ' (' + ordered.length + '명)</div>';
-      html += '<div style="display:flex;flex-direction:column;gap:10px;" id="wl-group-' + grp.key + '">';
-      ordered.forEach(function(student) {
-        html += '<div draggable="true" data-sid="' + student.id + '" data-stype="' + grp.key + '" data-date="' + dateStr + '"';
-        html += ' ondragstart="wlDragStart(event,\'' + student.id + '\',\'' + grp.key + '\')"';
-        html += ' ondragover="wlDragOver(event)"';
-        html += ' ondrop="wlDrop(event,\'' + student.id + '\',\'' + grp.key + '\',\'' + dateStr + '\')"';
-        html += ' style="cursor:grab;">';
-        html += buildWorkLogCard(student, dateStr, canWrite);
+      html += '<div style="background:' + grp.headerBg + ';color:' + grp.titleColor + ';font-size:13px;font-weight:700;padding:6px 12px;border-radius:var(--radius-sm);margin-bottom:10px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;" onclick="toggleWorkLogGroup(\'' + grp.key + '\')">';
+      html += '<span>' + grp.label + ' (' + ordered.length + '명)</span>';
+      html += '<span>' + (isCollapsed ? '&#9654;' : '&#9660;') + '</span>';
+      html += '</div>';
+      if (!isCollapsed) {
+        html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;" id="wl-group-' + grp.key + '">';
+        ordered.forEach(function(student) {
+          html += '<div draggable="true" data-sid="' + student.id + '" data-stype="' + grp.key + '" data-date="' + dateStr + '"';
+          html += ' ondragstart="wlDragStart(event,\'' + student.id + '\',\'' + grp.key + '\')"';
+          html += ' ondragend="wlDragEnd()"';
+          html += ' ondragover="wlDragOver(event)"';
+          html += ' ondrop="wlDrop(event,\'' + student.id + '\',\'' + grp.key + '\',\'' + dateStr + '\')"';
+          html += ' onclick="wlCardClick(event,\'' + student.id + '\',\'' + dateStr + '\')"';
+          html += ' style="cursor:pointer;">';
+          html += buildWorkLogCardSummary(student, dateStr);
+          html += '</div>';
+        });
         html += '</div>';
-      });
-      html += '</div></div>';
+      }
+      html += '</div>';
     });
   }
   if (canWrite) {
@@ -9541,9 +9556,13 @@ function renderWorkLogDailyBody(container) {
 }
 
 function wlDragStart(ev, studentId, schoolType) {
+  wlIsDragging = true;
   wlDragStudentId = studentId;
   wlDragSchoolType = schoolType;
   ev.dataTransfer.effectAllowed = 'move';
+}
+function wlDragEnd() {
+  setTimeout(function() { wlIsDragging = false; }, 100);
 }
 function wlDragOver(ev) {
   ev.preventDefault();
@@ -9563,6 +9582,145 @@ function wlDrop(ev, targetStudentId, schoolType, dateStr) {
   renderWorkLogBody();
 }
 
+function toggleWorkLogGroup(key) {
+  workLogGroupCollapsed[key] = !workLogGroupCollapsed[key];
+  renderWorkLogBody();
+}
+
+function wlCardClick(ev, studentId, dateStr) {
+  if (wlIsDragging) return;
+  openWorkLogEntryModal(studentId, dateStr);
+}
+
+function buildWorkLogCardSummary(student, dateStr) {
+  var entry = getWorkLogEntry(dateStr, student.id);
+  var hasEntry = !!entry;
+  var content = hasEntry ? (entry.content || '') : '';
+  var hasTest = hasEntry && !!entry.hasTest;
+  var isSpecial = hasEntry && !!entry.isSpecialClass;
+  var comment = hasEntry ? (entry.comment || '') : '';
+  var html = '';
+  html += '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;height:100%;box-sizing:border-box;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.12)\'" onmouseout="this.style.boxShadow=\'none\'">';
+  html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;">';
+  html += '<span style="font-weight:600;font-size:14px;">' + student.name + '</span>';
+  if (student.grade) html += '<span style="font-size:11px;color:var(--text2);background:var(--bg);padding:1px 6px;border-radius:20px;">' + student.grade + '</span>';
+  if (student.teacher) html += '<span style="font-size:11px;color:var(--text3);">' + student.teacher + '</span>';
+  html += '</div>';
+  if (!hasEntry || (!content && !hasTest && !isSpecial && !comment)) {
+    html += '<div style="font-size:12px;color:var(--text3);">미기록</div>';
+  } else {
+    if (content) {
+      var preview = content.length > 45 ? content.slice(0, 45) + '...' : content;
+      html += '<div style="font-size:12px;color:var(--text2);margin-bottom:4px;line-height:1.4;">' + preview + '</div>';
+    }
+    var badges = [];
+    if (hasTest) badges.push('<span style="font-size:11px;background:#EEF2FF;color:#4F46E5;padding:1px 6px;border-radius:4px;">TEST</span>');
+    if (isSpecial) badges.push('<span style="font-size:11px;background:#FFF4ED;color:#C25A0A;padding:1px 6px;border-radius:4px;">특강</span>');
+    if (comment) badges.push('<span style="font-size:11px;background:#F0F9F0;color:#3E8B3E;padding:1px 6px;border-radius:4px;">코멘트</span>');
+    if (badges.length) html += '<div style="display:flex;gap:4px;flex-wrap:wrap;">' + badges.join('') + '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function buildWorkLogEntryFormHtml(studentId, dateStr) {
+  var entry = getWorkLogEntry(dateStr, studentId);
+  var content = entry ? (entry.content || '') : '';
+  var homework = entry ? (entry.homework || '') : '';
+  var hasTest = entry ? !!entry.hasTest : false;
+  var testName = entry ? (entry.testName || '') : '';
+  var testDiff = entry ? (entry.testDifficulty || '') : '';
+  var testFull = entry && entry.testFullScore != null ? entry.testFullScore : '';
+  var testScore = entry && entry.testScore != null ? entry.testScore : '';
+  var isSpecial = entry ? !!entry.isSpecialClass : false;
+  var specialName = entry ? (entry.specialClassName || '') : '';
+  var specialCount = entry && entry.specialClassCount != null ? entry.specialClassCount : '';
+  var comment = entry ? (entry.comment || '') : '';
+  var sid = studentId;
+  var IS = 'width:100%;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;';
+  var LS = 'display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:3px;';
+  var GS = 'margin-bottom:10px;';
+  var html = '';
+  html += '<div style="' + GS + '"><label style="' + LS + '">수업 내용</label>';
+  html += '<textarea id="wl-content-' + sid + '" rows="2" style="' + IS + 'resize:vertical;">' + content + '</textarea></div>';
+  html += '<div style="' + GS + '"><label style="' + LS + '">숙제</label>';
+  html += '<textarea id="wl-homework-' + sid + '" rows="1" style="' + IS + 'resize:vertical;">' + homework + '</textarea></div>';
+  html += '<div style="' + GS + '">';
+  html += '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;margin-bottom:4px;">';
+  html += '<input type="checkbox" id="wl-hastest-' + sid + '" ' + (hasTest ? 'checked' : '') + ' onchange="toggleWorkLogTest(\'' + sid + '\')">';
+  html += '<b>TEST</b></label>';
+  html += '<div id="wl-test-fields-' + sid + '" style="display:' + (hasTest ? 'block' : 'none') + ';padding-left:2px;">';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;">';
+  html += '<div style="flex:2;min-width:100px;"><label style="' + LS + '">TEST 이름</label><input type="text" id="wl-testname-' + sid + '" value="' + testName + '" style="' + IS + '"></div>';
+  html += '<div style="flex:1;min-width:60px;"><label style="' + LS + '">난이도</label><input type="text" id="wl-testdifficulty-' + sid + '" value="' + testDiff + '" placeholder="상/중/하" style="' + IS + '"></div>';
+  html += '</div><div style="display:flex;gap:8px;flex-wrap:wrap;">';
+  html += '<div style="flex:1;min-width:60px;"><label style="' + LS + '">만점</label><input type="number" id="wl-testfullscore-' + sid + '" value="' + testFull + '" min="0" style="' + IS + '"></div>';
+  html += '<div style="flex:1;min-width:60px;"><label style="' + LS + '">점수</label><input type="number" id="wl-testscore-' + sid + '" value="' + testScore + '" min="0" style="' + IS + '"></div>';
+  html += '</div></div></div>';
+  html += '<div style="' + GS + '">';
+  html += '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;margin-bottom:4px;">';
+  html += '<input type="checkbox" id="wl-special-' + sid + '" ' + (isSpecial ? 'checked' : '') + ' onchange="toggleWorkLogSpecial(\'' + sid + '\')">';
+  html += '<b>특강</b></label>';
+  html += '<div id="wl-special-fields-' + sid + '" style="display:' + (isSpecial ? 'flex' : 'none') + ';gap:8px;flex-wrap:wrap;padding-left:2px;">';
+  html += '<div style="flex:2;min-width:100px;"><label style="' + LS + '">특강명</label><input type="text" id="wl-specialname-' + sid + '" value="' + specialName + '" style="' + IS + '"></div>';
+  html += '<div style="flex:1;min-width:60px;"><label style="' + LS + '">회차</label><input type="number" id="wl-specialcount-' + sid + '" value="' + specialCount + '" min="1" style="' + IS + '"></div>';
+  html += '</div></div>';
+  html += '<div style="' + GS + '"><label style="' + LS + '">코멘트</label>';
+  html += '<textarea id="wl-comment-' + sid + '" rows="2" style="' + IS + 'resize:vertical;">' + comment + '</textarea></div>';
+  return html;
+}
+
+function openWorkLogEntryModal(studentId, dateStr) {
+  if (wlIsDragging) return;
+  var student = studentsData.find(function(s) { return s.id === studentId; });
+  if (!student) return;
+  var canWrite = permissions[currentUser.role].worklog && permissions[currentUser.role].worklog.write;
+  var titleEl = document.getElementById('worklog-entry-modal-title');
+  var bodyEl = document.getElementById('worklog-entry-modal-body');
+  var saveBtn = document.getElementById('worklog-entry-save-btn');
+  if (!titleEl || !bodyEl) return;
+  titleEl.textContent = student.name + ' — ' + dateStr + ' (' + getDayName(dateStr) + ')';
+  if (!canWrite) {
+    var entry = getWorkLogEntry(dateStr, studentId);
+    var rhtml = '';
+    if (!entry || (!entry.content && !entry.homework && !entry.hasTest && !entry.isSpecialClass && !entry.comment)) {
+      rhtml = '<div style="color:var(--text3);font-size:13px;">기록 없음</div>';
+    } else {
+      if (entry.content) rhtml += '<div style="font-size:13px;margin-bottom:8px;"><b>수업 내용</b><br>' + entry.content + '</div>';
+      if (entry.homework) rhtml += '<div style="font-size:13px;margin-bottom:8px;"><b>숙제</b><br>' + entry.homework + '</div>';
+      if (entry.hasTest) {
+        var ts = (entry.testName || '') + (entry.testDifficulty ? ' [' + entry.testDifficulty + ']' : '') + (entry.testScore != null || entry.testFullScore != null ? '  ' + (entry.testScore != null ? entry.testScore : '') + '/' + (entry.testFullScore != null ? entry.testFullScore : '') : '');
+        if (ts.trim()) rhtml += '<div style="font-size:13px;margin-bottom:8px;"><b>TEST</b> ' + ts + '</div>';
+      }
+      if (entry.isSpecialClass) rhtml += '<div style="font-size:13px;margin-bottom:8px;"><b>특강</b> ' + (entry.specialClassName || '') + (entry.specialClassCount != null ? ' ' + entry.specialClassCount + '회차' : '') + '</div>';
+      if (entry.comment) rhtml += '<div style="font-size:13px;color:var(--text2);">' + entry.comment + '</div>';
+    }
+    bodyEl.innerHTML = rhtml;
+    if (saveBtn) saveBtn.style.display = 'none';
+  } else {
+    bodyEl.innerHTML = buildWorkLogEntryFormHtml(studentId, dateStr);
+    toggleWorkLogTest(studentId);
+    toggleWorkLogSpecial(studentId);
+    if (saveBtn) {
+      saveBtn.style.display = '';
+      saveBtn.onclick = function() {
+        saveWorkLogEntry(studentId, dateStr);
+        refreshWorkLogCard(studentId, dateStr);
+      };
+    }
+  }
+  openModal('modal-worklog-entry');
+}
+
+function refreshWorkLogCard(studentId, dateStr) {
+  var student = studentsData.find(function(s) { return s.id === studentId; });
+  if (!student) return;
+  var cardWrapper = document.querySelector('[data-sid="' + studentId + '"][data-date="' + dateStr + '"]');
+  if (cardWrapper) {
+    cardWrapper.innerHTML = buildWorkLogCardSummary(student, dateStr);
+  }
+}
+
 function renderWorkLogTeacherBody(container) {
   if (!workLogTeacherViewDate) workLogTeacherViewDate = today();
   if (!workLogTeacherViewDateFrom) workLogTeacherViewDateFrom = today().slice(0,7) + '-01';
@@ -9570,6 +9728,9 @@ function renderWorkLogTeacherBody(container) {
   var isRange = workLogTeacherViewMode === 'range';
   var html = '';
   var selStyle = 'padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;';
+  function fmtTD(dt) {
+    return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
+  }
   html += '<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">';
   html += '<select onchange="currentWorkLogTeacherFilter=this.value;renderWorkLogBody();" style="' + selStyle + '">';
   html += '<option value="">전체 선생님</option>';
@@ -9582,64 +9743,138 @@ function renderWorkLogTeacherBody(container) {
   html += '<button class="tab-btn' + (isRange ? ' active' : '') + '" onclick="workLogTeacherViewMode=\'range\';renderWorkLogBody();">기간</button>';
   html += '</div>';
   if (!isRange) {
+    var tvD = new Date(workLogTeacherViewDate + 'T00:00:00');
+    var tvPrev = new Date(tvD); tvPrev.setDate(tvPrev.getDate() - 1);
+    var tvNext = new Date(tvD); tvNext.setDate(tvNext.getDate() + 1);
+    html += '<button class="btn btn-outline btn-sm" onclick="workLogTeacherViewDate=\'' + fmtTD(tvPrev) + '\';renderWorkLogBody();">이전 날</button>';
     html += '<input type="date" value="' + workLogTeacherViewDate + '" onchange="workLogTeacherViewDate=this.value;renderWorkLogBody();" style="' + selStyle + '">';
+    html += '<button class="btn btn-outline btn-sm" onclick="workLogTeacherViewDate=\'' + fmtTD(tvNext) + '\';renderWorkLogBody();">다음 날</button>';
   } else {
     html += '<input type="date" value="' + workLogTeacherViewDateFrom + '" onchange="workLogTeacherViewDateFrom=this.value;renderWorkLogBody();" style="' + selStyle + '">';
     html += '<span style="font-size:14px;">~</span>';
     html += '<input type="date" value="' + workLogTeacherViewDateTo + '" onchange="workLogTeacherViewDateTo=this.value;renderWorkLogBody();" style="' + selStyle + '">';
   }
   html += '</div>';
-  var targetStudents = getEnrolledStudents().filter(function(s) {
-    return !currentWorkLogTeacherFilter || s.teacher === currentWorkLogTeacherFilter;
-  });
-  var targetIds = {};
-  targetStudents.forEach(function(s) { targetIds[s.id] = true; });
-  var targetEntries = workLogsData.filter(function(e) {
-    if (!targetIds[e.studentId]) return false;
-    if (!isRange) return e.date === workLogTeacherViewDate;
-    return e.date >= workLogTeacherViewDateFrom && e.date <= workLogTeacherViewDateTo;
-  }).sort(function(a,b) { return b.date.localeCompare(a.date); });
-  if (targetEntries.length === 0) {
-    html += '<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-text">기록된 근무일지가 없습니다</div></div>';
-    container.innerHTML = html;
-    return;
-  }
   var TD = 'padding:7px 10px;text-align:left;';
   var TH = TD + 'font-weight:600;background:var(--bg);';
-  html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">';
-  html += '<thead><tr style="border-bottom:1px solid var(--border);">';
-  if (isRange) html += '<th style="' + TH + '">날짜</th>';
-  html += '<th style="' + TH + '">학생명</th>';
-  html += '<th style="' + TH + '">수업 내용</th>';
-  html += '<th style="' + TH + '">숙제</th>';
-  html += '<th style="' + TH + '">TEST</th>';
-  html += '<th style="' + TH + '">난이도</th>';
-  html += '<th style="' + TH + '">결과</th>';
-  html += '<th style="' + TH + '">코멘트</th>';
-  html += '<th style="' + TH + '">특강</th>';
-  html += '<th style="' + TH + '">회차</th>';
-  html += '</tr></thead><tbody>';
-  targetEntries.forEach(function(e) {
-    var st = studentsData.find(function(s) { return s.id === e.studentId; });
-    var stName = st ? st.name : '-';
-    var result = '';
-    if (e.hasTest && (e.testScore != null || e.testFullScore != null)) {
-      result = (e.testScore != null ? e.testScore : '') + '/' + (e.testFullScore != null ? e.testFullScore : '');
+  var TRCLICK = 'cursor:pointer;border-bottom:1px solid var(--border);';
+  var groups = [
+    { key: '초', label: '초등', headerBg: '#FFF4B8', titleColor: '#B58900' },
+    { key: '중', label: '중등', headerBg: '#D4F0C5', titleColor: '#3E8B3E' },
+    { key: '고', label: '고등', headerBg: '#FFD9B3', titleColor: '#C25A0A' },
+    { key: '', label: '기타', headerBg: '#E8E8E8', titleColor: '#555' }
+  ];
+  if (!isRange) {
+    var dayStudents = getEnrolledStudents().filter(function(s) {
+      return !currentWorkLogTeacherFilter || s.teacher === currentWorkLogTeacherFilter;
+    }).sort(function(a, b) { return (a.grade || '').localeCompare(b.grade || '') || (a.name || '').localeCompare(b.name || ''); });
+    if (dayStudents.length === 0) {
+      html += '<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-text">해당 선생님의 학생이 없습니다</div></div>';
+      container.innerHTML = html;
+      return;
     }
-    html += '<tr style="border-bottom:1px solid var(--border);">';
-    if (isRange) html += '<td style="' + TD + 'white-space:nowrap;">' + e.date + ' (' + getDayName(e.date) + ')</td>';
-    html += '<td style="' + TD + '">' + stName + '</td>';
-    html += '<td style="' + TD + '">' + (e.content || '') + '</td>';
-    html += '<td style="' + TD + '">' + (e.homework || '') + '</td>';
-    html += '<td style="' + TD + '">' + (e.hasTest ? (e.testName || '') : '') + '</td>';
-    html += '<td style="' + TD + '">' + (e.hasTest ? (e.testDifficulty || '') : '') + '</td>';
-    html += '<td style="' + TD + '">' + result + '</td>';
-    html += '<td style="' + TD + '">' + (e.comment || '') + '</td>';
-    html += '<td style="' + TD + '">' + (e.isSpecialClass ? (e.specialClassName || '') : '') + '</td>';
-    html += '<td style="' + TD + '">' + (e.isSpecialClass && e.specialClassCount != null ? e.specialClassCount : '') + '</td>';
-    html += '</tr>';
-  });
-  html += '</tbody></table></div>';
+    var colCount = 9;
+    html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">';
+    html += '<thead><tr style="border-bottom:1px solid var(--border);">';
+    html += '<th style="' + TH + '">학생명</th>';
+    html += '<th style="' + TH + '">수업 내용</th>';
+    html += '<th style="' + TH + '">숙제</th>';
+    html += '<th style="' + TH + '">TEST</th>';
+    html += '<th style="' + TH + '">난이도</th>';
+    html += '<th style="' + TH + '">결과</th>';
+    html += '<th style="' + TH + '">코멘트</th>';
+    html += '<th style="' + TH + '">특강</th>';
+    html += '<th style="' + TH + '">회차</th>';
+    html += '</tr></thead><tbody>';
+    groups.forEach(function(grp) {
+      var grpStudents = dayStudents.filter(function(s) {
+        var first = s.grade ? s.grade.charAt(0) : '';
+        return grp.key ? first === grp.key : (first !== '초' && first !== '중' && first !== '고');
+      });
+      if (grpStudents.length === 0) return;
+      html += '<tr><td colspan="' + colCount + '" style="padding:6px 12px;font-size:12px;font-weight:700;background:' + grp.headerBg + ';color:' + grp.titleColor + ';">' + grp.label + ' (' + grpStudents.length + '명)</td></tr>';
+      grpStudents.forEach(function(s) {
+        var e = getWorkLogEntry(workLogTeacherViewDate, s.id);
+        var result = '';
+        if (e && e.hasTest && (e.testScore != null || e.testFullScore != null)) {
+          result = (e.testScore != null ? e.testScore : '') + '/' + (e.testFullScore != null ? e.testFullScore : '');
+        }
+        var tvDate = workLogTeacherViewDate;
+        html += '<tr style="' + TRCLICK + '" onclick="openWorkLogEntryModal(\'' + s.id + '\',\'' + tvDate + '\')" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'\'">';
+        html += '<td style="' + TD + '">' + s.name + '</td>';
+        html += '<td style="' + TD + '">' + (e ? (e.content || '') : '') + '</td>';
+        html += '<td style="' + TD + '">' + (e ? (e.homework || '') : '') + '</td>';
+        html += '<td style="' + TD + '">' + (e && e.hasTest ? (e.testName || '') : '') + '</td>';
+        html += '<td style="' + TD + '">' + (e && e.hasTest ? (e.testDifficulty || '') : '') + '</td>';
+        html += '<td style="' + TD + '">' + result + '</td>';
+        html += '<td style="' + TD + '">' + (e ? (e.comment || '') : '') + '</td>';
+        html += '<td style="' + TD + '">' + (e && e.isSpecialClass ? (e.specialClassName || '') : '') + '</td>';
+        html += '<td style="' + TD + '">' + (e && e.isSpecialClass && e.specialClassCount != null ? e.specialClassCount : '') + '</td>';
+        html += '</tr>';
+      });
+    });
+    html += '</tbody></table></div>';
+  } else {
+    var targetStudents = getEnrolledStudents().filter(function(s) {
+      return !currentWorkLogTeacherFilter || s.teacher === currentWorkLogTeacherFilter;
+    });
+    var targetIds = {};
+    targetStudents.forEach(function(s) { targetIds[s.id] = true; });
+    var targetEntries = workLogsData.filter(function(e) {
+      if (!targetIds[e.studentId]) return false;
+      return e.date >= workLogTeacherViewDateFrom && e.date <= workLogTeacherViewDateTo;
+    });
+    if (targetEntries.length === 0) {
+      html += '<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-text">기록된 근무일지가 없습니다</div></div>';
+      container.innerHTML = html;
+      return;
+    }
+    var colCountR = 10;
+    html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">';
+    html += '<thead><tr style="border-bottom:1px solid var(--border);">';
+    html += '<th style="' + TH + '">날짜</th>';
+    html += '<th style="' + TH + '">학생명</th>';
+    html += '<th style="' + TH + '">수업 내용</th>';
+    html += '<th style="' + TH + '">숙제</th>';
+    html += '<th style="' + TH + '">TEST</th>';
+    html += '<th style="' + TH + '">난이도</th>';
+    html += '<th style="' + TH + '">결과</th>';
+    html += '<th style="' + TH + '">코멘트</th>';
+    html += '<th style="' + TH + '">특강</th>';
+    html += '<th style="' + TH + '">회차</th>';
+    html += '</tr></thead><tbody>';
+    groups.forEach(function(grp) {
+      var grpEntries = targetEntries.filter(function(e) {
+        var st = studentsData.find(function(s) { return s.id === e.studentId; });
+        if (!st) return false;
+        var first = st.grade ? st.grade.charAt(0) : '';
+        return grp.key ? first === grp.key : (first !== '초' && first !== '중' && first !== '고');
+      }).sort(function(a,b) { return b.date.localeCompare(a.date); });
+      if (grpEntries.length === 0) return;
+      html += '<tr><td colspan="' + colCountR + '" style="padding:6px 12px;font-size:12px;font-weight:700;background:' + grp.headerBg + ';color:' + grp.titleColor + ';">' + grp.label + ' (' + grpEntries.length + '건)</td></tr>';
+      grpEntries.forEach(function(e) {
+        var st = studentsData.find(function(s) { return s.id === e.studentId; });
+        var stName = st ? st.name : '-';
+        var result = '';
+        if (e.hasTest && (e.testScore != null || e.testFullScore != null)) {
+          result = (e.testScore != null ? e.testScore : '') + '/' + (e.testFullScore != null ? e.testFullScore : '');
+        }
+        html += '<tr style="' + TRCLICK + '" onclick="openWorkLogEntryModal(\'' + e.studentId + '\',\'' + e.date + '\')" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'\'">';
+        html += '<td style="' + TD + 'white-space:nowrap;">' + e.date + ' (' + getDayName(e.date) + ')</td>';
+        html += '<td style="' + TD + '">' + stName + '</td>';
+        html += '<td style="' + TD + '">' + (e.content || '') + '</td>';
+        html += '<td style="' + TD + '">' + (e.homework || '') + '</td>';
+        html += '<td style="' + TD + '">' + (e.hasTest ? (e.testName || '') : '') + '</td>';
+        html += '<td style="' + TD + '">' + (e.hasTest ? (e.testDifficulty || '') : '') + '</td>';
+        html += '<td style="' + TD + '">' + result + '</td>';
+        html += '<td style="' + TD + '">' + (e.comment || '') + '</td>';
+        html += '<td style="' + TD + '">' + (e.isSpecialClass ? (e.specialClassName || '') : '') + '</td>';
+        html += '<td style="' + TD + '">' + (e.isSpecialClass && e.specialClassCount != null ? e.specialClassCount : '') + '</td>';
+        html += '</tr>';
+      });
+    });
+    html += '</tbody></table></div>';
+  }
   container.innerHTML = html;
 }
 
