@@ -9490,12 +9490,11 @@ function getDayName(dateStr) {
 
 function formatFeedbackDate(dateStr, useWeek, weekOverride) {
   if (!useWeek) return dateStr;
-  if (weekOverride && weekOverride.trim()) return weekOverride.trim();
   var d = new Date(dateStr + 'T00:00:00');
   var yy = String(d.getFullYear()).slice(2);
   var mm = d.getMonth() + 1;
-  var week = getWeekNumberInMonth(dateStr);
-  return yy + '년 ' + mm + '월 ' + week + '주차';
+  var weekPart = (weekOverride && weekOverride.trim()) ? weekOverride.trim() : getWeekNumberInMonth(dateStr);
+  return yy + '년 ' + mm + '월 ' + weekPart + '주차';
 }
 
 function getWorkLogDataForFeedback(studentId, dateStr) {
@@ -9651,13 +9650,14 @@ function renderFeedbackBulkModal() {
   html += '<label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="radio" name="fbb-date-mode" value="date" ' + (!feedbackBulkDateMode ? 'checked' : '') + ' onchange="feedbackBulkSetDateMode(false)"> 날짜 (' + currentFeedbackDateStr + ')</label>';
   html += '<label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="radio" name="fbb-date-mode" value="week" ' + (feedbackBulkDateMode ? 'checked' : '') + ' onchange="feedbackBulkSetDateMode(true)"> 주차</label>';
   html += '</div>';
-  if (feedbackBulkDateMode) {
-    var autoWeek = formatFeedbackDate(currentFeedbackDateStr, true, '');
-    html += '<div style="margin-top:8px;display:flex;align-items:center;gap:8px;">';
-    html += '<span style="font-size:12px;color:var(--text3);">자동: ' + autoWeek + '</span>';
-    html += '<input type="text" id="fbb-week-override" placeholder="직접 입력 (예: 3~4주차)" value="' + feedbackBulkWeekOverride + '" style="' + IS + 'width:160px;" oninput="feedbackBulkSetWeekOverride(this.value)">';
-    html += '</div>';
-  }
+  var fbbD = new Date(currentFeedbackDateStr + 'T00:00:00');
+  var fbbPrefix = String(fbbD.getFullYear()).slice(2) + '년 ' + (fbbD.getMonth() + 1) + '월';
+  var fbbAutoNum = String(getWeekNumberInMonth(currentFeedbackDateStr));
+  html += '<div id="fbb-week-section" style="display:' + (feedbackBulkDateMode ? 'flex' : 'none') + ';align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap;">';
+  html += '<span style="font-size:13px;color:var(--text2);">' + fbbPrefix + '</span>';
+  html += '<input type="text" id="fbb-week-override" placeholder="' + fbbAutoNum + '" value="' + feedbackBulkWeekOverride + '" style="' + IS + 'width:70px;" oninput="feedbackBulkSetWeekOverride(this.value)">';
+  html += '<span style="font-size:13px;color:var(--text2);">주차</span>';
+  html += '</div>';
   html += '</div>';
   html += '<textarea id="fb-bulk-text" rows="12" style="' + IS + 'width:100%;resize:vertical;font-family:inherit;line-height:1.6;">' + cur.content + '</textarea>';
   body.innerHTML = html;
@@ -9697,8 +9697,7 @@ function feedbackBulkSetWeekOverride(val) {
       return { studentId: sid, content: generateFeedbackTalk(template, varMap) };
     });
   }
-  feedbackBulkResults[feedbackBulkIndex].content = feedbackBulkResults[feedbackBulkIndex].content;
-  renderFeedbackBulkModal();
+  if (ta) ta.value = feedbackBulkResults[feedbackBulkIndex].content;
 }
 
 function copyFeedbackBulkCurrent() {
@@ -9725,6 +9724,24 @@ function saveFeedbackBulkCurrent() {
   showToast('저장됨');
 }
 
+function toggleFbDateMode(isWeek) {
+  var section = document.getElementById('fb-week-section');
+  if (section) section.style.display = isWeek ? 'flex' : 'none';
+  updateFeedbackPreviewContent();
+}
+
+function updateFeedbackPreviewContent() {
+  var modeEl = document.querySelector('input[name="fb-date-mode"]:checked');
+  var isWeek = modeEl && modeEl.value === 'week';
+  var overrideEl = document.getElementById('fb-week-override');
+  var override = (isWeek && overrideEl) ? overrideEl.value : '';
+  var template = feedbackTemplatesData.find(function(t) { return t.id === selectedFeedbackTemplateId; });
+  if (!template) return;
+  var varMap = buildFeedbackVarMap(currentFeedbackStudentId, currentFeedbackDateStr, isWeek, override);
+  var ta = document.getElementById('fb-preview-text');
+  if (ta) ta.value = generateFeedbackTalk(template, varMap);
+}
+
 function openFeedbackPreviewModal(useWeek, weekOverride) {
   var template = feedbackTemplatesData.find(function(t) { return t.id === selectedFeedbackTemplateId; });
   if (!template) return;
@@ -9740,18 +9757,17 @@ function openFeedbackPreviewModal(useWeek, weekOverride) {
   html += '<div style="margin-bottom:14px;">';
   html += '<label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">날짜 표기</label>';
   html += '<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">';
-  html += '<label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="radio" name="fb-date-mode" value="date" ' + (!useWeek ? 'checked' : '') + ' onchange="openFeedbackPreviewModal(false,\'\')"> 날짜 (' + currentFeedbackDateStr + ')</label>';
-  html += '<label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="radio" name="fb-date-mode" value="week" ' + (useWeek ? 'checked' : '') + ' onchange="openFeedbackPreviewModal(true,document.getElementById(\'fb-week-override\').value)"> 주차</label>';
+  html += '<label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="radio" name="fb-date-mode" value="date" ' + (!useWeek ? 'checked' : '') + ' onchange="toggleFbDateMode(false)"> 날짜 (' + currentFeedbackDateStr + ')</label>';
+  html += '<label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="radio" name="fb-date-mode" value="week" ' + (useWeek ? 'checked' : '') + ' onchange="toggleFbDateMode(true)"> 주차</label>';
   html += '</div>';
-  if (useWeek) {
-    var autoWeek = formatFeedbackDate(currentFeedbackDateStr, true, '');
-    html += '<div style="margin-top:8px;display:flex;align-items:center;gap:8px;">';
-    html += '<span style="font-size:12px;color:var(--text3);">자동: ' + autoWeek + '</span>';
-    html += '<input type="text" id="fb-week-override" placeholder="직접 입력 (예: 3~4주차)" value="' + weekOverride + '" style="' + IS + 'width:160px;" oninput="openFeedbackPreviewModal(true,this.value)">';
-    html += '</div>';
-  } else {
-    html += '<input type="hidden" id="fb-week-override" value="">';
-  }
+  var fbD = new Date(currentFeedbackDateStr + 'T00:00:00');
+  var fbPrefix = String(fbD.getFullYear()).slice(2) + '년 ' + (fbD.getMonth() + 1) + '월';
+  var fbAutoNum = String(getWeekNumberInMonth(currentFeedbackDateStr));
+  html += '<div id="fb-week-section" style="display:' + (useWeek ? 'flex' : 'none') + ';align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap;">';
+  html += '<span style="font-size:13px;color:var(--text2);">' + fbPrefix + '</span>';
+  html += '<input type="text" id="fb-week-override" placeholder="' + fbAutoNum + '" value="' + weekOverride + '" style="' + IS + 'width:70px;" oninput="updateFeedbackPreviewContent()">';
+  html += '<span style="font-size:13px;color:var(--text2);">주차</span>';
+  html += '</div>';
   html += '</div>';
   html += '<div style="margin-bottom:8px;">';
   html += '<label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">메시지 편집</label>';
