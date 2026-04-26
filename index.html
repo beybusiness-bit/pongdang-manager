@@ -2563,7 +2563,10 @@ input[type="checkbox"] {
       <div style="margin-bottom:6px;">
         <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;">내용</label>
         <div style="background:#F0F7FF;border:1px solid #C8DEF5;border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:6px;">
-          <div style="font-size:11px;font-weight:600;color:#1D6FBD;margin-bottom:6px;">변수 삽입 — 클릭하면 커서 위치에 삽입됩니다</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-size:11px;font-weight:600;color:#1D6FBD;">변수 삽입 — 클릭하면 커서 위치에 삽입됩니다</span>
+          <button type="button" onclick="openModal('modal-feedback-help')" style="font-size:11px;padding:2px 8px;border:1px solid #C8DEF5;border-radius:10px;background:white;color:#1D6FBD;cursor:pointer;font-weight:600;">? 작성법</button>
+        </div>
           <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;" id="ftf-var-btns"></div>
           <div style="font-size:11px;font-weight:600;color:#6D4C1E;margin-bottom:5px;margin-top:2px;">조건 구역 — 해당 값이 없으면 구역 전체가 메시지에서 사라집니다</div>
           <div style="display:flex;flex-wrap:wrap;gap:4px;" id="ftf-block-btns"></div>
@@ -2577,6 +2580,102 @@ input[type="checkbox"] {
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('modal-feedback-tpl-form')">취소</button>
       <button class="btn btn-primary btn-sm" onclick="saveFeedbackTemplateForm()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 피드백톡 템플릿 작성법 도움말 모달 -->
+<div class="modal-backdrop" id="modal-feedback-help">
+  <div class="modal" style="max-width:600px;width:95%;">
+    <div class="modal-title">템플릿 작성법</div>
+    <div class="modal-body" style="padding:24px;font-size:13px;line-height:1.8;color:var(--text);">
+
+      <h4 style="font-size:14px;font-weight:700;margin:0 0 8px;color:var(--accent);">1. 변수란?</h4>
+      <p style="margin:0 0 10px;color:var(--text2);">
+        메시지를 만들 때 근무일지 데이터로 자동 교체되는 자리표시자입니다.<br>
+        형식은 <b>{{변수명}}</b> 입니다.
+      </p>
+      <div style="background:var(--bg);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;font-size:12px;">
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 16px;">
+          <span style="color:var(--accent);font-weight:600;">{{날짜}}</span><span style="color:var(--text2);">수업 날짜 (예: 2026-04-26) 또는 주차 (예: 26년 4월 3주차)</span>
+          <span style="color:var(--accent);font-weight:600;">{{학생명}}</span><span style="color:var(--text2);">학생 이름 (예: 김민준)</span>
+          <span style="color:var(--accent);font-weight:600;">{{수업}}</span><span style="color:var(--text2);">수업 내용</span>
+          <span style="color:var(--accent);font-weight:600;">{{숙제}}</span><span style="color:var(--text2);">숙제 내용</span>
+          <span style="color:var(--accent);font-weight:600;">{{테스트}}</span><span style="color:var(--text2);">TEST 이름 — TEST 체크가 된 경우에만 값이 있음</span>
+          <span style="color:var(--accent);font-weight:600;">{{난이도}}</span><span style="color:var(--text2);">TEST 난이도 — TEST 체크가 된 경우에만 값이 있음</span>
+          <span style="color:var(--accent);font-weight:600;">{{결과}}</span><span style="color:var(--text2);">점수/만점 (예: 88/100) — TEST 체크가 된 경우에만 값이 있음</span>
+          <span style="color:var(--accent);font-weight:600;">{{코멘트}}</span><span style="color:var(--text2);">코멘트 내용</span>
+          <span style="color:var(--accent);font-weight:600;">{{특강}}</span><span style="color:var(--text2);">특강명과 회차 (예: 수능특강 풀기 3회차) — 특강 체크가 된 경우에만 값이 있음</span>
+        </div>
+      </div>
+      <p style="margin:0 0 4px;font-size:12px;color:var(--text2);">변수 값이 비어있으면 그 줄 전체가 메시지에서 자동으로 사라집니다.</p>
+      <div style="background:#FFFBF0;border:1px solid #EDD9A3;border-radius:var(--radius-sm);padding:8px 14px;margin-bottom:20px;font-size:12px;color:var(--text2);">
+        예) 숙제를 입력하지 않은 경우 &rarr; <b>숙제 : {{숙제}}</b> 줄이 메시지에서 사라짐
+      </div>
+
+      <h4 style="font-size:14px;font-weight:700;margin:0 0 8px;color:#6D4C1E;">[IF] 조건 구역이란?</h4>
+      <p style="margin:0 0 10px;color:var(--text2);">
+        특정 변수가 <b>있을 때만</b> 나타나야 하는 여러 줄을 묶는 방법입니다.<br>
+        해당 변수가 비어있으면 <b>구역 안의 정적 텍스트(글자)까지 전부</b> 사라집니다.
+      </p>
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;">형식</div>
+      <div style="background:#F5F0FF;border:1px solid #C9B8F0;border-radius:var(--radius-sm);padding:10px 14px;font-family:monospace;font-size:12px;white-space:pre;margin-bottom:12px;color:#4B2E9E;">[IF 변수명]
+보여줄 내용들
+[/IF]</div>
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;">예시</div>
+      <div style="background:#F5F0FF;border:1px solid #C9B8F0;border-radius:var(--radius-sm);padding:10px 14px;font-family:monospace;font-size:12px;white-space:pre;margin-bottom:6px;color:#4B2E9E;">[IF 테스트]
+TEST : {{테스트}}
+난이도 : {{난이도}}
+결과 : {{결과}}
+[/IF]</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:20px;">
+        &rarr; 근무일지에서 <b>TEST 체크가 되어 있을 때</b>만 "TEST :", "난이도 :", "결과 :" 줄이 전부 나타납니다.<br>
+        &rarr; TEST 체크가 없으면 위 내용 전체가 메시지에서 사라집니다.
+      </div>
+
+      <h4 style="font-size:14px;font-weight:700;margin:0 0 10px;color:var(--text);">전체 예시 템플릿</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:5px;">템플릿 내용</div>
+          <div style="background:#F8F8F8;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-family:monospace;font-size:11px;white-space:pre;line-height:1.7;color:var(--text2);">'풍당수학'
+{{날짜}} 수업내용
+
+수업 : {{수업}}
+숙제 : {{숙제}}
+[IF 테스트]
+TEST : {{테스트}}
+난이도 : {{난이도}}
+결과 : {{결과}}
+[/IF]
+{{코멘트}}
+[IF 특강]
+특강 : {{특강}}
+[/IF]</div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:5px;">TEST 있는 경우 결과</div>
+          <div style="background:white;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:11px;white-space:pre;line-height:1.7;color:var(--text);">'풍당수학'
+2026-04-26 수업내용
+
+수업 : 분수의 나눗셈
+숙제 : 연습문제 1~5번
+TEST : 분수 개념점검
+난이도 : 중
+결과 : 88/100
+이해도 양호합니다</div>
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin:8px 0 5px;">TEST 없는 경우 결과</div>
+          <div style="background:white;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:11px;white-space:pre;line-height:1.7;color:var(--text);">'풍당수학'
+2026-04-26 수업내용
+
+수업 : 분수의 나눗셈
+숙제 : 연습문제 1~5번
+이해도 양호합니다</div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary btn-sm" onclick="closeModal('modal-feedback-help')">닫기</button>
     </div>
   </div>
 </div>
