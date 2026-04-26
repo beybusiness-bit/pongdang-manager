@@ -2538,6 +2538,30 @@ input[type="checkbox"] {
   </div>
 </div>
 
+<!-- 피드백톡 템플릿 선택 모달 -->
+<div class="modal-backdrop" id="modal-feedback-template">
+  <div class="modal" style="max-width:480px;width:95%;">
+    <div class="modal-title" id="feedback-template-modal-title">피드백톡 생성</div>
+    <div class="modal-body" id="feedback-template-modal-body" style="padding:20px;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-feedback-template')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 피드백톡 미리보기/편집 모달 -->
+<div class="modal-backdrop" id="modal-feedback-preview">
+  <div class="modal" style="max-width:520px;width:95%;">
+    <div class="modal-title" id="feedback-preview-modal-title">피드백톡 미리보기</div>
+    <div class="modal-body" id="feedback-preview-modal-body" style="padding:20px;max-height:65vh;overflow-y:auto;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-feedback-preview')">닫기</button>
+      <button class="btn btn-outline btn-sm" onclick="copyFeedbackTalk()">복사</button>
+      <button class="btn btn-primary btn-sm" onclick="saveFeedbackTalk()">저장</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ============ 상수 ============
 const AUTH = {
@@ -2702,6 +2726,14 @@ let wlDragSchoolType = null;
 let workLogGroupCollapsed = {};
 let workLogTeacherGroupCollapsed = {};
 let wlIsDragging = false;
+
+let feedbackTemplatesData = [];
+let feedbackTalksData = [];
+let currentFeedbackStudentId = null;
+let currentFeedbackDateStr = null;
+let selectedFeedbackTemplateId = null;
+let feedbackBulkQueue = [];
+let feedbackBulkIndex = 0;
 
 let currentPaymentTab = 'register'; // register(월별등록대장) 또는 records(결제기록)
 let ledgerMonths = []; // 등록대장에 표시할 월 목록 (예: ['2026-04', '2026-03'])
@@ -5081,6 +5113,26 @@ function loadSampleData() {
   monthlyRegisterTabs = ['2026-04', '2026-03', '2026-05'];
   currentMonthTab = '2026-04';
   
+  // 피드백톡 템플릿 기본 데이터
+  feedbackTemplatesData = [
+    {
+      id: 'ft1', name: '평시 피드백톡', type: '평시',
+      content: '\'풍당수학\'\n{{날짜}} 수업내용\n\n수업 : {{수업}}\n숙제 : {{숙제}}\n\nTEST : {{test}}\n난이도 : {{level}}\n결과 : {{score}}\n\n{{comment}}\n\n{{특강}}',
+      variables: '날짜,학생명,수업,숙제,test,level,score,comment,특강'
+    },
+    {
+      id: 'ft2', name: '복귀 피드백톡', type: '복귀',
+      content: '\'풍당수학\'\n{{날짜}} 수업내용\n\n오늘 {{학생명}} 학생이 결석 후 복귀했습니다.\n\n수업 : {{수업}}\n숙제 : {{숙제}}\n\n{{comment}}',
+      variables: '날짜,학생명,수업,숙제,comment'
+    },
+    {
+      id: 'ft3', name: '시험 피드백톡', type: '시험',
+      content: '\'풍당수학\'\n{{날짜}} 시험 결과 안내\n\n수업 : {{수업}}\n\nTEST : {{test}}\n난이도 : {{level}}\n결과 : {{score}}\n\n{{comment}}',
+      variables: '날짜,학생명,수업,test,level,score,comment'
+    }
+  ];
+  feedbackTalksData = [];
+
   // 근무일지 샘플 데이터
   workLogsData = [
     { id: 'wl1', date: '2026-04-21', studentId: '1', content: '분수의 나눗셈 복습', homework: '연습문제 1~5번', hasTest: true, testName: '분수 개념점검', testDifficulty: '중', testFullScore: 100, testScore: 88, isSpecialClass: false, specialClassName: '', specialClassCount: null, comment: '이해도 양호. 다음 수업에서 소수 연계 예정', createdAt: '2026-04-21' },
@@ -9255,6 +9307,199 @@ function getDayName(dateStr) {
   return days[d.getDay()];
 }
 
+// ── 피드백톡 함수 ──────────────────────────────────────────
+
+function formatFeedbackDate(dateStr, useWeek, weekOverride) {
+  if (!useWeek) return dateStr;
+  if (weekOverride && weekOverride.trim()) return weekOverride.trim();
+  var d = new Date(dateStr + 'T00:00:00');
+  var yy = String(d.getFullYear()).slice(2);
+  var mm = d.getMonth() + 1;
+  var week = getWeekNumberInMonth(dateStr);
+  return yy + '년 ' + mm + '월 ' + week + '주차';
+}
+
+function getWorkLogDataForFeedback(studentId, dateStr) {
+  var student = studentsData.find(function(s) { return s.id === studentId; }) || {};
+  var saved = getWorkLogEntry(dateStr, studentId) || {};
+  var contentEl = document.getElementById('wl-content-' + studentId);
+  var homeworkEl = document.getElementById('wl-homework-' + studentId);
+  var hasTestEl = document.getElementById('wl-hastest-' + studentId);
+  var testNameEl = document.getElementById('wl-testname-' + studentId);
+  var testDiffEl = document.getElementById('wl-testdifficulty-' + studentId);
+  var testFullEl = document.getElementById('wl-testfullscore-' + studentId);
+  var testScoreEl = document.getElementById('wl-testscore-' + studentId);
+  var isSpecialEl = document.getElementById('wl-isspecial-' + studentId);
+  var specialNameEl = document.getElementById('wl-specialname-' + studentId);
+  var specialCountEl = document.getElementById('wl-specialcount-' + studentId);
+  var commentEl = document.getElementById('wl-comment-' + studentId);
+  var d = {
+    content: contentEl ? contentEl.value : (saved.content || ''),
+    homework: homeworkEl ? homeworkEl.value : (saved.homework || ''),
+    hasTest: hasTestEl ? hasTestEl.checked : !!saved.hasTest,
+    testName: testNameEl ? testNameEl.value : (saved.testName || ''),
+    testDifficulty: testDiffEl ? testDiffEl.value : (saved.testDifficulty || ''),
+    testFullScore: testFullEl ? testFullEl.value : (saved.testFullScore != null ? saved.testFullScore : ''),
+    testScore: testScoreEl ? testScoreEl.value : (saved.testScore != null ? saved.testScore : ''),
+    isSpecialClass: isSpecialEl ? isSpecialEl.checked : !!saved.isSpecialClass,
+    specialClassName: specialNameEl ? specialNameEl.value : (saved.specialClassName || ''),
+    specialClassCount: specialCountEl ? specialCountEl.value : (saved.specialClassCount != null ? saved.specialClassCount : ''),
+    comment: commentEl ? commentEl.value : (saved.comment || '')
+  };
+  return { student: student, data: d };
+}
+
+function buildFeedbackVarMap(studentId, dateStr, useWeek, weekOverride) {
+  var r = getWorkLogDataForFeedback(studentId, dateStr);
+  var s = r.student; var d = r.data;
+  var scoreStr = '';
+  if (d.hasTest && (d.testScore !== '' || d.testFullScore !== '')) {
+    scoreStr = (d.testScore !== '' ? d.testScore : '') + '/' + (d.testFullScore !== '' ? d.testFullScore : '');
+  }
+  var specialStr = '';
+  if (d.isSpecialClass && d.specialClassName) {
+    specialStr = d.specialClassName + (d.specialClassCount !== '' ? ' ' + d.specialClassCount + '회차' : '');
+  }
+  return {
+    '날짜': formatFeedbackDate(dateStr, useWeek, weekOverride),
+    '학생명': s.name || '',
+    '수업': d.content,
+    '숙제': d.homework,
+    'test': d.hasTest ? d.testName : '',
+    'level': d.hasTest ? d.testDifficulty : '',
+    'score': scoreStr,
+    'comment': d.comment,
+    '특강': specialStr
+  };
+}
+
+function generateFeedbackTalk(template, varMap) {
+  var result = template.content;
+  var vars = template.variables.split(',');
+  vars.forEach(function(v) {
+    var val = varMap[v.trim()] || '';
+    result = result.split('{{' + v.trim() + '}}').join(val);
+  });
+  result = result.split('\n').filter(function(line) {
+    return line.trim() !== '';
+  }).join('\n');
+  result = result.replace(/\n{3,}/g, '\n\n');
+  return result;
+}
+
+function openFeedbackTemplateModal(studentId, dateStr) {
+  currentFeedbackStudentId = studentId;
+  currentFeedbackDateStr = dateStr;
+  selectedFeedbackTemplateId = null;
+  var student = studentsData.find(function(s) { return s.id === studentId; });
+  var titleEl = document.getElementById('feedback-template-modal-title');
+  if (titleEl) titleEl.textContent = (student ? student.name : '') + ' 피드백톡 생성';
+  var body = document.getElementById('feedback-template-modal-body');
+  if (!body) return;
+  var html = '<p style="font-size:13px;color:var(--text2);margin-bottom:14px;">템플릿을 선택하세요.</p>';
+  html += '<div style="display:flex;flex-direction:column;gap:8px;">';
+  feedbackTemplatesData.forEach(function(tpl) {
+    var typeBg = tpl.type === '평시' ? '#EEF6FF' : tpl.type === '복귀' ? '#F0FFF4' : tpl.type === '시험' ? '#FFF7ED' : '#F5F5F5';
+    var typeColor = tpl.type === '평시' ? '#1D6FBD' : tpl.type === '복귀' ? '#2E7D32' : tpl.type === '시험' ? '#C25A0A' : '#555';
+    html += '<div onclick="selectFeedbackTemplate(\'' + tpl.id + '\')" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background 0.1s;" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'white\'">';
+    html += '<span style="background:' + typeBg + ';color:' + typeColor + ';font-size:11px;font-weight:600;padding:2px 7px;border-radius:10px;white-space:nowrap;">' + tpl.type + '</span>';
+    html += '<span style="font-size:13px;font-weight:500;">' + tpl.name + '</span>';
+    html += '</div>';
+  });
+  html += '</div>';
+  body.innerHTML = html;
+  openModal('modal-feedback-template');
+}
+
+function selectFeedbackTemplate(templateId) {
+  selectedFeedbackTemplateId = templateId;
+  closeModal('modal-feedback-template');
+  setTimeout(function() { openFeedbackPreviewModal(false, ''); }, 120);
+}
+
+function openFeedbackPreviewModal(useWeek, weekOverride) {
+  var template = feedbackTemplatesData.find(function(t) { return t.id === selectedFeedbackTemplateId; });
+  if (!template) return;
+  var student = studentsData.find(function(s) { return s.id === currentFeedbackStudentId; });
+  var titleEl = document.getElementById('feedback-preview-modal-title');
+  if (titleEl) titleEl.textContent = (student ? student.name : '') + ' 피드백톡';
+  var varMap = buildFeedbackVarMap(currentFeedbackStudentId, currentFeedbackDateStr, useWeek, weekOverride);
+  var generated = generateFeedbackTalk(template, varMap);
+  var body = document.getElementById('feedback-preview-modal-body');
+  if (!body) return;
+  var IS = 'font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;';
+  var html = '';
+  html += '<div style="margin-bottom:14px;">';
+  html += '<label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">날짜 표기</label>';
+  html += '<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">';
+  html += '<label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="radio" name="fb-date-mode" value="date" ' + (!useWeek ? 'checked' : '') + ' onchange="openFeedbackPreviewModal(false,\'\')"> 날짜 (' + currentFeedbackDateStr + ')</label>';
+  html += '<label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="radio" name="fb-date-mode" value="week" ' + (useWeek ? 'checked' : '') + ' onchange="openFeedbackPreviewModal(true,document.getElementById(\'fb-week-override\').value)"> 주차</label>';
+  html += '</div>';
+  if (useWeek) {
+    var autoWeek = formatFeedbackDate(currentFeedbackDateStr, true, '');
+    html += '<div style="margin-top:8px;display:flex;align-items:center;gap:8px;">';
+    html += '<span style="font-size:12px;color:var(--text3);">자동: ' + autoWeek + '</span>';
+    html += '<input type="text" id="fb-week-override" placeholder="직접 입력 (예: 3~4주차)" value="' + weekOverride + '" style="' + IS + 'width:160px;" oninput="openFeedbackPreviewModal(true,this.value)">';
+    html += '</div>';
+  } else {
+    html += '<input type="hidden" id="fb-week-override" value="">';
+  }
+  html += '</div>';
+  html += '<div style="margin-bottom:8px;">';
+  html += '<label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">메시지 편집</label>';
+  html += '<textarea id="fb-preview-text" rows="12" style="' + IS + 'width:100%;resize:vertical;font-family:inherit;line-height:1.6;">' + generated + '</textarea>';
+  html += '</div>';
+  body.innerHTML = html;
+  openModal('modal-feedback-preview');
+}
+
+function copyFeedbackTalk() {
+  var ta = document.getElementById('fb-preview-text');
+  if (!ta) return;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(ta.value).then(function() {
+      showToast('피드백톡 복사됨');
+    });
+  } else {
+    ta.select();
+    document.execCommand('copy');
+    showToast('피드백톡 복사됨');
+  }
+}
+
+function saveFeedbackTalk() {
+  var ta = document.getElementById('fb-preview-text');
+  if (!ta) return;
+  var existing = feedbackTalksData.find(function(f) {
+    return f.date === currentFeedbackDateStr && f.studentId === currentFeedbackStudentId && f.templateId === selectedFeedbackTemplateId;
+  });
+  if (existing) {
+    existing.content = ta.value;
+    existing.createdAt = today();
+  } else {
+    feedbackTalksData.push({ id: uid(), date: currentFeedbackDateStr, studentId: currentFeedbackStudentId, templateId: selectedFeedbackTemplateId, content: ta.value, createdAt: today() });
+  }
+  showToast('피드백톡 저장됨');
+  closeModal('modal-feedback-preview');
+}
+
+function openFeedbackBulkModal(dateStr) {
+  var scheduledStudents = getStudentsByDayOfWeek(dateStr);
+  var schedIds = {};
+  scheduledStudents.forEach(function(s) { schedIds[s.id] = true; });
+  var manualEntries = workLogsData.filter(function(e) { return e.date === dateStr && !schedIds[e.studentId]; });
+  var manualIds = [];
+  manualEntries.forEach(function(e) { if (manualIds.indexOf(e.studentId) === -1) manualIds.push(e.studentId); });
+  var manualStudents = manualIds.map(function(id) { return studentsData.find(function(s) { return s.id === id; }); }).filter(Boolean);
+  feedbackBulkQueue = scheduledStudents.concat(manualStudents).map(function(s) { return s.id; });
+  feedbackBulkIndex = 0;
+  if (feedbackBulkQueue.length === 0) { showToast('이 날 학생이 없습니다'); return; }
+  currentFeedbackDateStr = dateStr;
+  openFeedbackTemplateModal(feedbackBulkQueue[0], dateStr);
+}
+
+// ──────────────────────────────────────────────────────────
+
 function getWeekNumberInMonth(dateStr) {
   var d = new Date(dateStr + 'T00:00:00');
   var firstDay = new Date(d.getFullYear(), d.getMonth(), 1);
@@ -9549,8 +9794,11 @@ function renderWorkLogDailyBody(container) {
     });
   }
   if (canWrite) {
-    html += '<div style="margin-top:8px;">';
+    html += '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">';
     html += '<button class="btn btn-outline btn-sm" onclick="openAddWorkLogStudentModal()">+ 학생 추가</button>';
+    if (feedbackTemplatesData.length > 0) {
+      html += '<button class="btn btn-outline btn-sm" onclick="openFeedbackBulkModal(\'' + dateStr + '\')">전체 피드백톡 생성</button>';
+    }
     html += '</div>';
   }
   container.innerHTML = html;
@@ -9596,11 +9844,15 @@ function wlCardClick(ev, studentId, dateStr) {
 function buildWorkLogCardSummary(student, dateStr) {
   var entry = getWorkLogEntry(dateStr, student.id);
   var html = '';
+  var canWrite = permissions[currentUser.role].worklog && permissions[currentUser.role].worklog.write;
   html += '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;height:100%;box-sizing:border-box;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.12)\'" onmouseout="this.style.boxShadow=\'none\'">';
   html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:7px;">';
   html += '<span style="font-weight:600;font-size:14px;">' + student.name + '</span>';
   if (student.grade) html += '<span style="font-size:11px;color:var(--text2);background:var(--bg);padding:1px 6px;border-radius:20px;">' + student.grade + '</span>';
   if (student.teacher) html += '<span style="font-size:11px;color:var(--text3);">' + student.teacher + '</span>';
+  if (canWrite) {
+    html += '<button onclick="event.stopPropagation();openFeedbackTemplateModal(\'' + student.id + '\',\'' + dateStr + '\')" style="margin-left:auto;font-size:11px;padding:2px 8px;border:1px solid var(--accent);border-radius:10px;background:white;color:var(--accent);cursor:pointer;white-space:nowrap;">피드백톡</button>';
+  }
   html += '</div>';
   if (!entry) {
     html += '<div style="font-size:12px;color:var(--text3);">미기록</div>';
