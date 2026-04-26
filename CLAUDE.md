@@ -571,6 +571,15 @@ id, date (YYYY-MM-DD), name
 2. 변경 목록 + 제안 커밋 메시지를 사용자에게 보여줌
 3. 승인 후 `git add [지정 파일들] && git commit && git push origin main`
 4. CLAUDE.md 자체의 갱신은 섹션 3의 규칙을 별도로 따름 (명시적 종료 의사 필수)
+5. **다음 세션 스타터 메시지 출력** (필수): CLAUDE.md 갱신 후, 아래 형식으로 출력한다.
+   - `.claude/settings.json`을 읽어 토큰을 확인하고, 토큰을 포함한 복사용 블록을 채팅 메시지로 출력.
+   - 출력 형식:
+     ```
+     ── 다음 세션 시작 메시지 (아래 전체 복사 후 첫 메시지로 붙여넣기) ──
+     시작할게. 깃헙 토큰: [.claude/settings.json에서 읽은 토큰]
+     ────────────────────────────────────────────────────────────────
+     ```
+   - 토큰을 읽는 명령: `python3 -c "import json,re; d=open('.claude/settings.json').read(); print(re.search(r'ghp_\w+', d).group())"`
 
 ⚠️ `git add .` 또는 `git add -A` 지양. 바뀐 파일을 명시적으로 지정.
 
