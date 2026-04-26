@@ -2541,32 +2541,37 @@ input[type="checkbox"] {
 <!-- 피드백톡 템플릿 선택 모달 -->
 <!-- 피드백톡 템플릿 폼 모달 -->
 <div class="modal-backdrop" id="modal-feedback-tpl-form">
-  <div class="modal" style="max-width:560px;width:95%;">
+  <div class="modal" style="max-width:600px;width:95%;">
     <div class="modal-title" id="feedback-tpl-form-title">템플릿 추가</div>
     <div class="modal-body" style="padding:20px;">
       <input type="hidden" id="ftf-id">
-      <div style="margin-bottom:12px;">
-        <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;">유형</label>
-        <select id="ftf-type" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;">
-          <option value="평시">평시</option>
-          <option value="복귀">복귀</option>
-          <option value="시험">시험</option>
-          <option value="기타">기타</option>
-        </select>
+      <div style="display:flex;gap:10px;margin-bottom:12px;">
+        <div style="flex:1;">
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;">유형</label>
+          <select id="ftf-type" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;">
+            <option value="평시">평시</option>
+            <option value="복귀">복귀</option>
+            <option value="시험">시험</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+        <div style="flex:2;">
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;">템플릿명</label>
+          <input type="text" id="ftf-name" placeholder="예: 평시 피드백톡" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;">
+        </div>
       </div>
-      <div style="margin-bottom:12px;">
-        <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;">템플릿명</label>
-        <input type="text" id="ftf-name" placeholder="예: 평시 피드백톡" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;">
+      <div style="margin-bottom:6px;">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;">내용</label>
+        <div style="background:#F0F7FF;border:1px solid #C8DEF5;border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:6px;">
+          <div style="font-size:11px;font-weight:600;color:#1D6FBD;margin-bottom:6px;">변수 삽입 — 클릭하면 커서 위치에 삽입됩니다</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;" id="ftf-var-btns"></div>
+          <div style="font-size:11px;font-weight:600;color:#6D4C1E;margin-bottom:5px;margin-top:2px;">조건 구역 — 해당 값이 없으면 구역 전체가 메시지에서 사라집니다</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;" id="ftf-block-btns"></div>
+        </div>
+        <textarea id="ftf-content" rows="10" placeholder="여기에 메시지 내용을 작성하세요" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;line-height:1.7;box-sizing:border-box;resize:vertical;" oninput="updateFtfVariables()"></textarea>
       </div>
-      <div style="margin-bottom:8px;">
-        <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;">내용 <span style="font-weight:400;">({{변수명}} 형식으로 삽입)</span></label>
-        <textarea id="ftf-content" rows="10" placeholder="'풍당수학'" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;line-height:1.6;box-sizing:border-box;resize:vertical;" oninput="updateFtfVariables()"></textarea>
-      </div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">
         감지된 변수: <span id="ftf-vars-preview" style="color:var(--accent);font-weight:600;">없음</span>
-      </div>
-      <div style="background:var(--bg);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.7;">
-        사용 가능한 변수: <b>{{날짜}}</b> <b>{{학생명}}</b> <b>{{수업}}</b> <b>{{숙제}}</b> <b>{{test}}</b> <b>{{level}}</b> <b>{{score}}</b> <b>{{comment}}</b> <b>{{특강}}</b>
       </div>
     </div>
     <div class="modal-footer">
@@ -5177,18 +5182,18 @@ function loadSampleData() {
   feedbackTemplatesData = [
     {
       id: 'ft1', name: '평시 피드백톡', type: '평시',
-      content: '\'풍당수학\'\n{{날짜}} 수업내용\n\n수업 : {{수업}}\n숙제 : {{숙제}}\n\nTEST : {{test}}\n난이도 : {{level}}\n결과 : {{score}}\n\n{{comment}}\n\n{{특강}}',
-      variables: '날짜,학생명,수업,숙제,test,level,score,comment,특강'
+      content: '\'풍당수학\'\n{{날짜}} 수업내용\n\n수업 : {{수업}}\n숙제 : {{숙제}}\n[IF 테스트]\nTEST : {{테스트}}\n난이도 : {{난이도}}\n결과 : {{결과}}\n[/IF]\n{{코멘트}}\n[IF 특강]\n특강 : {{특강}}\n[/IF]',
+      variables: '날짜,학생명,수업,숙제,테스트,난이도,결과,코멘트,특강'
     },
     {
       id: 'ft2', name: '복귀 피드백톡', type: '복귀',
-      content: '\'풍당수학\'\n{{날짜}} 수업내용\n\n오늘 {{학생명}} 학생이 결석 후 복귀했습니다.\n\n수업 : {{수업}}\n숙제 : {{숙제}}\n\n{{comment}}',
-      variables: '날짜,학생명,수업,숙제,comment'
+      content: '\'풍당수학\'\n{{날짜}} 수업내용\n\n오늘 {{학생명}} 학생이 결석 후 복귀했습니다.\n\n수업 : {{수업}}\n숙제 : {{숙제}}\n{{코멘트}}',
+      variables: '날짜,학생명,수업,숙제,코멘트'
     },
     {
       id: 'ft3', name: '시험 피드백톡', type: '시험',
-      content: '\'풍당수학\'\n{{날짜}} 시험 결과 안내\n\n수업 : {{수업}}\n\nTEST : {{test}}\n난이도 : {{level}}\n결과 : {{score}}\n\n{{comment}}',
-      variables: '날짜,학생명,수업,test,level,score,comment'
+      content: '\'풍당수학\'\n{{날짜}} 시험 결과 안내\n\n수업 : {{수업}}\n[IF 테스트]\nTEST : {{테스트}}\n난이도 : {{난이도}}\n결과 : {{결과}}\n[/IF]\n{{코멘트}}',
+      variables: '날짜,학생명,수업,테스트,난이도,결과,코멘트'
     }
   ];
   feedbackTalksData = [];
@@ -9425,16 +9430,24 @@ function buildFeedbackVarMap(studentId, dateStr, useWeek, weekOverride) {
     '학생명': s.name || '',
     '수업': d.content,
     '숙제': d.homework,
-    'test': d.hasTest ? d.testName : '',
-    'level': d.hasTest ? d.testDifficulty : '',
-    'score': scoreStr,
-    'comment': d.comment,
+    '테스트': d.hasTest ? (d.testName || '') : '',
+    '난이도': d.hasTest ? (d.testDifficulty || '') : '',
+    '결과': scoreStr,
+    '코멘트': d.comment,
     '특강': specialStr
   };
 }
 
 function generateFeedbackTalk(template, varMap) {
-  var lines = template.content.split('\n');
+  var content = template.content;
+  // Step 1: [IF 변수]...[/IF] 블록 — 조건 변수가 빈 값이면 블록 전체 제거
+  content = content.replace(/\[IF ([^\]]+)\]([\s\S]*?)\[\/IF\]/g, function(match, condVar, inner) {
+    var val = varMap[condVar.trim()];
+    if (val === undefined || val === null || String(val).trim() === '') return '';
+    return inner;
+  });
+  // Step 2: 줄별 변수 치환 — 줄의 모든 변수가 빈 값이면 해당 줄 전체 제거
+  var lines = content.split('\n');
   var resultLines = [];
   lines.forEach(function(line) {
     var varRe = /\{\{([^}]+)\}\}/g;
@@ -9831,8 +9844,61 @@ function openFeedbackTemplateForm(tplId) {
   if (nameEl) nameEl.value = tpl ? tpl.name : '';
   if (typeEl) typeEl.value = tpl ? tpl.type : '평시';
   if (contentEl) contentEl.value = tpl ? tpl.content : '';
+  renderFtfButtons();
   updateFtfVariables();
   openModal('modal-feedback-tpl-form');
+}
+
+var FTF_VARS = ['날짜', '학생명', '수업', '숙제', '테스트', '난이도', '결과', '코멘트', '특강'];
+
+var FTF_BLOCKS = [
+  { label: 'TEST 구역', cond: '테스트', content: '\nTEST : {{테스트}}\n난이도 : {{난이도}}\n결과 : {{결과}}\n' },
+  { label: '특강 구역', cond: '특강', content: '\n특강 : {{특강}}\n' }
+];
+
+function renderFtfButtons() {
+  var varBtns = document.getElementById('ftf-var-btns');
+  var blockBtns = document.getElementById('ftf-block-btns');
+  if (varBtns) {
+    var vHtml = '';
+    FTF_VARS.forEach(function(v) {
+      vHtml += '<button type="button" onclick="insertFtfVar(\'' + v + '\')" style="font-size:11px;padding:3px 9px;border:1px solid #C8DEF5;border-radius:10px;background:white;color:#1D6FBD;cursor:pointer;white-space:nowrap;">{{' + v + '}}</button>';
+    });
+    varBtns.innerHTML = vHtml;
+  }
+  if (blockBtns) {
+    var bHtml = '';
+    FTF_BLOCKS.forEach(function(b, i) {
+      bHtml += '<button type="button" onclick="insertFtfBlock(' + i + ')" style="font-size:11px;padding:3px 10px;border:1px solid #DEB887;border-radius:10px;background:#FFFBF0;color:#6D4C1E;cursor:pointer;white-space:nowrap;">+ ' + b.label + '</button>';
+    });
+    blockBtns.innerHTML = bHtml;
+  }
+}
+
+function insertFtfVar(varName) {
+  var ta = document.getElementById('ftf-content');
+  if (!ta) return;
+  var start = ta.selectionStart;
+  var end = ta.selectionEnd;
+  var ins = '{{' + varName + '}}';
+  ta.value = ta.value.substring(0, start) + ins + ta.value.substring(end);
+  var newPos = start + ins.length;
+  ta.selectionStart = ta.selectionEnd = newPos;
+  ta.focus();
+  updateFtfVariables();
+}
+
+function insertFtfBlock(idx) {
+  var b = FTF_BLOCKS[idx];
+  if (!b) return;
+  var ta = document.getElementById('ftf-content');
+  if (!ta) return;
+  var start = ta.selectionStart;
+  var ins = '[IF ' + b.cond + ']' + b.content + '[/IF]';
+  ta.value = ta.value.substring(0, start) + ins + ta.value.substring(start);
+  ta.selectionStart = ta.selectionEnd = start + ins.length;
+  ta.focus();
+  updateFtfVariables();
 }
 
 function updateFtfVariables() {
