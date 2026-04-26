@@ -2539,6 +2539,43 @@ input[type="checkbox"] {
 </div>
 
 <!-- 피드백톡 템플릿 선택 모달 -->
+<!-- 피드백톡 템플릿 폼 모달 -->
+<div class="modal-backdrop" id="modal-feedback-tpl-form">
+  <div class="modal" style="max-width:560px;width:95%;">
+    <div class="modal-title" id="feedback-tpl-form-title">템플릿 추가</div>
+    <div class="modal-body" style="padding:20px;">
+      <input type="hidden" id="ftf-id">
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;">유형</label>
+        <select id="ftf-type" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;">
+          <option value="평시">평시</option>
+          <option value="복귀">복귀</option>
+          <option value="시험">시험</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;">템플릿명</label>
+        <input type="text" id="ftf-name" placeholder="예: 평시 피드백톡" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:8px;">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;">내용 <span style="font-weight:400;">({{변수명}} 형식으로 삽입)</span></label>
+        <textarea id="ftf-content" rows="10" placeholder="'풍당수학'" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;line-height:1.6;box-sizing:border-box;resize:vertical;" oninput="updateFtfVariables()"></textarea>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;">
+        감지된 변수: <span id="ftf-vars-preview" style="color:var(--accent);font-weight:600;">없음</span>
+      </div>
+      <div style="background:var(--bg);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.7;">
+        사용 가능한 변수: <b>{{날짜}}</b> <b>{{학생명}}</b> <b>{{수업}}</b> <b>{{숙제}}</b> <b>{{test}}</b> <b>{{level}}</b> <b>{{score}}</b> <b>{{comment}}</b> <b>{{특강}}</b>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-feedback-tpl-form')">취소</button>
+      <button class="btn btn-primary btn-sm" onclick="saveFeedbackTemplateForm()">저장</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="modal-feedback-template">
   <div class="modal" style="max-width:480px;width:95%;">
     <div class="modal-title" id="feedback-template-modal-title">피드백톡 생성</div>
@@ -3534,6 +3571,10 @@ function getPageContent(pageId) {
     return '<div id="worklog-page-content"></div>';
   }
 
+  if (pageId === 'feedback') {
+    return '<div id="feedback-page-content"></div>';
+  }
+
   // 설정 페이지만 특별 처리
   if (pageId === 'settings' && currentUser.role === ROLES.OWNER) {
     return `
@@ -3640,6 +3681,7 @@ function navigateTo(pageId) {
   if (pageId === 'schools') renderSchoolsPage();
   if (pageId === 'teachers') renderTeachersPage();
   if (pageId === 'worklog') renderWorkLogPage();
+  if (pageId === 'feedback') renderFeedbackPage();
 
   // 교재 페이지 렌더링 (중복 제거)
 }
@@ -9392,17 +9434,26 @@ function buildFeedbackVarMap(studentId, dateStr, useWeek, weekOverride) {
 }
 
 function generateFeedbackTalk(template, varMap) {
-  var result = template.content;
-  var vars = template.variables.split(',');
-  vars.forEach(function(v) {
-    var val = varMap[v.trim()] || '';
-    result = result.split('{{' + v.trim() + '}}').join(val);
+  var lines = template.content.split('\n');
+  var resultLines = [];
+  lines.forEach(function(line) {
+    var varRe = /\{\{([^}]+)\}\}/g;
+    var m;
+    var lineVars = [];
+    while ((m = varRe.exec(line)) !== null) lineVars.push(m[1].trim());
+    var substituted = line;
+    var allVarsEmpty = lineVars.length > 0;
+    lineVars.forEach(function(v) {
+      var val = (varMap[v] !== undefined && varMap[v] !== null) ? String(varMap[v]) : '';
+      if (val !== '') allVarsEmpty = false;
+      substituted = substituted.split('{{' + v + '}}').join(val);
+    });
+    if (lineVars.length > 0 && allVarsEmpty) return;
+    resultLines.push(substituted);
   });
-  result = result.split('\n').filter(function(line) {
-    return line.trim() !== '';
-  }).join('\n');
-  result = result.replace(/\n{3,}/g, '\n\n');
-  return result;
+  var joined = resultLines.join('\n');
+  joined = joined.replace(/\n{3,}/g, '\n\n');
+  return joined.trim();
 }
 
 function openFeedbackTemplateModal(studentId, dateStr) {
@@ -9693,6 +9744,170 @@ function getSpecialClassCount(studentId, specialClassName) {
   return workLogsData.filter(function(e) {
     return e.studentId === studentId && e.isSpecialClass && e.specialClassName === specialClassName;
   }).length;
+}
+
+function renderFeedbackPage() {
+  var container = document.getElementById('feedback-page-content');
+  if (!container) return;
+  var canWrite = permissions[currentUser.role].feedback && permissions[currentUser.role].feedback.write;
+  var html = '';
+  html += '<div style="display:flex;flex-direction:column;gap:24px;">';
+
+  // 템플릿 관리 섹션
+  html += '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:20px;">';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">';
+  html += '<h3 style="font-size:15px;font-weight:700;margin:0;">템플릿 관리</h3>';
+  if (canWrite) html += '<button class="btn btn-primary btn-sm" onclick="openFeedbackTemplateForm(null)">+ 템플릿 추가</button>';
+  html += '</div>';
+  if (feedbackTemplatesData.length === 0) {
+    html += '<div class="empty-state" style="padding:24px 0;"><div class="empty-icon">📄</div><div class="empty-text">등록된 템플릿이 없습니다</div></div>';
+  } else {
+    html += '<div style="display:flex;flex-direction:column;gap:8px;">';
+    feedbackTemplatesData.forEach(function(tpl) {
+      var typeBg = tpl.type === '평시' ? '#EEF6FF' : tpl.type === '복귀' ? '#F0FFF4' : tpl.type === '시험' ? '#FFF7ED' : '#F5F5F5';
+      var typeColor = tpl.type === '평시' ? '#1D6FBD' : tpl.type === '복귀' ? '#2E7D32' : tpl.type === '시험' ? '#C25A0A' : '#555';
+      html += '<div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;display:flex;align-items:flex-start;gap:12px;">';
+      html += '<span style="background:' + typeBg + ';color:' + typeColor + ';font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0;margin-top:2px;">' + tpl.type + '</span>';
+      html += '<div style="flex:1;min-width:0;">';
+      html += '<div style="font-weight:600;font-size:14px;margin-bottom:4px;">' + tpl.name + '</div>';
+      var preview = tpl.content.split('\n').slice(0, 3).join(' · ');
+      if (preview.length > 80) preview = preview.slice(0, 80) + '…';
+      html += '<div style="font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + preview + '</div>';
+      if (tpl.variables) html += '<div style="font-size:11px;color:var(--text3);margin-top:3px;">변수: ' + tpl.variables + '</div>';
+      html += '</div>';
+      if (canWrite) {
+        html += '<div style="display:flex;gap:6px;flex-shrink:0;">';
+        html += '<button class="btn btn-outline btn-sm" onclick="openFeedbackTemplateForm(\'' + tpl.id + '\')">수정</button>';
+        html += '<button class="btn btn-sm" style="border:1px solid #e74c3c;color:#e74c3c;background:white;" onclick="deleteFeedbackTemplate(\'' + tpl.id + '\')">삭제</button>';
+        html += '</div>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // 피드백톡 기록 섹션
+  html += '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:20px;">';
+  html += '<h3 style="font-size:15px;font-weight:700;margin:0 0 16px;">피드백톡 기록</h3>';
+  if (feedbackTalksData.length === 0) {
+    html += '<div class="empty-state" style="padding:24px 0;"><div class="empty-icon">💬</div><div class="empty-text">저장된 피드백톡이 없습니다</div></div>';
+  } else {
+    var sorted = feedbackTalksData.slice().sort(function(a, b) { return b.date.localeCompare(a.date); });
+    html += '<div style="display:flex;flex-direction:column;gap:8px;">';
+    sorted.forEach(function(ft) {
+      var st = studentsData.find(function(s) { return s.id === ft.studentId; });
+      var tpl = feedbackTemplatesData.find(function(t) { return t.id === ft.templateId; });
+      html += '<div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;">';
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">';
+      html += '<span style="font-size:13px;font-weight:600;">' + (st ? st.name : '?') + '</span>';
+      if (st && st.grade) html += '<span style="font-size:11px;color:var(--text3);">' + st.grade + '</span>';
+      html += '<span style="font-size:12px;color:var(--text3);">' + ft.date + '</span>';
+      if (tpl) html += '<span style="font-size:11px;background:var(--bg);color:var(--text2);padding:1px 7px;border-radius:10px;">' + tpl.name + '</span>';
+      html += '<button onclick="copyFeedbackRecord(\'' + ft.id + '\')" style="margin-left:auto;font-size:11px;padding:2px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:white;color:var(--text2);cursor:pointer;">복사</button>';
+      html += '</div>';
+      var contentPreview = ft.content.replace(/\n/g, ' ').slice(0, 100);
+      if (ft.content.length > 100) contentPreview += '…';
+      html += '<div style="font-size:12px;color:var(--text2);white-space:pre-wrap;background:var(--bg);padding:8px 10px;border-radius:var(--radius-sm);max-height:80px;overflow:hidden;">' + contentPreview + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function openFeedbackTemplateForm(tplId) {
+  var tpl = tplId ? feedbackTemplatesData.find(function(t) { return t.id === tplId; }) : null;
+  var titleEl = document.getElementById('feedback-tpl-form-title');
+  if (titleEl) titleEl.textContent = tpl ? '템플릿 수정' : '템플릿 추가';
+  var idEl = document.getElementById('ftf-id');
+  var nameEl = document.getElementById('ftf-name');
+  var typeEl = document.getElementById('ftf-type');
+  var contentEl = document.getElementById('ftf-content');
+  if (idEl) idEl.value = tpl ? tpl.id : '';
+  if (nameEl) nameEl.value = tpl ? tpl.name : '';
+  if (typeEl) typeEl.value = tpl ? tpl.type : '평시';
+  if (contentEl) contentEl.value = tpl ? tpl.content : '';
+  updateFtfVariables();
+  openModal('modal-feedback-tpl-form');
+}
+
+function updateFtfVariables() {
+  var contentEl = document.getElementById('ftf-content');
+  var previewEl = document.getElementById('ftf-vars-preview');
+  if (!contentEl || !previewEl) return;
+  var matches = [];
+  var re = /\{\{([^}]+)\}\}/g;
+  var m;
+  while ((m = re.exec(contentEl.value)) !== null) {
+    var v = m[1].trim();
+    if (matches.indexOf(v) === -1) matches.push(v);
+  }
+  previewEl.textContent = matches.length > 0 ? matches.join(', ') : '없음';
+}
+
+function saveFeedbackTemplateForm() {
+  var idEl = document.getElementById('ftf-id');
+  var nameEl = document.getElementById('ftf-name');
+  var typeEl = document.getElementById('ftf-type');
+  var contentEl = document.getElementById('ftf-content');
+  if (!nameEl || !nameEl.value.trim()) { showToast('템플릿명을 입력하세요'); return; }
+  if (!contentEl || !contentEl.value.trim()) { showToast('내용을 입력하세요'); return; }
+  var vars = [];
+  var re = /\{\{([^}]+)\}\}/g;
+  var m;
+  while ((m = re.exec(contentEl.value)) !== null) {
+    var v = m[1].trim();
+    if (vars.indexOf(v) === -1) vars.push(v);
+  }
+  var tplId = idEl ? idEl.value : '';
+  if (tplId) {
+    var existing = feedbackTemplatesData.find(function(t) { return t.id === tplId; });
+    if (existing) {
+      existing.name = nameEl.value.trim();
+      existing.type = typeEl ? typeEl.value : '평시';
+      existing.content = contentEl.value;
+      existing.variables = vars.join(',');
+    }
+  } else {
+    feedbackTemplatesData.push({
+      id: uid(),
+      name: nameEl.value.trim(),
+      type: typeEl ? typeEl.value : '평시',
+      content: contentEl.value,
+      variables: vars.join(',')
+    });
+  }
+  closeModal('modal-feedback-tpl-form');
+  showToast('저장됨');
+  var fp = document.getElementById('feedback-page-content');
+  if (fp) renderFeedbackPage();
+}
+
+function deleteFeedbackTemplate(tplId) {
+  if (!confirm('이 템플릿을 삭제할까요?')) return;
+  feedbackTemplatesData = feedbackTemplatesData.filter(function(t) { return t.id !== tplId; });
+  showToast('삭제됨');
+  renderFeedbackPage();
+}
+
+function copyFeedbackRecord(ftId) {
+  var ft = feedbackTalksData.find(function(f) { return f.id === ftId; });
+  if (!ft) return;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(ft.content).then(function() { showToast('복사됨'); });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = ft.content;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('복사됨');
+  }
 }
 
 function renderWorkLogPage() {
