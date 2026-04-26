@@ -9695,7 +9695,7 @@ function openWorkLogEntryModal(studentId, dateStr) {
   var saveBtn = document.getElementById('worklog-entry-save-btn');
   if (!titleEl || !bodyEl) return;
   var wlSubInfo = [student.grade, student.school].filter(Boolean).join(' · ');
-  titleEl.innerHTML = student.name + '<br><span style="font-size:11px;font-weight:400;color:var(--text3);line-height:1.3;">' + (wlSubInfo ? wlSubInfo + ' · ' : '') + dateStr + ' (' + getDayName(dateStr) + ')</span>';
+  titleEl.innerHTML = student.name + (wlSubInfo ? ' <span style="font-size:12px;font-weight:400;color:var(--text3);">(' + wlSubInfo + ')</span>' : '') + '<br><span style="font-size:13px;font-weight:600;color:var(--text2);line-height:1.4;">' + dateStr + ' (' + getDayName(dateStr) + ')</span>';
   if (!canWrite) {
     var entry = getWorkLogEntry(dateStr, studentId);
     var rhtml = '';
@@ -9814,9 +9814,7 @@ function renderWorkLogTeacherBody(container) {
     });
     if (dayStudents.length === 0) {
       html += '<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-text">이 날 수업 학생이 없습니다</div></div>';
-      container.innerHTML = html;
-      return;
-    }
+    } else {
     var colCount = 9;
     html += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;">';
     html += '<table style="min-width:700px;border-collapse:collapse;font-size:13px;">';
@@ -9866,6 +9864,12 @@ function renderWorkLogTeacherBody(container) {
       }
     });
     html += '</tbody></table></div>';
+    }
+    if (canWrite) {
+      html += '<div style="margin-top:8px;">';
+      html += '<button class="btn btn-outline btn-sm" onclick="currentWorkLogDate=workLogTeacherViewDate;openAddWorkLogStudentModal();">+ 학생 추가</button>';
+      html += '</div>';
+    }
   } else {
     var targetStudents = getEnrolledStudents().filter(function(s) {
       return !currentWorkLogTeacherFilter || s.teacher === currentWorkLogTeacherFilter;
