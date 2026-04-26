@@ -2739,6 +2739,8 @@ let wlDragSchoolType = null;
 let workLogGroupCollapsed = {};
 let workLogTeacherGroupCollapsed = {};
 let wlIsDragging = false;
+let wlCheckedStudentIds = [];
+let wlCurrentViewStudentIds = [];
 
 let feedbackTemplatesData = [];
 let feedbackTalksData = [];
@@ -9714,6 +9716,8 @@ function renderWorkLogPage() {
 
 function switchWorkLogTab(tab) {
   currentWorkLogTab = tab;
+  wlCheckedStudentIds = [];
+  wlCurrentViewStudentIds = [];
   renderWorkLogPage();
 }
 
@@ -9726,6 +9730,8 @@ function renderWorkLogBody() {
 
 function changeWorkLogDate(dateStr) {
   currentWorkLogDate = dateStr;
+  wlCheckedStudentIds = [];
+  wlCurrentViewStudentIds = [];
   renderWorkLogBody();
 }
 
@@ -9859,6 +9865,16 @@ function renderWorkLogDailyBody(container) {
   }
   var prevDateStr = fmtDate(prevD);
   var nextDateStr = fmtDate(nextD);
+  var scheduledStudents = getStudentsByDayOfWeek(dateStr);
+  var schedIds = {};
+  scheduledStudents.forEach(function(s) { schedIds[s.id] = true; });
+  var manualEntries = workLogsData.filter(function(e) { return e.date === dateStr && !schedIds[e.studentId]; });
+  var manualStudentIds = [];
+  manualEntries.forEach(function(e) { if (manualStudentIds.indexOf(e.studentId) === -1) manualStudentIds.push(e.studentId); });
+  var manualStudents = manualStudentIds.map(function(id) { return studentsData.find(function(s) { return s.id === id; }); }).filter(Boolean);
+  var allStudents = scheduledStudents.concat(manualStudents);
+  wlCurrentViewStudentIds = allStudents.map(function(s) { return s.id; });
+  wlCheckedStudentIds = wlCheckedStudentIds.filter(function(id) { return wlCurrentViewStudentIds.indexOf(id) !== -1; });
   var html = '';
   html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">';
   html += '<button class="btn btn-outline btn-sm" onclick="changeWorkLogDate(\'' + prevDateStr + '\')">이전 날</button>';
@@ -9866,6 +9882,15 @@ function renderWorkLogDailyBody(container) {
   html += '<button class="btn btn-outline btn-sm" onclick="changeWorkLogDate(\'' + nextDateStr + '\')">다음 날</button>';
   if (canWrite) {
     html += '<button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="openAddWorkLogStudentModal()">+ 학생 추가</button>';
+  }
+  if (canWrite && feedbackTemplatesData.length > 0) {
+    var fbN = wlCheckedStudentIds.filter(function(id) { return wlCurrentViewStudentIds.indexOf(id) !== -1; }).length;
+    html += '<button id="wl-fb-btn-top" class="btn btn-sm" style="background:var(--accent);color:white;' + (fbN === 0 ? 'display:none;' : '') + '" onclick="openWlFeedbackSelected(\'' + dateStr + '\')">피드백톡 생성' + (fbN > 0 ? ' (' + fbN + '명)' : '') + '</button>';
+  }
+  if (allStudents.length > 0 && canWrite) {
+    var allChecked = wlCurrentViewStudentIds.length > 0 && wlCurrentViewStudentIds.every(function(id) { return wlCheckedStudentIds.indexOf(id) !== -1; });
+    html += '<label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2);cursor:pointer;margin-left:4px;">';
+    html += '<input type="checkbox" id="wl-check-all"' + (allChecked ? ' checked' : '') + ' onchange="toggleWlCheckAll(this.checked)" onclick="event.stopPropagation()">전체선택</label>';
   }
   html += '</div>';
   var holidayForced = workLogForceOpenDates.indexOf(dateStr) !== -1;
@@ -9889,14 +9914,6 @@ function renderWorkLogDailyBody(container) {
     }
     html += '</div>';
   }
-  var scheduledStudents = getStudentsByDayOfWeek(dateStr);
-  var schedIds = {};
-  scheduledStudents.forEach(function(s) { schedIds[s.id] = true; });
-  var manualEntries = workLogsData.filter(function(e) { return e.date === dateStr && !schedIds[e.studentId]; });
-  var manualStudentIds = [];
-  manualEntries.forEach(function(e) { if (manualStudentIds.indexOf(e.studentId) === -1) manualStudentIds.push(e.studentId); });
-  var manualStudents = manualStudentIds.map(function(id) { return studentsData.find(function(s) { return s.id === id; }); }).filter(Boolean);
-  var allStudents = scheduledStudents.concat(manualStudents);
   if (allStudents.length === 0) {
     html += '<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-text">이 날 수업 학생이 없습니다</div></div>';
   } else {
@@ -9928,13 +9945,17 @@ function renderWorkLogDailyBody(container) {
       if (!isCollapsed) {
         html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;" id="wl-group-' + grp.key + '">';
         ordered.forEach(function(student) {
+          var isChk = wlCheckedStudentIds.indexOf(student.id) !== -1;
           html += '<div draggable="true" data-sid="' + student.id + '" data-stype="' + grp.key + '" data-date="' + dateStr + '"';
           html += ' ondragstart="wlDragStart(event,\'' + student.id + '\',\'' + grp.key + '\')"';
           html += ' ondragend="wlDragEnd()"';
           html += ' ondragover="wlDragOver(event)"';
           html += ' ondrop="wlDrop(event,\'' + student.id + '\',\'' + grp.key + '\',\'' + dateStr + '\')"';
           html += ' onclick="wlCardClick(event,\'' + student.id + '\',\'' + dateStr + '\')"';
-          html += ' style="cursor:pointer;">';
+          html += ' style="cursor:pointer;position:relative;">';
+          if (canWrite && feedbackTemplatesData.length > 0) {
+            html += '<input type="checkbox" id="wl-card-chk-' + student.id + '"' + (isChk ? ' checked' : '') + ' onclick="event.stopPropagation();toggleWlCheck(\'' + student.id + '\')" style="position:absolute;top:10px;right:10px;z-index:2;width:16px;height:16px;cursor:pointer;">';
+          }
           html += buildWorkLogCardSummary(student, dateStr);
           html += '</div>';
         });
@@ -9944,11 +9965,8 @@ function renderWorkLogDailyBody(container) {
     });
   }
   if (canWrite) {
-    html += '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">';
+    html += '<div style="margin-top:8px;">';
     html += '<button class="btn btn-outline btn-sm" onclick="openAddWorkLogStudentModal()">+ 학생 추가</button>';
-    if (feedbackTemplatesData.length > 0) {
-      html += '<button class="btn btn-outline btn-sm" onclick="openFeedbackBulkModal(\'' + dateStr + '\')">전체 피드백톡 생성</button>';
-    }
     html += '</div>';
   }
   container.innerHTML = html;
@@ -9986,6 +10004,71 @@ function toggleWorkLogGroup(key) {
   renderWorkLogBody();
 }
 
+function toggleWlCheck(studentId) {
+  var idx = wlCheckedStudentIds.indexOf(studentId);
+  if (idx === -1) wlCheckedStudentIds.push(studentId);
+  else wlCheckedStudentIds.splice(idx, 1);
+  updateWlFeedbackBtns();
+  var allChk = document.getElementById('wl-check-all');
+  if (allChk) allChk.checked = wlCurrentViewStudentIds.length > 0 && wlCurrentViewStudentIds.every(function(id) { return wlCheckedStudentIds.indexOf(id) !== -1; });
+}
+
+function toggleWlCheckAll(checked) {
+  if (checked) {
+    wlCurrentViewStudentIds.forEach(function(id) { if (wlCheckedStudentIds.indexOf(id) === -1) wlCheckedStudentIds.push(id); });
+  } else {
+    wlCheckedStudentIds = wlCheckedStudentIds.filter(function(id) { return wlCurrentViewStudentIds.indexOf(id) === -1; });
+  }
+  updateWlFeedbackBtns();
+  wlCurrentViewStudentIds.forEach(function(id) {
+    var chk = document.getElementById('wl-card-chk-' + id);
+    if (chk) chk.checked = checked;
+    var rowChk = document.getElementById('wl-row-chk-' + id);
+    if (rowChk) rowChk.checked = checked;
+  });
+}
+
+function updateWlFeedbackBtns() {
+  var n = wlCheckedStudentIds.filter(function(id) { return wlCurrentViewStudentIds.indexOf(id) !== -1; }).length;
+  ['wl-fb-btn-top', 'wl-fb-btn-teacher'].forEach(function(btnId) {
+    var btn = document.getElementById(btnId);
+    if (!btn) return;
+    if (n > 0) {
+      btn.style.display = '';
+      btn.textContent = '피드백톡 생성 (' + n + '명)';
+    } else {
+      btn.style.display = 'none';
+    }
+  });
+}
+
+function openWlFeedbackSelected(dateStr) {
+  var activeIds = wlCheckedStudentIds.filter(function(id) { return wlCurrentViewStudentIds.indexOf(id) !== -1; });
+  if (activeIds.length === 0) { showToast('학생을 선택하세요'); return; }
+  feedbackBulkQueue = activeIds;
+  currentFeedbackDateStr = dateStr;
+  currentFeedbackStudentId = feedbackBulkQueue[0];
+  selectedFeedbackTemplateId = null;
+  var titleEl = document.getElementById('feedback-template-modal-title');
+  if (titleEl) titleEl.textContent = '피드백톡 생성 — 템플릿 선택 (' + feedbackBulkQueue.length + '명)';
+  var body = document.getElementById('feedback-template-modal-body');
+  if (body) {
+    var html = '<p style="font-size:13px;color:var(--text2);margin-bottom:14px;">선택한 템플릿이 ' + feedbackBulkQueue.length + '명 전체에 동일하게 적용됩니다.</p>';
+    html += '<div style="display:flex;flex-direction:column;gap:8px;">';
+    feedbackTemplatesData.forEach(function(tpl) {
+      var typeBg = tpl.type === '평시' ? '#EEF6FF' : tpl.type === '복귀' ? '#F0FFF4' : tpl.type === '시험' ? '#FFF7ED' : '#F5F5F5';
+      var typeColor = tpl.type === '평시' ? '#1D6FBD' : tpl.type === '복귀' ? '#2E7D32' : tpl.type === '시험' ? '#C25A0A' : '#555';
+      html += '<div onclick="selectFeedbackTemplate(\'' + tpl.id + '\')" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background 0.1s;" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'white\'">';
+      html += '<span style="background:' + typeBg + ';color:' + typeColor + ';font-size:11px;font-weight:600;padding:2px 7px;border-radius:10px;white-space:nowrap;">' + tpl.type + '</span>';
+      html += '<span style="font-size:13px;font-weight:500;">' + tpl.name + '</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+    body.innerHTML = html;
+  }
+  openModal('modal-feedback-template');
+}
+
 function wlCardClick(ev, studentId, dateStr) {
   if (wlIsDragging) return;
   openWorkLogEntryModal(studentId, dateStr);
@@ -9996,13 +10079,11 @@ function buildWorkLogCardSummary(student, dateStr) {
   var html = '';
   var canWrite = permissions[currentUser.role].worklog && permissions[currentUser.role].worklog.write;
   html += '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;height:100%;box-sizing:border-box;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.12)\'" onmouseout="this.style.boxShadow=\'none\'">';
-  html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:7px;">';
+  var cardPadRight = (canWrite && feedbackTemplatesData.length > 0) ? 'padding-right:30px;' : '';
+  html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:7px;' + cardPadRight + '">';
   html += '<span style="font-weight:600;font-size:14px;">' + student.name + '</span>';
   if (student.grade) html += '<span style="font-size:11px;color:var(--text2);background:var(--bg);padding:1px 6px;border-radius:20px;">' + student.grade + '</span>';
   if (student.teacher) html += '<span style="font-size:11px;color:var(--text3);">' + student.teacher + '</span>';
-  if (canWrite) {
-    html += '<button onclick="event.stopPropagation();openFeedbackTemplateModal(\'' + student.id + '\',\'' + dateStr + '\')" style="margin-left:auto;font-size:11px;padding:2px 8px;border:1px solid var(--accent);border-radius:10px;background:white;color:var(--accent);cursor:pointer;white-space:nowrap;">피드백톡</button>';
-  }
   html += '</div>';
   if (!entry) {
     html += '<div style="font-size:12px;color:var(--text3);">미기록</div>';
@@ -10151,7 +10232,14 @@ function refreshWorkLogCard(studentId, dateStr) {
   if (!student) return;
   var cardWrapper = document.querySelector('[data-sid="' + studentId + '"][data-date="' + dateStr + '"]');
   if (cardWrapper) {
-    cardWrapper.innerHTML = buildWorkLogCardSummary(student, dateStr);
+    var canWrite = permissions[currentUser.role].worklog && permissions[currentUser.role].worklog.write;
+    var isChk = wlCheckedStudentIds.indexOf(studentId) !== -1;
+    var newHtml = '';
+    if (canWrite && feedbackTemplatesData.length > 0) {
+      newHtml += '<input type="checkbox" id="wl-card-chk-' + studentId + '"' + (isChk ? ' checked' : '') + ' onclick="event.stopPropagation();toggleWlCheck(\'' + studentId + '\')" style="position:absolute;top:10px;right:10px;z-index:2;width:16px;height:16px;cursor:pointer;">';
+    }
+    newHtml += buildWorkLogCardSummary(student, dateStr);
+    cardWrapper.innerHTML = newHtml;
   }
 }
 
@@ -10229,13 +10317,27 @@ function renderWorkLogTeacherBody(container) {
     var dayStudents = scheduledDay.concat(manualDayStudents).sort(function(a, b) {
       return (a.grade || '').localeCompare(b.grade || '') || (a.name || '').localeCompare(b.name || '');
     });
+    wlCurrentViewStudentIds = dayStudents.map(function(s) { return s.id; });
+    wlCheckedStudentIds = wlCheckedStudentIds.filter(function(id) { return wlCurrentViewStudentIds.indexOf(id) !== -1; });
+    var tvCheckedN = wlCheckedStudentIds.filter(function(id) { return wlCurrentViewStudentIds.indexOf(id) !== -1; }).length;
+    var tvAllChecked = wlCurrentViewStudentIds.length > 0 && wlCurrentViewStudentIds.every(function(id) { return wlCheckedStudentIds.indexOf(id) !== -1; });
     if (dayStudents.length === 0) {
       html += '<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-text">이 날 수업 학생이 없습니다</div></div>';
     } else {
-    var colCount = 9;
-    html += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;">';
-    html += '<table style="min-width:700px;border-collapse:collapse;font-size:13px;">';
+    if (canWrite && feedbackTemplatesData.length > 0) {
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">';
+      html += '<label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2);cursor:pointer;">';
+      html += '<input type="checkbox" id="wl-check-all"' + (tvAllChecked ? ' checked' : '') + ' onchange="toggleWlCheckAll(this.checked)" onclick="event.stopPropagation()">전체선택</label>';
+      html += '<button id="wl-fb-btn-teacher" class="btn btn-sm" style="background:var(--accent);color:white;' + (tvCheckedN === 0 ? 'display:none;' : '') + '" onclick="openWlFeedbackSelected(\'' + workLogTeacherViewDate + '\')">피드백톡 생성' + (tvCheckedN > 0 ? ' (' + tvCheckedN + '명)' : '') + '</button>';
+      html += '</div>';
+    }
+    var colCount = 10;
+    html += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">';
+    html += '<table style="width:100%;min-width:750px;border-collapse:collapse;font-size:13px;">';
     html += '<thead><tr style="border-bottom:1px solid var(--border);">';
+    if (canWrite && feedbackTemplatesData.length > 0) {
+      html += '<th style="' + TH + 'width:36px;text-align:center;"></th>';
+    }
     html += '<th style="' + TH + '">학생명</th>';
     html += '<th style="' + TH + '">수업 내용</th>';
     html += '<th style="' + TH + '">숙제</th>';
@@ -10266,7 +10368,11 @@ function renderWorkLogTeacherBody(container) {
           if (e && e.hasTest && (e.testScore != null || e.testFullScore != null)) {
             result = (e.testScore != null ? e.testScore : '') + '/' + (e.testFullScore != null ? e.testFullScore : '');
           }
+          var isRowChk = wlCheckedStudentIds.indexOf(s.id) !== -1;
           html += '<tr class="clickable-row" style="border-bottom:1px solid var(--border);" onclick="openWorkLogEntryModal(\'' + s.id + '\',\'' + tvDate + '\')">';
+          if (canWrite && feedbackTemplatesData.length > 0) {
+            html += '<td style="' + TD + 'text-align:center;width:36px;" onclick="event.stopPropagation()"><input type="checkbox" id="wl-row-chk-' + s.id + '"' + (isRowChk ? ' checked' : '') + ' onchange="toggleWlCheck(\'' + s.id + '\')" style="width:15px;height:15px;cursor:pointer;"></td>';
+          }
           html += '<td style="' + TD + '">' + s.name + '</td>';
           html += '<td style="' + TD + '">' + (e ? (e.content || '') : '') + '</td>';
           html += '<td style="' + TD + '">' + (e ? (e.homework || '') : '') + '</td>';
@@ -10303,8 +10409,8 @@ function renderWorkLogTeacherBody(container) {
       return;
     }
     var colCountR = 10;
-    html += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;">';
-    html += '<table style="min-width:800px;border-collapse:collapse;font-size:13px;">';
+    html += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">';
+    html += '<table style="width:100%;min-width:800px;border-collapse:collapse;font-size:13px;">';
     html += '<thead><tr style="border-bottom:1px solid var(--border);">';
     html += '<th style="' + TH + '">날짜</th>';
     html += '<th style="' + TH + '">학생명</th>';
