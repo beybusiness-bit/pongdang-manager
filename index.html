@@ -1483,7 +1483,35 @@ input[type="checkbox"] {
     width: 100px !important;
     height: 133px !important;
   }
+  /* 시험대비 상세 - 모바일에서 테이블 숨기고 카드뷰 */
+  .ep-detail-table-wrapper { display: none !important; }
+  .ep-detail-cards-wrapper { display: block !important; }
 }
+/* 시험대비 상세 - 데스크탑 테이블 / 모바일 카드 */
+.ep-detail-table-wrapper { display: block; overflow-x: auto; }
+.ep-detail-cards-wrapper { display: none; }
+.ep-school-group {
+  margin-bottom: 16px;
+}
+.ep-school-group-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg-side);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  user-select: none;
+}
+.ep-school-group-header:hover { background: var(--bg-hover); }
+.ep-detail-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 12px; }
+.ep-detail-table th { position: sticky; top: 0; z-index: 10; background: var(--bg-side); padding: 8px 8px; text-align: center; white-space: nowrap; border-bottom: 2px solid var(--border); font-size: 11px; }
+.ep-detail-table td { padding: 7px 8px; border-bottom: 1px solid var(--border); text-align: center; vertical-align: middle; }
+.ep-detail-table tr.ep-table-row:hover td { background: var(--bg-hover); cursor: pointer; }
 </style>
 </head>
 <body>
@@ -2352,6 +2380,40 @@ input[type="checkbox"] {
   </div>
 </div>
 
+<!-- 결제 일괄수정 모달 -->
+<div class="modal-backdrop" id="modal-payment-bulk-edit">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-title">결제 일괄수정</div>
+    <div class="modal-body">
+      <div style="margin-bottom:12px;font-size:13px;color:var(--text2);">
+        <strong><span id="payment-bulk-count">0</span>건</strong> 결제에 일괄 적용합니다. 변경 안 할 항목은 빈 칸으로 두세요.
+      </div>
+      <div class="form-group">
+        <label class="form-label">담당T</label>
+        <select class="form-input" id="payment-bulk-teacher">
+          <option value="">변경 안 함</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">수강반</label>
+        <select class="form-input" id="payment-bulk-class">
+          <option value="">변경 안 함</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">결제수단</label>
+        <select class="form-input" id="payment-bulk-method">
+          <option value="">변경 안 함</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-payment-bulk-edit')">취소</button>
+      <button class="btn btn-primary btn-sm" onclick="savePaymentBulkEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- 수강반 추가/수정 모달 -->
 <div class="modal-backdrop" id="modal-class-form">
   <div class="modal">
@@ -2778,10 +2840,63 @@ TEST : 분수 개념점검
 <div class="modal-backdrop" id="modal-exam-prep-add-student">
   <div class="modal" style="max-width:480px;">
     <div class="modal-title" id="ep-add-student-title">학생 추가</div>
-    <div class="modal-body" id="ep-add-student-body"></div>
+    <div class="modal-body">
+      <div style="margin-bottom:10px;">
+        <input type="text" id="ep-add-student-search-input" placeholder="이름, 학년, 학교 검색"
+               oninput="handleEpAddStudentSearch(this)"
+               style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;width:100%;">
+      </div>
+      <div id="ep-add-student-list-body"></div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('modal-exam-prep-add-student')">취소</button>
       <button class="btn btn-primary btn-sm" onclick="confirmAddStudentsToExamPrep()">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- 시험대비 학생 개별 수정 모달 -->
+<div class="modal-backdrop" id="modal-ep-student-edit">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-title" id="ep-student-edit-title">학생 정보 수정</div>
+    <div class="modal-body" id="ep-student-edit-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-ep-student-edit')">닫기</button>
+      <button class="btn btn-primary btn-sm" onclick="saveEpStudentEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 시험대비 학생 일괄수정 모달 -->
+<div class="modal-backdrop" id="modal-ep-bulk-edit">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-title">시험대비 학생 일괄수정</div>
+    <div class="modal-body">
+      <div style="margin-bottom:12px;font-size:13px;color:var(--text2);">
+        <strong><span id="ep-bulk-edit-count">0</span>명</strong> 학생에게 일괄 적용합니다. 빈 칸으로 두면 변경되지 않습니다.
+      </div>
+      <div class="form-group">
+        <label class="form-label">담당T</label>
+        <select class="form-input" id="ep-bulk-teacher">
+          <option value="">변경 안 함</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">보강요일</label>
+        <input type="text" class="form-input" id="ep-bulk-days" placeholder="변경 안 함">
+      </div>
+      <div class="form-group">
+        <label class="form-label">보강시간</label>
+        <input type="text" class="form-input" id="ep-bulk-time" placeholder="변경 안 함">
+      </div>
+      <div class="form-group">
+        <label class="form-label">체크박스 일괄 체크 (선택 학생 전체 ON)</label>
+        <div id="ep-bulk-checks" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-ep-bulk-edit')">취소</button>
+      <button class="btn btn-primary btn-sm" onclick="saveEpBulkEdit()">저장</button>
     </div>
   </div>
 </div>
@@ -2984,6 +3099,10 @@ let currentEditingEpId = null;
 let epAddStudentSearch = '';
 let epAddStudentSelected = new Set();
 let epAddTextbookEpsId = null;
+let selectedEpStudentIds = new Set();
+let expandedEpSchoolGroups = new Set();
+let epDetailSort = { field: 'name', dir: 'asc' };
+let currentEditingEpsId = null;
 let epAddTextbookSearch = '';
 let currentFeedbackStudentId = null;
 let currentFeedbackDateStr = null;
@@ -7545,8 +7664,9 @@ function renderPaymentRecordsListBody() {
   if (canWrite && selectedPaymentIds.length > 0) {
     html += '<div class="bulk-actions-bar show" style="margin-bottom:12px;">';
     html += '  <span class="bulk-count">' + selectedPaymentIds.length + '건 선택됨</span>';
-    html += '  <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="bulkDeletePayments()">선택 삭제</button>';
-    html += '  <button class="btn btn-outline btn-sm" onclick="selectedPaymentIds=[];renderPaymentRecordsListBody()">선택 해제</button>';
+    html += '  <button class="btn btn-outline btn-sm" onclick="openPaymentBulkEditModal()">일괄수정</button>';
+    html += '  <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="bulkDeletePayments()">삭제</button>';
+    html += '  <button class="btn btn-outline btn-sm" onclick="selectedPaymentIds=[];renderPaymentRecordsListBody()">선택해제</button>';
     html += '</div>';
   }
 
@@ -8513,7 +8633,7 @@ function togglePaymentSelection(id, checked) {
 }
 
 function toggleSelectAllPayments(checked) {
-  const filteredPayments = getFilteredPayments();
+  const filteredPayments = getFilteredAndSortedPayments();
   const startIdx = (paymentPagination.currentPage - 1) * paymentPagination.pageSize;
   const endIdx = startIdx + paymentPagination.pageSize;
   const pagePayments = filteredPayments.slice(startIdx, endIdx);
@@ -8539,6 +8659,52 @@ function bulkDeletePayments() {
   selectedPaymentIds = [];
   showToast('선택한 결제가 삭제되었습니다');
   renderPaymentsPage();
+}
+
+function openPaymentBulkEditModal() {
+  if (selectedPaymentIds.length === 0) return;
+  const countEl = document.getElementById('payment-bulk-count');
+  if (countEl) countEl.textContent = selectedPaymentIds.length;
+  const teacherSelect = document.getElementById('payment-bulk-teacher');
+  if (teacherSelect) {
+    teacherSelect.innerHTML = '<option value="">변경 안 함</option>';
+    teachersData.forEach(t => {
+      teacherSelect.innerHTML += '<option value="' + t.name + '">' + t.name + '</option>';
+    });
+  }
+  const classSelect = document.getElementById('payment-bulk-class');
+  if (classSelect) {
+    classSelect.innerHTML = '<option value="">변경 안 함</option>';
+    classesData.forEach(c => {
+      classSelect.innerHTML += '<option value="' + c.id + '">' + c.name + '</option>';
+    });
+  }
+  const methodSelect = document.getElementById('payment-bulk-method');
+  if (methodSelect) {
+    methodSelect.innerHTML = '<option value="">변경 안 함</option>';
+    paymentMethodsData.forEach(pm => {
+      methodSelect.innerHTML += '<option value="' + pm.id + '">' + pm.name + '</option>';
+    });
+  }
+  openModal('modal-payment-bulk-edit');
+}
+
+function savePaymentBulkEdit() {
+  const teacher = document.getElementById('payment-bulk-teacher') ? document.getElementById('payment-bulk-teacher').value : '';
+  const classId = document.getElementById('payment-bulk-class') ? document.getElementById('payment-bulk-class').value : '';
+  const methodId = document.getElementById('payment-bulk-method') ? document.getElementById('payment-bulk-method').value : '';
+  let count = 0;
+  paymentsData.forEach(p => {
+    if (!selectedPaymentIds.includes(p.id)) return;
+    if (teacher) p.teacherName = teacher;
+    if (classId) p.classId = classId;
+    if (methodId) p.paymentMethodId = methodId;
+    count++;
+  });
+  showToast(count + '건 일괄 수정됨');
+  closeModal('modal-payment-bulk-edit');
+  selectedPaymentIds = [];
+  renderPaymentRecordsListBody();
 }
 
 function openCsvUploadModal() {
@@ -12012,6 +12178,14 @@ function openExamPrepDetail(epId) {
   currentExamPrepId = epId;
   currentExamPrepFilter = 'all';
   expandedEpStudentIds = new Set();
+  selectedEpStudentIds = new Set();
+  epDetailSort = { field: 'name', dir: 'asc' };
+  // 모든 학교 그룹을 기본으로 펼침
+  expandedEpSchoolGroups = new Set();
+  examPrepStudentsData.filter(function(x) { return x.examPrepId === epId; }).forEach(function(eps) {
+    var st = studentsData.find(function(s) { return s.id === eps.studentId; });
+    expandedEpSchoolGroups.add(st ? (st.school || '학교 미상') : '학교 미상');
+  });
   renderExamPrepPage();
 }
 
@@ -12025,7 +12199,7 @@ function renderExamPrepDetail(container) {
   var rate = calcEpRate(ep.id);
 
   var html = '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">';
-  html += '<button class="btn btn-outline btn-sm" onclick="currentExamPrepId=null;renderExamPrepPage();">← 뒤로</button>';
+  html += '<button class="btn btn-outline btn-sm" onclick="currentExamPrepId=null;selectedEpStudentIds=new Set();renderExamPrepPage();">← 뒤로</button>';
   html += '<span style="font-weight:700;font-size:18px;">' + escHtml(ep.name) + '</span>';
   html += '<span style="font-size:13px;color:var(--text3);">' + ep.startDate + ' ~ ' + ep.endDate + '</span>';
   if (isOwner) {
@@ -12036,26 +12210,39 @@ function renderExamPrepDetail(container) {
   }
   html += '</div>';
 
-  html += '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap;">';
+  html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">';
   html += '<span style="font-size:13px;color:var(--text2);">참여 학생 <strong>' + cnt + '명</strong></span>';
   html += '<span style="font-size:13px;color:var(--accent3);font-weight:600;">완료율 ' + rate + '%</span>';
   if (canWrite) html += '<button class="btn btn-primary btn-sm" onclick="openAddStudentModal()">+ 학생 추가</button>';
-  html += '<select onchange="currentExamPrepFilter=this.value;renderExamPrepDetailBody();" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);">';
+  html += '</div>';
+
+  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">';
+  // 필터 select
+  var teachers = [];
+  examPrepStudentsData.filter(function(x){ return x.examPrepId === ep.id; }).forEach(function(eps) {
+    var st = studentsData.find(function(s){ return s.id === eps.studentId; });
+    if (st && st.teacher && teachers.indexOf(st.teacher) === -1) teachers.push(st.teacher);
+  });
+  html += '<select onchange="currentExamPrepFilter=this.value;selectedEpStudentIds=new Set();renderExamPrepDetailBody();" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);">';
   html += '<option value="all"' + (currentExamPrepFilter==='all'?' selected':'') + '>전체</option>';
   html += '<option value="incomplete"' + (currentExamPrepFilter==='incomplete'?' selected':'') + '>미완료</option>';
   html += '<option value="complete"' + (currentExamPrepFilter==='complete'?' selected':'') + '>완료</option>';
   html += '<option value="초"' + (currentExamPrepFilter==='초'?' selected':'') + '>초등</option>';
   html += '<option value="중"' + (currentExamPrepFilter==='중'?' selected':'') + '>중등</option>';
   html += '<option value="고"' + (currentExamPrepFilter==='고'?' selected':'') + '>고등</option>';
-  // 선생님 옵션
-  var teachers = [];
-  examPrepStudentsData.filter(function(x){ return x.examPrepId === ep.id; }).forEach(function(eps) {
-    var st = studentsData.find(function(s){ return s.id === eps.studentId; });
-    if (st && st.teacher && teachers.indexOf(st.teacher) === -1) teachers.push(st.teacher);
-  });
   teachers.forEach(function(t) {
     html += '<option value="t:' + escHtml(t) + '"' + (currentExamPrepFilter==='t:'+t?' selected':'') + '>' + escHtml(t) + '</option>';
   });
+  html += '</select>';
+  // 정렬 select
+  html += '<select onchange="epDetailSort.field=this.value;renderExamPrepDetailBody();" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);">';
+  html += '<option value="name"' + (epDetailSort.field==='name'?' selected':'') + '>이름순</option>';
+  html += '<option value="grade"' + (epDetailSort.field==='grade'?' selected':'') + '>학년순</option>';
+  html += '<option value="teacher"' + (epDetailSort.field==='teacher'?' selected':'') + '>담당T순</option>';
+  html += '</select>';
+  html += '<select onchange="epDetailSort.dir=this.value;renderExamPrepDetailBody();" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);">';
+  html += '<option value="asc"' + (epDetailSort.dir==='asc'?' selected':'') + '>오름차순</option>';
+  html += '<option value="desc"' + (epDetailSort.dir==='desc'?' selected':'') + '>내림차순</option>';
   html += '</select>';
   html += '</div>';
 
@@ -12074,7 +12261,6 @@ function renderExamPrepDetailBody() {
   var myName = currentUser ? currentUser.name : '';
 
   var list = examPrepStudentsData.filter(function(x) { return x.examPrepId === ep.id; });
-  // 필터
   list = list.filter(function(eps) {
     var st = studentsData.find(function(s) { return s.id === eps.studentId; });
     var f = currentExamPrepFilter;
@@ -12090,115 +12276,235 @@ function renderExamPrepDetailBody() {
     return;
   }
 
-  var IS = 'font-size:13px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;width:100%;';
-  var LBL = 'font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:3px;';
-  var html = '<div style="display:flex;flex-direction:column;gap:12px;">';
+  function sortList(arr) {
+    return arr.slice().sort(function(a, b) {
+      var sa = studentsData.find(function(s) { return s.id === a.studentId; }) || {};
+      var sb = studentsData.find(function(s) { return s.id === b.studentId; }) || {};
+      var va = '', vb = '';
+      if (epDetailSort.field === 'teacher') { va = sa.teacher || ''; vb = sb.teacher || ''; }
+      else if (epDetailSort.field === 'grade') { va = sa.grade || ''; vb = sb.grade || ''; }
+      else { va = sa.name || ''; vb = sb.name || ''; }
+      var cmp = va.localeCompare(vb, 'ko');
+      return epDetailSort.dir === 'asc' ? cmp : -cmp;
+    });
+  }
 
+  // 학교별 그룹화
+  var schoolGroups = {};
   list.forEach(function(eps) {
     var st = studentsData.find(function(s) { return s.id === eps.studentId; });
-    var name = st ? st.name : '알 수 없는 학생';
-    var grade = st ? st.grade : '';
-    var teacher = st ? (st.teacher || '') : '';
-    var school = st ? (st.school || '') : '';
-    var done = calcEpStudentDone(eps);
-    var isComplete = done === EP_CHECKS.length;
-    var canEditThis = isOwner || (canWrite && teacher === myName);
-    var isExpanded = expandedEpStudentIds.has(eps.id);
+    var school = st ? (st.school || '학교 미상') : '학교 미상';
+    if (!schoolGroups[school]) schoolGroups[school] = [];
+    schoolGroups[school].push(eps);
+  });
+  var sortedSchools = Object.keys(schoolGroups).sort();
 
-    // 진행 아이콘 바
-    var checkBar = EP_CHECKS.map(function(c) { return eps[c.field] ? '✓' : '○'; }).join('');
-    var progressPct = Math.round(done / EP_CHECKS.length * 100);
-    var progressColor = isComplete ? 'var(--success)' : 'var(--accent3)';
+  var html = '';
 
-    html += '<div id="ep-card-' + eps.id + '" style="background:white;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;">';
-    // 카드 헤더 (항상 보임)
-    html += '<div style="padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;" onclick="toggleEpCard(\'' + eps.id + '\')">';
-    html += '<div style="flex:1;">';
-    html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">';
-    html += '<span style="font-weight:600;font-size:14px;">' + escHtml(name) + '</span>';
-    html += '<span style="font-size:12px;color:var(--text2);">' + escHtml(grade) + '</span>';
-    if (teacher) html += '<span style="font-size:12px;color:var(--accent);">' + escHtml(teacher) + '</span>';
-    if (isComplete) html += '<span style="font-size:11px;background:var(--success);color:white;padding:1px 6px;border-radius:10px;">완료 ✅</span>';
+  // 전체 선택 체크박스
+  var allSelected = list.length > 0 && list.every(function(eps) { return selectedEpStudentIds.has(eps.id); });
+  if (canWrite) {
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;">';
+    html += '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;">';
+    html += '<input type="checkbox"' + (allSelected ? ' checked' : '') + ' onchange="toggleAllEpStudents(this.checked)">';
+    html += '<span>전체 선택 (' + list.length + '명)</span></label>';
     html += '</div>';
-    html += '<div style="display:flex;align-items:center;gap:8px;margin-top:5px;">';
-    html += '<span style="font-size:11px;color:var(--text3);font-family:monospace;">' + checkBar + '</span>';
-    html += '<span style="font-size:11px;color:' + progressColor + ';font-weight:600;">' + done + '/' + EP_CHECKS.length + '</span>';
-    html += '</div>';
-    html += '</div>';
-    html += '<span style="font-size:18px;color:var(--text3);">' + (isExpanded ? '▲' : '▼') + '</span>';
-    html += '</div>';
+  }
 
+  // 일괄 작업 바
+  if (canWrite && selectedEpStudentIds.size > 0) {
+    html += '<div class="bulk-actions-bar show" style="margin-bottom:12px;">';
+    html += '<span class="bulk-count">' + selectedEpStudentIds.size + '명 선택됨</span>';
+    html += '<button class="btn btn-outline btn-sm" onclick="openEpBulkEditModal()">일괄수정</button>';
+    html += '<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="bulkDeleteEpStudents()">삭제</button>';
+    html += '<button class="btn btn-outline btn-sm" onclick="clearEpSelection()">선택해제</button>';
+    html += '</div>';
+  }
+
+  var IS = 'font-size:12px;padding:5px 7px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;width:100%;';
+  var LBL = 'font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:3px;';
+
+  // ── 데스크탑 테이블 ──
+  html += '<div class="ep-detail-table-wrapper">';
+  sortedSchools.forEach(function(school) {
+    var groupItems = sortList(schoolGroups[school]);
+    var isExpanded = expandedEpSchoolGroups.has(school);
+    var allGroupSelected = groupItems.every(function(eps) { return selectedEpStudentIds.has(eps.id); });
+    html += '<div class="ep-school-group">';
+    html += '<div class="ep-school-group-header" onclick="toggleEpSchoolExpand(\'' + escHtml(school) + '\')">';
+    if (canWrite) {
+      html += '<input type="checkbox"' + (allGroupSelected ? ' checked' : '') + ' onclick="event.stopPropagation();toggleEpSchoolGroupCheckbox(\'' + escHtml(school) + '\',this.checked)">';
+    }
+    html += '<span>' + (isExpanded ? '▼' : '▶') + '</span>';
+    html += '<span>' + escHtml(school) + '</span>';
+    html += '<span style="font-size:12px;font-weight:400;color:var(--text3);">(' + groupItems.length + '명)</span>';
+    html += '</div>';
     if (isExpanded) {
-      html += '<div style="border-top:1px solid var(--border);padding:16px;">';
-
-      // 일정 정보
-      html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;">📅 일정 정보</div>';
-      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">';
-      html += '<div><label style="' + LBL + '">보강요일</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-days-' + eps.id + '" value="' + escHtml(eps.reinforcementDays) + '" style="' + IS + '"></div>';
-      html += '<div><label style="' + LBL + '">보강시간</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-time-' + eps.id + '" value="' + escHtml(eps.reinforcementTime) + '" style="' + IS + '"></div>';
-      html += '<div><label style="' + LBL + '">시험기간 시작</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-examstart-' + eps.id + '" value="' + (eps.examStart || '') + '" style="' + IS + '"></div>';
-      html += '<div><label style="' + LBL + '">시험기간 종료</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-examend-' + eps.id + '" value="' + (eps.examEnd || '') + '" style="' + IS + '"></div>';
-      html += '<div><label style="' + LBL + '">시험대비 시작일</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-prepstart-' + eps.id + '" value="' + (eps.prepStart || '') + '" style="' + IS + '"></div>';
-      html += '<div><label style="' + LBL + '">직전보강일</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-lastrf-' + eps.id + '" value="' + (eps.lastReinforcement || '') + '" style="' + IS + '"></div>';
-      html += '</div>';
-
-      // 시험 정보
-      html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">📖 시험 정보</div>';
-      html += '<div style="margin-bottom:6px;font-size:12px;color:var(--text3);">학교: ' + escHtml(school) + '</div>';
-      html += '<div style="margin-bottom:14px;"><label style="' + LBL + '">시험범위</label>';
-      html += '<input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-scope-' + eps.id + '" value="' + escHtml(eps.examScope) + '" placeholder="예: 3-1 도형, 분수" style="' + IS + '"></div>';
-
-      // 교재
-      html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">📚 시험대비 교재</div>';
-      var tbIds = eps.textbookIds ? eps.textbookIds.split(',').filter(Boolean) : [];
-      if (tbIds.length) {
-        tbIds.forEach(function(tbId) {
-          var tb = textbooksData.find(function(x) { return x.id === tbId; });
-          var tbName = tb ? tb.title : '(삭제된 교재)';
-          html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
-          html += '<span style="font-size:13px;">📖 ' + escHtml(tbName) + '</span>';
-          if (canEditThis) html += '<button class="btn btn-sm" style="font-size:12px;padding:1px 5px;color:var(--danger);" onclick="removeEpTextbook(\'' + eps.id + '\',\'' + tbId + '\')">×</button>';
-          html += '</div>';
+      html += '<div style="overflow-x:auto;">';
+      html += '<table class="ep-detail-table">';
+      html += '<thead><tr>';
+      if (canWrite) html += '<th style="width:36px;"></th>';
+      html += '<th>이름</th><th>학교</th><th>학년</th><th>담당T</th>';
+      html += '<th>보강요일</th><th>보강시간</th><th>시험기간</th>';
+      html += '<th>시험대비시작일</th><th>직전보강일</th><th>시험대비교재</th>';
+      EP_CHECKS.forEach(function(c) { html += '<th>' + c.label + '</th>'; });
+      html += '<th>결과</th><th>메모</th>';
+      if (canWrite) html += '<th></th>';
+      html += '</tr></thead>';
+      html += '<tbody>';
+      groupItems.forEach(function(eps) {
+        var st = studentsData.find(function(s) { return s.id === eps.studentId; }) || {};
+        var tbNames = eps.textbookIds ? eps.textbookIds.split(',').filter(Boolean).map(function(tid) {
+          var tb = textbooksData.find(function(x) { return x.id === tid; });
+          return tb ? tb.title : '(삭제)';
+        }).join(', ') : '';
+        var examRange = (eps.examStart || '') + (eps.examStart && eps.examEnd ? '~' : '') + (eps.examEnd || '');
+        var isSelected = selectedEpStudentIds.has(eps.id);
+        html += '<tr class="ep-table-row"' + (canWrite ? ' onclick="openEpStudentEditModal(\'' + eps.id + '\')"' : '') + ' style="' + (isSelected ? 'background:var(--bg-hover);' : '') + '">';
+        if (canWrite) {
+          html += '<td onclick="event.stopPropagation()"><input type="checkbox"' + (isSelected ? ' checked' : '') + ' onchange="toggleEpStudentSelection(\'' + eps.id + '\',this.checked)"></td>';
+        }
+        html += '<td style="font-weight:600;white-space:nowrap;">' + escHtml(st.name || '') + '</td>';
+        html += '<td style="white-space:nowrap;">' + escHtml(st.school || '') + '</td>';
+        html += '<td>' + escHtml(st.grade || '') + '</td>';
+        html += '<td>' + escHtml(st.teacher || '') + '</td>';
+        html += '<td>' + escHtml(eps.reinforcementDays || '') + '</td>';
+        html += '<td>' + escHtml(eps.reinforcementTime || '') + '</td>';
+        html += '<td style="white-space:nowrap;">' + escHtml(examRange) + '</td>';
+        html += '<td>' + escHtml(eps.prepStart || '') + '</td>';
+        html += '<td>' + escHtml(eps.lastReinforcement || '') + '</td>';
+        html += '<td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escHtml(tbNames) + '">' + escHtml(tbNames) + '</td>';
+        EP_CHECKS.forEach(function(c) {
+          var checked = eps[c.field];
+          html += '<td onclick="event.stopPropagation();toggleEpCheck(\'' + eps.id + '\',\'' + c.field + '\')" style="cursor:pointer;" title="클릭하여 토글">';
+          html += checked ? '<span style="color:var(--success);font-weight:700;">✓</span>' : '<span style="color:var(--text3);">○</span>';
+          html += '</td>';
         });
-      } else {
-        html += '<div style="font-size:12px;color:var(--text3);margin-bottom:6px;">교재 없음</div>';
-      }
-      if (canEditThis) html += '<button class="btn btn-outline btn-sm" style="margin-top:4px;margin-bottom:14px;" onclick="openEpAddTextbook(\'' + eps.id + '\')">+ 교재 추가</button>';
-      else html += '<div style="margin-bottom:14px;"></div>';
-
-      // 체크박스
-      html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;">✅ 진행 상황</div>';
-      html += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">';
-      EP_CHECKS.forEach(function(c) {
-        var checked = eps[c.field];
-        var canToggle = canEditThis;
-        html += '<label style="display:flex;align-items:center;gap:8px;cursor:' + (canToggle ? 'pointer' : 'default') + ';font-size:13px;">';
-        html += '<input type="checkbox"' + (checked ? ' checked' : '') + (canToggle ? ' onclick="toggleEpCheck(\'' + eps.id + '\',\'' + c.field + '\')"' : ' disabled') + ' style="width:16px;height:16px;">';
-        html += '<span style="' + (checked ? 'text-decoration:line-through;color:var(--text3);' : '') + '">' + c.label + '</span>';
-        html += '</label>';
+        html += '<td style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(eps.result || '') + '</td>';
+        html += '<td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(eps.memo || '') + '</td>';
+        if (canWrite) {
+          html += '<td onclick="event.stopPropagation()"><button class="btn btn-outline btn-sm" onclick="openEpStudentEditModal(\'' + eps.id + '\')">수정</button></td>';
+        }
+        html += '</tr>';
       });
-      html += '</div>';
-
-      // 결과 + 메모
-      html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">📊 결과 / 메모</div>';
-      html += '<div style="margin-bottom:8px;"><label style="' + LBL + '">결과</label>';
-      html += '<input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-result-' + eps.id + '" value="' + escHtml(eps.result || '') + '" placeholder="예: 95점" style="' + IS + '"></div>';
-      html += '<div style="margin-bottom:14px;"><label style="' + LBL + '">메모</label>';
-      html += '<textarea ' + (canEditThis ? '' : 'readonly ') + 'id="ep-memo-' + eps.id + '" rows="3" style="' + IS + 'resize:vertical;font-family:inherit;">' + escHtml(eps.memo || '') + '</textarea></div>';
-
-      // 버튼
-      html += '<div style="display:flex;gap:8px;justify-content:flex-end;">';
-      if (isOwner) html += '<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="removeStudentFromExamPrep(\'' + eps.id + '\')">학생 제거</button>';
-      if (canEditThis) html += '<button class="btn btn-primary btn-sm" onclick="saveEpStudentDetails(\'' + eps.id + '\')">저장</button>';
-      html += '<button class="btn btn-outline btn-sm" onclick="toggleEpCard(\'' + eps.id + '\')">접기</button>';
-      html += '</div>';
-
+      html += '</tbody></table>';
       html += '</div>';
     }
     html += '</div>';
   });
-
   html += '</div>';
+
+  // ── 모바일 카드뷰 ──
+  html += '<div class="ep-detail-cards-wrapper">';
+  sortedSchools.forEach(function(school) {
+    var groupItems = sortList(schoolGroups[school]);
+    var isExpanded = expandedEpSchoolGroups.has(school);
+    var allGroupSelected = groupItems.every(function(eps) { return selectedEpStudentIds.has(eps.id); });
+    html += '<div class="ep-school-group">';
+    html += '<div class="ep-school-group-header" onclick="toggleEpSchoolExpand(\'' + escHtml(school) + '\')">';
+    if (canWrite) {
+      html += '<input type="checkbox"' + (allGroupSelected ? ' checked' : '') + ' onclick="event.stopPropagation();toggleEpSchoolGroupCheckbox(\'' + escHtml(school) + '\',this.checked)">';
+    }
+    html += '<span>' + (isExpanded ? '▼' : '▶') + '</span>';
+    html += '<span>' + escHtml(school) + '</span>';
+    html += '<span style="font-size:12px;font-weight:400;color:var(--text3);">(' + groupItems.length + '명)</span>';
+    html += '</div>';
+    if (isExpanded) {
+      html += '<div style="display:flex;flex-direction:column;gap:10px;padding:0 4px;">';
+      groupItems.forEach(function(eps) {
+        var st = studentsData.find(function(s) { return s.id === eps.studentId; }) || {};
+        var name = st.name || '알 수 없는 학생';
+        var grade = st.grade || '';
+        var teacher = st.teacher || '';
+        var done = calcEpStudentDone(eps);
+        var isComplete = done === EP_CHECKS.length;
+        var canEditThis = isOwner || (canWrite && teacher === myName);
+        var isExpCard = expandedEpStudentIds.has(eps.id);
+        var isSelected = selectedEpStudentIds.has(eps.id);
+        var checkBar = EP_CHECKS.map(function(c) { return eps[c.field] ? '✓' : '○'; }).join('');
+        var progressColor = isComplete ? 'var(--success)' : 'var(--accent3)';
+
+        html += '<div id="ep-card-' + eps.id + '" style="background:white;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;' + (isSelected ? 'border-color:var(--accent);' : '') + '">';
+        html += '<div style="padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;" onclick="toggleEpCard(\'' + eps.id + '\')">';
+        if (canWrite) {
+          html += '<input type="checkbox"' + (isSelected ? ' checked' : '') + ' onclick="event.stopPropagation();toggleEpStudentSelection(\'' + eps.id + '\',this.checked)" style="flex-shrink:0;">';
+        }
+        html += '<div style="flex:1;">';
+        html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">';
+        html += '<span style="font-weight:600;font-size:14px;">' + escHtml(name) + '</span>';
+        html += '<span style="font-size:12px;color:var(--text2);">' + escHtml(grade) + '</span>';
+        if (teacher) html += '<span style="font-size:12px;color:var(--accent);">' + escHtml(teacher) + '</span>';
+        if (isComplete) html += '<span style="font-size:11px;background:var(--success);color:white;padding:1px 6px;border-radius:10px;">완료 ✅</span>';
+        html += '</div>';
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-top:4px;">';
+        html += '<span style="font-size:11px;color:var(--text3);font-family:monospace;">' + checkBar + '</span>';
+        html += '<span style="font-size:11px;color:' + progressColor + ';font-weight:600;">' + done + '/' + EP_CHECKS.length + '</span>';
+        html += '</div>';
+        html += '</div>';
+        html += '<span style="font-size:16px;color:var(--text3);">' + (isExpCard ? '▲' : '▼') + '</span>';
+        html += '</div>';
+
+        if (isExpCard) {
+          html += '<div style="border-top:1px solid var(--border);padding:14px;">';
+          html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">📅 일정 정보</div>';
+          html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">';
+          html += '<div><label style="' + LBL + '">보강요일</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-days-' + eps.id + '" value="' + escHtml(eps.reinforcementDays || '') + '" style="' + IS + '"></div>';
+          html += '<div><label style="' + LBL + '">보강시간</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-time-' + eps.id + '" value="' + escHtml(eps.reinforcementTime || '') + '" style="' + IS + '"></div>';
+          html += '<div><label style="' + LBL + '">시험기간 시작</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-examstart-' + eps.id + '" value="' + (eps.examStart || '') + '" style="' + IS + '"></div>';
+          html += '<div><label style="' + LBL + '">시험기간 종료</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-examend-' + eps.id + '" value="' + (eps.examEnd || '') + '" style="' + IS + '"></div>';
+          html += '<div><label style="' + LBL + '">시험대비 시작일</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-prepstart-' + eps.id + '" value="' + (eps.prepStart || '') + '" style="' + IS + '"></div>';
+          html += '<div><label style="' + LBL + '">직전보강일</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-lastrf-' + eps.id + '" value="' + (eps.lastReinforcement || '') + '" style="' + IS + '"></div>';
+          html += '</div>';
+          html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">📖 시험 정보</div>';
+          html += '<div style="margin-bottom:10px;font-size:12px;color:var(--text3);">학교: ' + escHtml(st.school || '') + '</div>';
+          html += '<div style="margin-bottom:12px;"><label style="' + LBL + '">시험범위</label>';
+          html += '<input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-scope-' + eps.id + '" value="' + escHtml(eps.examScope || '') + '" placeholder="예: 3-1 도형, 분수" style="' + IS + '"></div>';
+          html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">📚 시험대비 교재</div>';
+          var tbIds = eps.textbookIds ? eps.textbookIds.split(',').filter(Boolean) : [];
+          if (tbIds.length) {
+            tbIds.forEach(function(tbId) {
+              var tb = textbooksData.find(function(x) { return x.id === tbId; });
+              var tbName = tb ? tb.title : '(삭제된 교재)';
+              html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
+              html += '<span style="font-size:13px;">📖 ' + escHtml(tbName) + '</span>';
+              if (canEditThis) html += '<button class="btn btn-sm" style="font-size:12px;padding:1px 5px;color:var(--danger);" onclick="removeEpTextbook(\'' + eps.id + '\',\'' + tbId + '\')">×</button>';
+              html += '</div>';
+            });
+          } else {
+            html += '<div style="font-size:12px;color:var(--text3);margin-bottom:6px;">교재 없음</div>';
+          }
+          if (canEditThis) html += '<button class="btn btn-outline btn-sm" style="margin-bottom:12px;" onclick="openEpAddTextbook(\'' + eps.id + '\')">+ 교재 추가</button>';
+          else html += '<div style="margin-bottom:12px;"></div>';
+          html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">✅ 진행 상황</div>';
+          html += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">';
+          EP_CHECKS.forEach(function(c) {
+            var checked = eps[c.field];
+            html += '<label style="display:flex;align-items:center;gap:8px;cursor:' + (canEditThis ? 'pointer' : 'default') + ';font-size:13px;">';
+            html += '<input type="checkbox"' + (checked ? ' checked' : '') + (canEditThis ? ' onclick="toggleEpCheck(\'' + eps.id + '\',\'' + c.field + '\')"' : ' disabled') + ' style="width:16px;height:16px;">';
+            html += '<span style="' + (checked ? 'text-decoration:line-through;color:var(--text3);' : '') + '">' + c.label + '</span>';
+            html += '</label>';
+          });
+          html += '</div>';
+          html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">📊 결과 / 메모</div>';
+          html += '<div style="margin-bottom:8px;"><label style="' + LBL + '">결과</label>';
+          html += '<input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-result-' + eps.id + '" value="' + escHtml(eps.result || '') + '" placeholder="예: 95점" style="' + IS + '"></div>';
+          html += '<div style="margin-bottom:12px;"><label style="' + LBL + '">메모</label>';
+          html += '<textarea ' + (canEditThis ? '' : 'readonly ') + 'id="ep-memo-' + eps.id + '" rows="3" style="' + IS + 'resize:vertical;font-family:inherit;">' + escHtml(eps.memo || '') + '</textarea></div>';
+          html += '<div style="display:flex;gap:8px;justify-content:flex-end;">';
+          if (isOwner) html += '<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="removeStudentFromExamPrep(\'' + eps.id + '\')">학생 제거</button>';
+          if (canEditThis) html += '<button class="btn btn-primary btn-sm" onclick="saveEpStudentDetails(\'' + eps.id + '\')">저장</button>';
+          html += '<button class="btn btn-outline btn-sm" onclick="toggleEpCard(\'' + eps.id + '\')">접기</button>';
+          html += '</div>';
+          html += '</div>';
+        }
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+
   body.innerHTML = html;
 }
 
@@ -12209,6 +12515,192 @@ function toggleEpCard(epsId) {
     expandedEpStudentIds.add(epsId);
   }
   renderExamPrepDetailBody();
+}
+
+function toggleEpSchoolExpand(school) {
+  if (expandedEpSchoolGroups.has(school)) {
+    expandedEpSchoolGroups.delete(school);
+  } else {
+    expandedEpSchoolGroups.add(school);
+  }
+  renderExamPrepDetailBody();
+}
+
+function toggleAllEpStudents(checked) {
+  var ep = examPrepsData.find(function(x) { return x.id === currentExamPrepId; });
+  if (!ep) return;
+  var list = examPrepStudentsData.filter(function(x) { return x.examPrepId === ep.id; });
+  list = list.filter(function(eps) {
+    var st = studentsData.find(function(s) { return s.id === eps.studentId; });
+    var f = currentExamPrepFilter;
+    if (f === 'incomplete') return calcEpStudentDone(eps) < EP_CHECKS.length;
+    if (f === 'complete') return calcEpStudentDone(eps) === EP_CHECKS.length;
+    if (f === '초' || f === '중' || f === '고') return st && st.grade && st.grade.charAt(0) === f;
+    if (f.indexOf('t:') === 0) return st && st.teacher === f.slice(2);
+    return true;
+  });
+  if (checked) {
+    list.forEach(function(eps) { selectedEpStudentIds.add(eps.id); });
+  } else {
+    list.forEach(function(eps) { selectedEpStudentIds.delete(eps.id); });
+  }
+  renderExamPrepDetailBody();
+}
+
+function toggleEpSchoolGroupCheckbox(school, checked) {
+  var ep = examPrepsData.find(function(x) { return x.id === currentExamPrepId; });
+  if (!ep) return;
+  var list = examPrepStudentsData.filter(function(x) { return x.examPrepId === ep.id; });
+  list.forEach(function(eps) {
+    var st = studentsData.find(function(s) { return s.id === eps.studentId; });
+    var epSchool = st ? (st.school || '학교 미상') : '학교 미상';
+    if (epSchool === school) {
+      if (checked) selectedEpStudentIds.add(eps.id);
+      else selectedEpStudentIds.delete(eps.id);
+    }
+  });
+  renderExamPrepDetailBody();
+}
+
+function toggleEpStudentSelection(epsId, checked) {
+  if (checked) selectedEpStudentIds.add(epsId);
+  else selectedEpStudentIds.delete(epsId);
+  renderExamPrepDetailBody();
+}
+
+function clearEpSelection() {
+  selectedEpStudentIds = new Set();
+  renderExamPrepDetailBody();
+}
+
+function openEpStudentEditModal(epsId) {
+  var eps = examPrepStudentsData.find(function(x) { return x.id === epsId; });
+  if (!eps) return;
+  var st = studentsData.find(function(s) { return s.id === eps.studentId; }) || {};
+  var isOwner = currentUser && currentUser.role === ROLES.OWNER;
+  var canWrite = isOwner || (currentUser && currentUser.role === ROLES.TEACHER);
+  var myName = currentUser ? currentUser.name : '';
+  var teacher = st.teacher || '';
+  var canEditThis = isOwner || (canWrite && teacher === myName);
+  currentEditingEpsId = epsId;
+  var titleEl = document.getElementById('ep-student-edit-title');
+  if (titleEl) titleEl.textContent = (st.name || '학생') + ' 수정';
+  var body = document.getElementById('ep-student-edit-body');
+  if (!body) return;
+  var IS = 'font-size:13px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;width:100%;';
+  var LBL = 'font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:3px;';
+  var html = '';
+  html += '<div style="font-size:13px;font-weight:700;margin-bottom:12px;">' + escHtml(st.name || '') + ' · ' + escHtml(st.grade || '') + ' · ' + escHtml(st.school || '') + '</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">';
+  html += '<div><label style="' + LBL + '">보강요일</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-edit-days" value="' + escHtml(eps.reinforcementDays || '') + '" style="' + IS + '"></div>';
+  html += '<div><label style="' + LBL + '">보강시간</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-edit-time" value="' + escHtml(eps.reinforcementTime || '') + '" style="' + IS + '"></div>';
+  html += '<div><label style="' + LBL + '">시험기간 시작</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-edit-examstart" value="' + (eps.examStart || '') + '" style="' + IS + '"></div>';
+  html += '<div><label style="' + LBL + '">시험기간 종료</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-edit-examend" value="' + (eps.examEnd || '') + '" style="' + IS + '"></div>';
+  html += '<div><label style="' + LBL + '">시험대비 시작일</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-edit-prepstart" value="' + (eps.prepStart || '') + '" style="' + IS + '"></div>';
+  html += '<div><label style="' + LBL + '">직전보강일</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-edit-lastrf" value="' + (eps.lastReinforcement || '') + '" style="' + IS + '"></div>';
+  html += '</div>';
+  html += '<div style="margin-bottom:12px;"><label style="' + LBL + '">시험범위</label>';
+  html += '<input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-edit-scope" value="' + escHtml(eps.examScope || '') + '" style="' + IS + '"></div>';
+  html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">✅ 진행 상황</div>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;">';
+  EP_CHECKS.forEach(function(c) {
+    var checked = eps[c.field];
+    html += '<label style="display:flex;align-items:center;gap:6px;cursor:' + (canEditThis ? 'pointer' : 'default') + ';font-size:13px;">';
+    html += '<input type="checkbox" id="ep-edit-check-' + c.field + '"' + (checked ? ' checked' : '') + (canEditThis ? '' : ' disabled') + ' style="width:15px;height:15px;">';
+    html += c.label + '</label>';
+  });
+  html += '</div>';
+  html += '<div style="margin-bottom:8px;"><label style="' + LBL + '">결과</label>';
+  html += '<input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-edit-result" value="' + escHtml(eps.result || '') + '" style="' + IS + '"></div>';
+  html += '<div><label style="' + LBL + '">메모</label>';
+  html += '<textarea ' + (canEditThis ? '' : 'readonly ') + 'id="ep-edit-memo" rows="3" style="' + IS + 'resize:vertical;font-family:inherit;">' + escHtml(eps.memo || '') + '</textarea></div>';
+  body.innerHTML = html;
+  openModal('modal-ep-student-edit');
+}
+
+function saveEpStudentEdit() {
+  var eps = examPrepStudentsData.find(function(x) { return x.id === currentEditingEpsId; });
+  if (!eps) return;
+  var get = function(id) { var el = document.getElementById(id); return el ? el.value : ''; };
+  var getCheck = function(field) { var el = document.getElementById('ep-edit-check-' + field); return el ? el.checked : false; };
+  eps.reinforcementDays = get('ep-edit-days');
+  eps.reinforcementTime = get('ep-edit-time');
+  eps.examStart = get('ep-edit-examstart');
+  eps.examEnd = get('ep-edit-examend');
+  eps.prepStart = get('ep-edit-prepstart');
+  eps.lastReinforcement = get('ep-edit-lastrf');
+  eps.examScope = get('ep-edit-scope');
+  eps.result = get('ep-edit-result');
+  var memoEl = document.getElementById('ep-edit-memo');
+  eps.memo = memoEl ? memoEl.value : '';
+  EP_CHECKS.forEach(function(c) { eps[c.field] = getCheck(c.field); });
+  showToast('저장됨');
+  closeModal('modal-ep-student-edit');
+  renderExamPrepDetailBody();
+}
+
+function openEpBulkEditModal() {
+  if (!selectedEpStudentIds.size) return;
+  var countEl = document.getElementById('ep-bulk-edit-count');
+  if (countEl) countEl.textContent = selectedEpStudentIds.size;
+  var teacherSelect = document.getElementById('ep-bulk-teacher');
+  if (teacherSelect) {
+    teacherSelect.innerHTML = '<option value="">변경 안 함</option>';
+    teachersData.forEach(function(t) {
+      teacherSelect.innerHTML += '<option value="' + escHtml(t.name) + '">' + escHtml(t.name) + '</option>';
+    });
+  }
+  var checksDiv = document.getElementById('ep-bulk-checks');
+  if (checksDiv) {
+    var cHtml = '';
+    EP_CHECKS.forEach(function(c) {
+      cHtml += '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">';
+      cHtml += '<input type="checkbox" id="ep-bulk-check-' + c.field + '" style="width:15px;height:15px;">';
+      cHtml += c.label + '</label>';
+    });
+    checksDiv.innerHTML = cHtml;
+  }
+  var daysEl = document.getElementById('ep-bulk-days');
+  if (daysEl) daysEl.value = '';
+  var timeEl = document.getElementById('ep-bulk-time');
+  if (timeEl) timeEl.value = '';
+  openModal('modal-ep-bulk-edit');
+}
+
+function saveEpBulkEdit() {
+  var teacher = document.getElementById('ep-bulk-teacher') ? document.getElementById('ep-bulk-teacher').value : '';
+  var days = document.getElementById('ep-bulk-days') ? document.getElementById('ep-bulk-days').value : '';
+  var time = document.getElementById('ep-bulk-time') ? document.getElementById('ep-bulk-time').value : '';
+  var checkFields = EP_CHECKS.filter(function(c) {
+    var el = document.getElementById('ep-bulk-check-' + c.field);
+    return el && el.checked;
+  }).map(function(c) { return c.field; });
+  var count = 0;
+  examPrepStudentsData.forEach(function(eps) {
+    if (!selectedEpStudentIds.has(eps.id)) return;
+    if (teacher) eps.teacher = teacher;
+    if (days) eps.reinforcementDays = days;
+    if (time) eps.reinforcementTime = time;
+    checkFields.forEach(function(field) { eps[field] = true; });
+    count++;
+  });
+  showToast(count + '명 일괄 수정됨');
+  closeModal('modal-ep-bulk-edit');
+  clearEpSelection();
+}
+
+function bulkDeleteEpStudents() {
+  if (!selectedEpStudentIds.size) return;
+  if (!confirm(selectedEpStudentIds.size + '명의 학생을 시험대비에서 제거하시겠습니까?')) return;
+  examPrepStudentsData = examPrepStudentsData.filter(function(x) { return !selectedEpStudentIds.has(x.id); });
+  selectedEpStudentIds = new Set();
+  showToast('제거됨');
+  renderExamPrepDetailBody();
+  var ep = examPrepsData.find(function(x) { return x.id === currentExamPrepId; });
+  if (ep) {
+    var cnt = examPrepStudentsData.filter(function(x) { return x.examPrepId === ep.id; }).length;
+    var cntEl = document.querySelector('#exam-prep-page-content strong');
+  }
 }
 
 // ── CRUD ──
@@ -12274,14 +12766,20 @@ function deleteExamPrep(id) {
 function openAddStudentModal() {
   epAddStudentSearch = '';
   epAddStudentSelected = new Set();
-  renderEpAddStudentBody();
+  var searchInput = document.getElementById('ep-add-student-search-input');
+  if (searchInput) searchInput.value = '';
+  renderEpAddStudentListBody();
   openModal('modal-exam-prep-add-student');
 }
 
-function renderEpAddStudentBody() {
-  var body = document.getElementById('ep-add-student-body');
+function handleEpAddStudentSearch(input) {
+  epAddStudentSearch = input.value;
+  renderEpAddStudentListBody();
+}
+
+function renderEpAddStudentListBody() {
+  var body = document.getElementById('ep-add-student-list-body');
   if (!body) return;
-  var IS = 'font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;width:100%;';
   var q = epAddStudentSearch.trim().toLowerCase();
   var existing = new Set(examPrepStudentsData.filter(function(x) { return x.examPrepId === currentExamPrepId; }).map(function(x) { return x.studentId; }));
   var active = studentsData.filter(function(s) {
@@ -12294,10 +12792,7 @@ function renderEpAddStudentBody() {
            (s.grade && s.grade.toLowerCase().indexOf(q) !== -1) ||
            (s.school && s.school.toLowerCase().indexOf(q) !== -1);
   });
-  var html = '<div style="margin-bottom:10px;">';
-  html += '<input type="text" placeholder="이름, 학년, 학교 검색" value="' + escHtml(epAddStudentSearch) + '" oninput="epAddStudentSearch=this.value;renderEpAddStudentBody();" style="' + IS + '">';
-  html += '</div>';
-  html += '<div style="max-height:320px;overflow-y:auto;">';
+  var html = '<div style="max-height:320px;overflow-y:auto;">';
   if (!filtered.length) { html += '<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">학생이 없습니다</div>'; }
   filtered.forEach(function(s) {
     var isExisting = existing.has(s.id);
@@ -12335,6 +12830,11 @@ function confirmAddStudentsToExamPrep() {
       result: '', memo: '', createdAt: today()
     });
   });
+  // 추가된 학생들의 학교를 expandedEpSchoolGroups에 추가
+  epAddStudentSelected.forEach(function(sid) {
+    var st = studentsData.find(function(s) { return s.id === sid; });
+    if (st) expandedEpSchoolGroups.add(st.school || '학교 미상');
+  });
   closeModal('modal-exam-prep-add-student');
   renderExamPrepDetailBody();
   showToast(epAddStudentSelected.size + '명 추가됨');
@@ -12348,6 +12848,7 @@ function removeStudentFromExamPrep(epsId) {
   if (!confirm(escHtml(name) + '을(를) 시험대비에서 제거하시겠습니까?')) return;
   examPrepStudentsData = examPrepStudentsData.filter(function(x) { return x.id !== epsId; });
   expandedEpStudentIds.delete(epsId);
+  selectedEpStudentIds.delete(epsId);
   renderExamPrepDetailBody();
   showToast('제거됨');
 }
