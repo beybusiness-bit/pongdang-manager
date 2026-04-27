@@ -1569,6 +1569,7 @@ input[type="checkbox"] {
         <span id="sync-text">연결 전</span>
       </div>
       <button class="btn btn-outline btn-logout btn-full" onclick="handleLogout()">로그아웃</button>
+      <button class="btn btn-outline btn-full" style="margin-top:6px;font-size:11px;color:var(--text3);border-color:var(--border);" onclick="resetToSampleData()">🔄 샘플 데이터 초기화</button>
     </div>
   </nav>
 
@@ -5523,6 +5524,15 @@ function editStudentFromDetail() {
   setTimeout(() => {
     openStudentForm(studentId);
   }, 100);
+}
+
+function resetToSampleData() {
+  if (!confirm('localStorage의 모든 데이터를 삭제하고 샘플 데이터로 초기화합니다. 계속하시겠습니까?')) return;
+  localStorage.removeItem('pongdang_eventLog');
+  eventLogData = [];
+  loadSampleData();
+  showToast('샘플 데이터로 초기화되었습니다');
+  navigateTo(currentPage || 'dashboard');
 }
 
 // 초기 샘플 데이터 로드
