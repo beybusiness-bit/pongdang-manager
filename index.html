@@ -2762,6 +2762,41 @@ TEST : 분수 개념점검
   </div>
 </div>
 
+<!-- 시험대비 생성/수정 모달 -->
+<div class="modal-backdrop" id="modal-exam-prep-form">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-title" id="exam-prep-form-title">새 시험대비 만들기</div>
+    <div class="modal-body" id="exam-prep-form-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-exam-prep-form')">취소</button>
+      <button class="btn btn-primary btn-sm" onclick="saveExamPrep()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 시험대비 학생 추가 모달 -->
+<div class="modal-backdrop" id="modal-exam-prep-add-student">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title" id="ep-add-student-title">학생 추가</div>
+    <div class="modal-body" id="ep-add-student-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-exam-prep-add-student')">취소</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmAddStudentsToExamPrep()">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- 시험대비 교재 추가 모달 -->
+<div class="modal-backdrop" id="modal-ep-add-textbook">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-title">교재 선택</div>
+    <div class="modal-body" id="ep-add-textbook-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-ep-add-textbook')">닫기</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ============ 상수 ============
 const AUTH = {
@@ -2939,6 +2974,17 @@ var currentEditingMeetingId = null;
 var meetingFormAttendees = [];
 var currentTaskId = null;
 var currentTaskMeetingId = null;
+// ── 시험대비 상태 ──
+let examPrepsData = [];
+let examPrepStudentsData = [];
+let currentExamPrepId = null;
+let currentExamPrepFilter = 'all';
+let expandedEpStudentIds = new Set();
+let currentEditingEpId = null;
+let epAddStudentSearch = '';
+let epAddStudentSelected = new Set();
+let epAddTextbookEpsId = null;
+let epAddTextbookSearch = '';
 let currentFeedbackStudentId = null;
 let currentFeedbackDateStr = null;
 let selectedFeedbackTemplateId = null;
@@ -3848,6 +3894,7 @@ function navigateTo(pageId) {
   if (pageId === 'worklog') renderWorkLogPage();
   if (pageId === 'feedback') renderFeedbackPage();
   if (pageId === 'meetings') renderMeetingsPage();
+  if (pageId === 'exam-prep') { currentExamPrepId = null; renderExamPrepPage(); }
 
   // 교재 페이지 렌더링 (중복 제거)
 }
@@ -5424,6 +5471,22 @@ function loadSampleData() {
     { id: 'mt10', meetingId: 'm3', assignee: '박찬혁', taskContent: '신규 학생 배치 안내', isComplete: true, completedDate: '2026-02-28', createdAt: '2026-02-10' }
   ];
   appState.meetings = meetingsData;
+
+  // ── 시험대비 더미 데이터 ──
+  examPrepsData = [
+    { id: 'ep1', name: '중간고사', startDate: '2026-04-10', endDate: '2026-04-27', createdAt: '2026-04-01' },
+    { id: 'ep2', name: '1학기 기말고사', startDate: '2026-07-01', endDate: '2026-07-10', createdAt: '2026-06-15' },
+    { id: 'ep3', name: '2025 2학기 중간고사', startDate: '2025-10-15', endDate: '2025-10-25', createdAt: '2025-10-01' }
+  ];
+  examPrepStudentsData = [
+    { id: 'eps1', examPrepId: 'ep1', studentId: '1',  reinforcementDays: '월,수', reinforcementTime: '19:00', examScope: '3-1 도형, 분수',        examStart: '2026-04-22', examEnd: '2026-04-24', prepStart: '2026-04-10', lastReinforcement: '2026-04-21', textbookIds: 'tb1',    checkBookwork: true,  checkBookCorrection: true,  checkErrorNote: false, checkTest10: true,  checkTextbookMaterial: false, checkSchoolMaterial: false, checkConceptSummary: false, result: '',    memo: '',                         createdAt: '2026-04-01' },
+    { id: 'eps2', examPrepId: 'ep1', studentId: '2',  reinforcementDays: '화,목', reinforcementTime: '17:00', examScope: '이차방정식, 이차함수',   examStart: '2026-04-23', examEnd: '2026-04-25', prepStart: '2026-04-10', lastReinforcement: '2026-04-22', textbookIds: 'tb2,tb3', checkBookwork: true,  checkBookCorrection: true,  checkErrorNote: true,  checkTest10: true,  checkTextbookMaterial: true,  checkSchoolMaterial: true,  checkConceptSummary: true,  result: '88점', memo: '실수가 줄었음. 서술형 연습 필요', createdAt: '2026-04-01' },
+    { id: 'eps3', examPrepId: 'ep1', studentId: '3',  reinforcementDays: '월,금', reinforcementTime: '18:00', examScope: '수능특강 4~6강',         examStart: '2026-04-22', examEnd: '2026-04-24', prepStart: '2026-04-10', lastReinforcement: '2026-04-21', textbookIds: '',       checkBookwork: true,  checkBookCorrection: false, checkErrorNote: false, checkTest10: false, checkTextbookMaterial: false, checkSchoolMaterial: false, checkConceptSummary: false, result: '',    memo: '',                         createdAt: '2026-04-01' },
+    { id: 'eps4', examPrepId: 'ep1', studentId: '4',  reinforcementDays: '수,토', reinforcementTime: '16:00', examScope: '확률과 통계 전범위',     examStart: '2026-04-22', examEnd: '2026-04-24', prepStart: '2026-04-10', lastReinforcement: '2026-04-21', textbookIds: 'tb2',    checkBookwork: true,  checkBookCorrection: true,  checkErrorNote: true,  checkTest10: true,  checkTextbookMaterial: false, checkSchoolMaterial: false, checkConceptSummary: false, result: '',    memo: '',                         createdAt: '2026-04-01' },
+    { id: 'eps5', examPrepId: 'ep3', studentId: '5',  reinforcementDays: '월,목', reinforcementTime: '18:00', examScope: '미적분 전범위',          examStart: '2025-10-20', examEnd: '2025-10-22', prepStart: '2025-10-15', lastReinforcement: '2025-10-19', textbookIds: 'tb3',    checkBookwork: true,  checkBookCorrection: true,  checkErrorNote: true,  checkTest10: true,  checkTextbookMaterial: true,  checkSchoolMaterial: true,  checkConceptSummary: true,  result: '95점', memo: '우수한 결과',              createdAt: '2025-10-01' },
+    { id: 'eps6', examPrepId: 'ep3', studentId: '6',  reinforcementDays: '화,금', reinforcementTime: '19:00', examScope: '행렬, 벡터',             examStart: '2025-10-20', examEnd: '2025-10-22', prepStart: '2025-10-15', lastReinforcement: '2025-10-19', textbookIds: '',       checkBookwork: true,  checkBookCorrection: true,  checkErrorNote: true,  checkTest10: true,  checkTextbookMaterial: true,  checkSchoolMaterial: false, checkConceptSummary: true,  result: '82점', memo: '',                         createdAt: '2025-10-01' }
+  ];
+  appState.examPreps = examPrepsData;
 }
 
 // ============ 교재 관리 ============
@@ -6906,11 +6969,19 @@ function createDateCell(day, dateStr) {
     const safeId = m.id.replace(/'/g, "\\'");
     events.push('<div style="font-size: 10px; background: var(--accent2); color: white; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; cursor:pointer;" onclick="calendarMeetingClick(\'' + safeId + '\');event.stopPropagation();">' + escHtml(m.title) + '</div>');
   });
-  if (hasExamPrep) events.push('<div style="font-size: 10px; background: var(--accent3); color: white; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px;">시험대비</div>');
+  appState.examPreps.filter(e => e.startDate <= dateStr && e.endDate >= dateStr).forEach(e => {
+    const safeId = e.id.replace(/'/g, "\\'");
+    events.push('<div style="font-size: 10px; background: var(--accent3); color: white; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; cursor:pointer;" onclick="calendarExamPrepClick(\'' + safeId + '\');event.stopPropagation();">📚 ' + escHtml(e.name) + '</div>');
+  });
   
   cell.innerHTML = dateHTML + events.join('');
   
   return cell;
+}
+
+function calendarExamPrepClick(epId) {
+  navigateTo('exam-prep');
+  setTimeout(function() { openExamPrepDetail(epId); }, 100);
 }
 
 function calendarMeetingClick(meetingId) {
@@ -11841,6 +11912,544 @@ function deleteMeeting(id) {
   closeModal('modal-meeting-detail');
   renderMeetingsListBody();
   showToast('삭제됨');
+}
+
+// ============ 시험대비 체크리스트 ============
+
+var EP_CHECKS = [
+  { field: 'checkBookwork',          label: '교재 풀기' },
+  { field: 'checkBookCorrection',    label: '교재 오답' },
+  { field: 'checkErrorNote',         label: '오답노트' },
+  { field: 'checkTest10',            label: 'TEST 10개' },
+  { field: 'checkTextbookMaterial',  label: '교과서 자료' },
+  { field: 'checkSchoolMaterial',    label: '학교 자료' },
+  { field: 'checkConceptSummary',    label: '개념정리' }
+];
+
+function getEpStatus(ep) {
+  return ep.endDate >= today() ? 'active' : 'completed';
+}
+
+function calcEpRate(epId) {
+  var list = examPrepStudentsData.filter(function(x) { return x.examPrepId === epId; });
+  if (!list.length) return 0;
+  var total = list.length * EP_CHECKS.length;
+  var done = list.reduce(function(sum, s) {
+    return sum + EP_CHECKS.filter(function(c) { return s[c.field]; }).length;
+  }, 0);
+  return Math.round(done / total * 100);
+}
+
+function calcEpStudentDone(eps) {
+  return EP_CHECKS.filter(function(c) { return eps[c.field]; }).length;
+}
+
+// ── 목록 페이지 ──
+function renderExamPrepPage() {
+  var container = document.getElementById('main');
+  if (!container) return;
+  var isOwner = currentUser && currentUser.role === ROLES.OWNER;
+  if (currentExamPrepId) {
+    renderExamPrepDetail(container);
+  } else {
+    var html = '<div class="page-header"><h1 class="page-title">시험대비 체크리스트</h1></div>';
+    html += '<div style="margin-bottom:16px;">';
+    if (isOwner) html += '<button class="btn btn-primary btn-sm" onclick="openExamPrepForm(null)">+ 새 시험대비 만들기</button>';
+    html += '</div>';
+    html += '<div id="exam-prep-list-body"></div>';
+    container.innerHTML = html;
+    renderExamPrepListBody();
+  }
+}
+
+function renderExamPrepListBody() {
+  var body = document.getElementById('exam-prep-list-body');
+  if (!body) return;
+  var active = examPrepsData.filter(function(e) { return getEpStatus(e) === 'active'; });
+  var done   = examPrepsData.filter(function(e) { return getEpStatus(e) === 'completed'; });
+  active.sort(function(a, b) { return a.startDate < b.startDate ? -1 : 1; });
+  done.sort(function(a, b)   { return a.startDate < b.startDate ? 1 : -1; });
+  var html = '';
+  if (!examPrepsData.length) {
+    body.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">시험대비가 없습니다</div></div>';
+    return;
+  }
+  function renderGroup(list, label) {
+    if (!list.length) return '';
+    var gh = '<div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:8px;">' + label + ' (' + list.length + ')</div>';
+    gh += '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;">';
+    list.forEach(function(ep) {
+      var cnt = examPrepStudentsData.filter(function(x) { return x.examPrepId === ep.id; }).length;
+      var rate = calcEpRate(ep.id);
+      var statusColor = getEpStatus(ep) === 'active' ? 'var(--accent3)' : 'var(--text3)';
+      gh += '<div class="clickable-row" onclick="openExamPrepDetail(\'' + ep.id + '\')" style="background:white;border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 18px;cursor:pointer;" onmouseenter="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.08)\'" onmouseleave="this.style.boxShadow=\'none\'">';
+      gh += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">';
+      gh += '<div style="font-weight:600;font-size:15px;color:var(--text);">' + escHtml(ep.name) + '</div>';
+      gh += '<div style="font-size:12px;color:var(--text3);white-space:nowrap;">' + ep.startDate.slice(5).replace('-','/') + ' ~ ' + ep.endDate.slice(5).replace('-','/') + '</div>';
+      gh += '</div>';
+      gh += '<div style="display:flex;align-items:center;gap:12px;margin-top:8px;">';
+      gh += '<span style="font-size:12px;color:var(--text2);">참여 학생: ' + cnt + '명</span>';
+      gh += '<span style="font-size:12px;color:' + statusColor + ';font-weight:600;">완료율: ' + rate + '%</span>';
+      gh += '</div>';
+      if (cnt > 0) {
+        gh += '<div style="margin-top:8px;background:var(--border);border-radius:4px;height:6px;overflow:hidden;">';
+        gh += '<div style="width:' + rate + '%;height:100%;background:' + statusColor + ';transition:width 0.3s;"></div>';
+        gh += '</div>';
+      }
+      gh += '</div>';
+    });
+    gh += '</div>';
+    return gh;
+  }
+  html += renderGroup(active, '진행중');
+  html += renderGroup(done, '완료됨');
+  body.innerHTML = html;
+}
+
+function openExamPrepDetail(epId) {
+  currentExamPrepId = epId;
+  currentExamPrepFilter = 'all';
+  expandedEpStudentIds = new Set();
+  renderExamPrepPage();
+}
+
+// ── 상세 페이지 ──
+function renderExamPrepDetail(container) {
+  var ep = examPrepsData.find(function(x) { return x.id === currentExamPrepId; });
+  if (!ep) { currentExamPrepId = null; renderExamPrepPage(); return; }
+  var isOwner = currentUser && currentUser.role === ROLES.OWNER;
+  var canWrite = isOwner || (currentUser && currentUser.role === ROLES.TEACHER);
+  var cnt = examPrepStudentsData.filter(function(x) { return x.examPrepId === ep.id; }).length;
+  var rate = calcEpRate(ep.id);
+
+  var html = '<div class="page-header" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">';
+  html += '<button class="btn btn-outline btn-sm" onclick="currentExamPrepId=null;renderExamPrepPage();">← 뒤로</button>';
+  html += '<h1 class="page-title" style="margin:0;">' + escHtml(ep.name) + '</h1>';
+  html += '<span style="font-size:13px;color:var(--text3);">' + ep.startDate + ' ~ ' + ep.endDate + '</span>';
+  if (isOwner) {
+    html += '<div style="margin-left:auto;display:flex;gap:6px;">';
+    html += '<button class="btn btn-outline btn-sm" onclick="openExamPrepForm(\'' + ep.id + '\')">수정</button>';
+    html += '<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="deleteExamPrep(\'' + ep.id + '\')">삭제</button>';
+    html += '</div>';
+  }
+  html += '</div>';
+
+  html += '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap;">';
+  html += '<span style="font-size:13px;color:var(--text2);">참여 학생 <strong>' + cnt + '명</strong></span>';
+  html += '<span style="font-size:13px;color:var(--accent3);font-weight:600;">완료율 ' + rate + '%</span>';
+  if (canWrite) html += '<button class="btn btn-primary btn-sm" onclick="openAddStudentModal()">+ 학생 추가</button>';
+  html += '<select onchange="currentExamPrepFilter=this.value;renderExamPrepDetailBody();" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);">';
+  html += '<option value="all"' + (currentExamPrepFilter==='all'?' selected':'') + '>전체</option>';
+  html += '<option value="incomplete"' + (currentExamPrepFilter==='incomplete'?' selected':'') + '>미완료</option>';
+  html += '<option value="complete"' + (currentExamPrepFilter==='complete'?' selected':'') + '>완료</option>';
+  html += '<option value="초"' + (currentExamPrepFilter==='초'?' selected':'') + '>초등</option>';
+  html += '<option value="중"' + (currentExamPrepFilter==='중'?' selected':'') + '>중등</option>';
+  html += '<option value="고"' + (currentExamPrepFilter==='고'?' selected':'') + '>고등</option>';
+  // 선생님 옵션
+  var teachers = [];
+  examPrepStudentsData.filter(function(x){ return x.examPrepId === ep.id; }).forEach(function(eps) {
+    var st = studentsData.find(function(s){ return s.id === eps.studentId; });
+    if (st && st.teacher && teachers.indexOf(st.teacher) === -1) teachers.push(st.teacher);
+  });
+  teachers.forEach(function(t) {
+    html += '<option value="t:' + escHtml(t) + '"' + (currentExamPrepFilter==='t:'+t?' selected':'') + '>' + escHtml(t) + '</option>';
+  });
+  html += '</select>';
+  html += '</div>';
+
+  html += '<div id="ep-detail-body"></div>';
+  container.innerHTML = html;
+  renderExamPrepDetailBody();
+}
+
+function renderExamPrepDetailBody() {
+  var body = document.getElementById('ep-detail-body');
+  if (!body) return;
+  var ep = examPrepsData.find(function(x) { return x.id === currentExamPrepId; });
+  if (!ep) return;
+  var isOwner = currentUser && currentUser.role === ROLES.OWNER;
+  var canWrite = isOwner || (currentUser && currentUser.role === ROLES.TEACHER);
+  var myName = currentUser ? currentUser.name : '';
+
+  var list = examPrepStudentsData.filter(function(x) { return x.examPrepId === ep.id; });
+  // 필터
+  list = list.filter(function(eps) {
+    var st = studentsData.find(function(s) { return s.id === eps.studentId; });
+    var f = currentExamPrepFilter;
+    if (f === 'incomplete') return calcEpStudentDone(eps) < EP_CHECKS.length;
+    if (f === 'complete')   return calcEpStudentDone(eps) === EP_CHECKS.length;
+    if (f === '초' || f === '중' || f === '고') return st && st.grade && st.grade.charAt(0) === f;
+    if (f.indexOf('t:') === 0) return st && st.teacher === f.slice(2);
+    return true;
+  });
+
+  if (!list.length) {
+    body.innerHTML = '<div class="empty-state"><div class="empty-icon">👤</div><div class="empty-text">학생이 없습니다</div></div>';
+    return;
+  }
+
+  var IS = 'font-size:13px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;width:100%;';
+  var LBL = 'font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:3px;';
+  var html = '<div style="display:flex;flex-direction:column;gap:12px;">';
+
+  list.forEach(function(eps) {
+    var st = studentsData.find(function(s) { return s.id === eps.studentId; });
+    var name = st ? st.name : '알 수 없는 학생';
+    var grade = st ? st.grade : '';
+    var teacher = st ? (st.teacher || '') : '';
+    var school = st ? (st.school || '') : '';
+    var done = calcEpStudentDone(eps);
+    var isComplete = done === EP_CHECKS.length;
+    var canEditThis = isOwner || (canWrite && teacher === myName);
+    var isExpanded = expandedEpStudentIds.has(eps.id);
+
+    // 진행 아이콘 바
+    var checkBar = EP_CHECKS.map(function(c) { return eps[c.field] ? '✓' : '○'; }).join('');
+    var progressPct = Math.round(done / EP_CHECKS.length * 100);
+    var progressColor = isComplete ? 'var(--success)' : 'var(--accent3)';
+
+    html += '<div id="ep-card-' + eps.id + '" style="background:white;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;">';
+    // 카드 헤더 (항상 보임)
+    html += '<div style="padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;" onclick="toggleEpCard(\'' + eps.id + '\')">';
+    html += '<div style="flex:1;">';
+    html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">';
+    html += '<span style="font-weight:600;font-size:14px;">' + escHtml(name) + '</span>';
+    html += '<span style="font-size:12px;color:var(--text2);">' + escHtml(grade) + '</span>';
+    if (teacher) html += '<span style="font-size:12px;color:var(--accent);">' + escHtml(teacher) + '</span>';
+    if (isComplete) html += '<span style="font-size:11px;background:var(--success);color:white;padding:1px 6px;border-radius:10px;">완료 ✅</span>';
+    html += '</div>';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-top:5px;">';
+    html += '<span style="font-size:11px;color:var(--text3);font-family:monospace;">' + checkBar + '</span>';
+    html += '<span style="font-size:11px;color:' + progressColor + ';font-weight:600;">' + done + '/' + EP_CHECKS.length + '</span>';
+    html += '</div>';
+    html += '</div>';
+    html += '<span style="font-size:18px;color:var(--text3);">' + (isExpanded ? '▲' : '▼') + '</span>';
+    html += '</div>';
+
+    if (isExpanded) {
+      html += '<div style="border-top:1px solid var(--border);padding:16px;">';
+
+      // 일정 정보
+      html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;">📅 일정 정보</div>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">';
+      html += '<div><label style="' + LBL + '">보강요일</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-days-' + eps.id + '" value="' + escHtml(eps.reinforcementDays) + '" style="' + IS + '"></div>';
+      html += '<div><label style="' + LBL + '">보강시간</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-time-' + eps.id + '" value="' + escHtml(eps.reinforcementTime) + '" style="' + IS + '"></div>';
+      html += '<div><label style="' + LBL + '">시험기간 시작</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-examstart-' + eps.id + '" value="' + (eps.examStart || '') + '" style="' + IS + '"></div>';
+      html += '<div><label style="' + LBL + '">시험기간 종료</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-examend-' + eps.id + '" value="' + (eps.examEnd || '') + '" style="' + IS + '"></div>';
+      html += '<div><label style="' + LBL + '">시험대비 시작일</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-prepstart-' + eps.id + '" value="' + (eps.prepStart || '') + '" style="' + IS + '"></div>';
+      html += '<div><label style="' + LBL + '">직전보강일</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-lastrf-' + eps.id + '" value="' + (eps.lastReinforcement || '') + '" style="' + IS + '"></div>';
+      html += '</div>';
+
+      // 시험 정보
+      html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">📖 시험 정보</div>';
+      html += '<div style="margin-bottom:6px;font-size:12px;color:var(--text3);">학교: ' + escHtml(school) + '</div>';
+      html += '<div style="margin-bottom:14px;"><label style="' + LBL + '">시험범위</label>';
+      html += '<input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-scope-' + eps.id + '" value="' + escHtml(eps.examScope) + '" placeholder="예: 3-1 도형, 분수" style="' + IS + '"></div>';
+
+      // 교재
+      html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">📚 시험대비 교재</div>';
+      var tbIds = eps.textbookIds ? eps.textbookIds.split(',').filter(Boolean) : [];
+      if (tbIds.length) {
+        tbIds.forEach(function(tbId) {
+          var tb = textbooksData.find(function(x) { return x.id === tbId; });
+          var tbName = tb ? tb.title : '(삭제된 교재)';
+          html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
+          html += '<span style="font-size:13px;">📖 ' + escHtml(tbName) + '</span>';
+          if (canEditThis) html += '<button class="btn btn-sm" style="font-size:12px;padding:1px 5px;color:var(--danger);" onclick="removeEpTextbook(\'' + eps.id + '\',\'' + tbId + '\')">×</button>';
+          html += '</div>';
+        });
+      } else {
+        html += '<div style="font-size:12px;color:var(--text3);margin-bottom:6px;">교재 없음</div>';
+      }
+      if (canEditThis) html += '<button class="btn btn-outline btn-sm" style="margin-top:4px;margin-bottom:14px;" onclick="openEpAddTextbook(\'' + eps.id + '\')">+ 교재 추가</button>';
+      else html += '<div style="margin-bottom:14px;"></div>';
+
+      // 체크박스
+      html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;">✅ 진행 상황</div>';
+      html += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">';
+      EP_CHECKS.forEach(function(c) {
+        var checked = eps[c.field];
+        var canToggle = canEditThis;
+        html += '<label style="display:flex;align-items:center;gap:8px;cursor:' + (canToggle ? 'pointer' : 'default') + ';font-size:13px;">';
+        html += '<input type="checkbox"' + (checked ? ' checked' : '') + (canToggle ? ' onclick="toggleEpCheck(\'' + eps.id + '\',\'' + c.field + '\')"' : ' disabled') + ' style="width:16px;height:16px;">';
+        html += '<span style="' + (checked ? 'text-decoration:line-through;color:var(--text3);' : '') + '">' + c.label + '</span>';
+        html += '</label>';
+      });
+      html += '</div>';
+
+      // 결과 + 메모
+      html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">📊 결과 / 메모</div>';
+      html += '<div style="margin-bottom:8px;"><label style="' + LBL + '">결과</label>';
+      html += '<input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-result-' + eps.id + '" value="' + escHtml(eps.result || '') + '" placeholder="예: 95점" style="' + IS + '"></div>';
+      html += '<div style="margin-bottom:14px;"><label style="' + LBL + '">메모</label>';
+      html += '<textarea ' + (canEditThis ? '' : 'readonly ') + 'id="ep-memo-' + eps.id + '" rows="3" style="' + IS + 'resize:vertical;font-family:inherit;">' + escHtml(eps.memo || '') + '</textarea></div>';
+
+      // 버튼
+      html += '<div style="display:flex;gap:8px;justify-content:flex-end;">';
+      if (isOwner) html += '<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="removeStudentFromExamPrep(\'' + eps.id + '\')">학생 제거</button>';
+      if (canEditThis) html += '<button class="btn btn-primary btn-sm" onclick="saveEpStudentDetails(\'' + eps.id + '\')">저장</button>';
+      html += '<button class="btn btn-outline btn-sm" onclick="toggleEpCard(\'' + eps.id + '\')">접기</button>';
+      html += '</div>';
+
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+
+  html += '</div>';
+  body.innerHTML = html;
+}
+
+function toggleEpCard(epsId) {
+  if (expandedEpStudentIds.has(epsId)) {
+    expandedEpStudentIds.delete(epsId);
+  } else {
+    expandedEpStudentIds.add(epsId);
+  }
+  renderExamPrepDetailBody();
+}
+
+// ── CRUD ──
+function openExamPrepForm(id) {
+  currentEditingEpId = id || null;
+  var ep = id ? examPrepsData.find(function(x) { return x.id === id; }) : null;
+  var titleEl = document.getElementById('exam-prep-form-title');
+  if (titleEl) titleEl.textContent = id ? '시험대비 수정' : '새 시험대비 만들기';
+  var body = document.getElementById('exam-prep-form-body');
+  if (!body) return;
+  var IS = 'font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;width:100%;';
+  var LBL = 'font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px;';
+  var html = '';
+  html += '<div style="margin-bottom:12px;"><label style="' + LBL + '">시험대비명</label>';
+  html += '<input type="text" id="ep-form-name" value="' + escHtml(ep ? ep.name : '') + '" placeholder="예: 중간고사" style="' + IS + '"></div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
+  html += '<div><label style="' + LBL + '">시작일</label><input type="date" id="ep-form-start" value="' + (ep ? ep.startDate : today()) + '" style="' + IS + '"></div>';
+  html += '<div><label style="' + LBL + '">종료일</label><input type="date" id="ep-form-end" value="' + (ep ? ep.endDate : today()) + '" style="' + IS + '"></div>';
+  html += '</div>';
+  body.innerHTML = html;
+  openModal('modal-exam-prep-form');
+}
+
+function saveExamPrep() {
+  var nameEl = document.getElementById('ep-form-name');
+  var startEl = document.getElementById('ep-form-start');
+  var endEl = document.getElementById('ep-form-end');
+  if (!nameEl || !startEl || !endEl) return;
+  var name = nameEl.value.trim();
+  var startDate = startEl.value;
+  var endDate = endEl.value;
+  if (!name) { showToast('시험대비명을 입력하세요'); nameEl.focus(); return; }
+  if (!startDate) { showToast('시작일을 입력하세요'); return; }
+  if (!endDate) { showToast('종료일을 입력하세요'); return; }
+  if (endDate < startDate) { showToast('종료일은 시작일보다 늦어야 합니다'); return; }
+  if (currentEditingEpId) {
+    var ep = examPrepsData.find(function(x) { return x.id === currentEditingEpId; });
+    if (ep) { ep.name = name; ep.startDate = startDate; ep.endDate = endDate; }
+  } else {
+    examPrepsData.push({ id: uid(), name: name, startDate: startDate, endDate: endDate, createdAt: today() });
+  }
+  appState.examPreps = examPrepsData;
+  closeModal('modal-exam-prep-form');
+  renderExamPrepPage();
+  showToast(currentEditingEpId ? '수정됨' : '생성됨');
+}
+
+function deleteExamPrep(id) {
+  var ep = examPrepsData.find(function(x) { return x.id === id; });
+  if (!ep) return;
+  var relCnt = examPrepStudentsData.filter(function(x) { return x.examPrepId === id; }).length;
+  var msg = '이 시험대비를 삭제하면' + (relCnt > 0 ? ' 참여 학생 ' + relCnt + '명의 데이터도 모두 삭제됩니다.' : '') + '\n복구할 수 없습니다. 계속하시겠습니까?';
+  if (!confirm(msg)) return;
+  examPrepsData = examPrepsData.filter(function(x) { return x.id !== id; });
+  examPrepStudentsData = examPrepStudentsData.filter(function(x) { return x.examPrepId !== id; });
+  appState.examPreps = examPrepsData;
+  if (currentExamPrepId === id) currentExamPrepId = null;
+  renderExamPrepPage();
+  showToast('삭제됨');
+}
+
+// ── 학생 추가 ──
+function openAddStudentModal() {
+  epAddStudentSearch = '';
+  epAddStudentSelected = new Set();
+  renderEpAddStudentBody();
+  openModal('modal-exam-prep-add-student');
+}
+
+function renderEpAddStudentBody() {
+  var body = document.getElementById('ep-add-student-body');
+  if (!body) return;
+  var IS = 'font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;width:100%;';
+  var q = epAddStudentSearch.trim().toLowerCase();
+  var existing = new Set(examPrepStudentsData.filter(function(x) { return x.examPrepId === currentExamPrepId; }).map(function(x) { return x.studentId; }));
+  var active = studentsData.filter(function(s) {
+    var status = getStudentStatus ? getStudentStatus(s) : '';
+    return status !== '퇴원';
+  });
+  var filtered = active.filter(function(s) {
+    if (!q) return true;
+    return (s.name && s.name.toLowerCase().indexOf(q) !== -1) ||
+           (s.grade && s.grade.toLowerCase().indexOf(q) !== -1) ||
+           (s.school && s.school.toLowerCase().indexOf(q) !== -1);
+  });
+  var html = '<div style="margin-bottom:10px;">';
+  html += '<input type="text" placeholder="이름, 학년, 학교 검색" value="' + escHtml(epAddStudentSearch) + '" oninput="epAddStudentSearch=this.value;renderEpAddStudentBody();" style="' + IS + '">';
+  html += '</div>';
+  html += '<div style="max-height:320px;overflow-y:auto;">';
+  if (!filtered.length) { html += '<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">학생이 없습니다</div>'; }
+  filtered.forEach(function(s) {
+    var isExisting = existing.has(s.id);
+    var isSelected = epAddStudentSelected.has(s.id);
+    html += '<label style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:' + (isExisting ? 'default' : 'pointer') + ';opacity:' + (isExisting ? '0.45' : '1') + ';">';
+    html += '<input type="checkbox"' + (isSelected ? ' checked' : '') + (isExisting ? ' disabled' : ' onclick="epToggleAddStudent(\'' + s.id + '\')"') + ' style="width:15px;height:15px;">';
+    html += '<span style="font-size:13px;font-weight:600;">' + escHtml(s.name) + '</span>';
+    html += '<span style="font-size:12px;color:var(--text2);">' + escHtml(s.grade) + '</span>';
+    html += '<span style="font-size:12px;color:var(--text3);">' + escHtml(s.teacher || '') + '</span>';
+    if (isExisting) html += '<span style="font-size:11px;color:var(--text3);">이미 추가됨</span>';
+    html += '</label>';
+  });
+  html += '</div>';
+  body.innerHTML = html;
+}
+
+function epToggleAddStudent(studentId) {
+  if (epAddStudentSelected.has(studentId)) {
+    epAddStudentSelected.delete(studentId);
+  } else {
+    epAddStudentSelected.add(studentId);
+  }
+}
+
+function confirmAddStudentsToExamPrep() {
+  if (!epAddStudentSelected.size) { showToast('학생을 선택하세요'); return; }
+  epAddStudentSelected.forEach(function(sid) {
+    examPrepStudentsData.push({
+      id: uid(), examPrepId: currentExamPrepId, studentId: sid,
+      reinforcementDays: '', reinforcementTime: '', examScope: '',
+      examStart: '', examEnd: '', prepStart: '', lastReinforcement: '',
+      textbookIds: '',
+      checkBookwork: false, checkBookCorrection: false, checkErrorNote: false,
+      checkTest10: false, checkTextbookMaterial: false, checkSchoolMaterial: false, checkConceptSummary: false,
+      result: '', memo: '', createdAt: today()
+    });
+  });
+  closeModal('modal-exam-prep-add-student');
+  renderExamPrepDetailBody();
+  showToast(epAddStudentSelected.size + '명 추가됨');
+}
+
+function removeStudentFromExamPrep(epsId) {
+  var eps = examPrepStudentsData.find(function(x) { return x.id === epsId; });
+  if (!eps) return;
+  var st = studentsData.find(function(s) { return s.id === eps.studentId; });
+  var name = st ? st.name : '이 학생';
+  if (!confirm(escHtml(name) + '을(를) 시험대비에서 제거하시겠습니까?')) return;
+  examPrepStudentsData = examPrepStudentsData.filter(function(x) { return x.id !== epsId; });
+  expandedEpStudentIds.delete(epsId);
+  renderExamPrepDetailBody();
+  showToast('제거됨');
+}
+
+// ── 체크박스 토글 ──
+function toggleEpCheck(epsId, field) {
+  var eps = examPrepStudentsData.find(function(x) { return x.id === epsId; });
+  if (!eps) return;
+  eps[field] = !eps[field];
+  // 헤더만 갱신 (전체 재렌더)
+  renderExamPrepDetailBody();
+  // 카드 다시 펼침
+  expandedEpStudentIds.add(epsId);
+}
+
+// ── 학생 정보 저장 ──
+function saveEpStudentDetails(epsId) {
+  var eps = examPrepStudentsData.find(function(x) { return x.id === epsId; });
+  if (!eps) return;
+  var get = function(id) { var el = document.getElementById(id); return el ? el.value : ''; };
+  eps.reinforcementDays = get('ep-days-' + epsId);
+  eps.reinforcementTime = get('ep-time-' + epsId);
+  eps.examStart         = get('ep-examstart-' + epsId);
+  eps.examEnd           = get('ep-examend-' + epsId);
+  eps.prepStart         = get('ep-prepstart-' + epsId);
+  eps.lastReinforcement = get('ep-lastrf-' + epsId);
+  eps.examScope         = get('ep-scope-' + epsId);
+  eps.result            = get('ep-result-' + epsId);
+  var memoEl = document.getElementById('ep-memo-' + epsId);
+  eps.memo = memoEl ? memoEl.value : '';
+  showToast('저장됨');
+  renderExamPrepDetailBody();
+  expandedEpStudentIds.add(epsId);
+}
+
+// ── 교재 ──
+function openEpAddTextbook(epsId) {
+  epAddTextbookEpsId = epsId;
+  epAddTextbookSearch = '';
+  renderEpAddTextbookBody();
+  openModal('modal-ep-add-textbook');
+}
+
+function renderEpAddTextbookBody() {
+  var body = document.getElementById('ep-add-textbook-body');
+  if (!body) return;
+  var eps = examPrepStudentsData.find(function(x) { return x.id === epAddTextbookEpsId; });
+  var existingIds = eps ? (eps.textbookIds ? eps.textbookIds.split(',').filter(Boolean) : []) : [];
+  var IS = 'font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;width:100%;';
+  var q = epAddTextbookSearch.trim().toLowerCase();
+  var filtered = textbooksData.filter(function(tb) {
+    if (!q) return true;
+    return (tb.title && tb.title.toLowerCase().indexOf(q) !== -1) ||
+           (tb.author && tb.author.toLowerCase().indexOf(q) !== -1);
+  });
+  var html = '<div style="margin-bottom:10px;">';
+  html += '<input type="text" placeholder="교재명 검색" value="' + escHtml(epAddTextbookSearch) + '" oninput="epAddTextbookSearch=this.value;renderEpAddTextbookBody();" style="' + IS + '">';
+  html += '</div>';
+  html += '<div style="max-height:320px;overflow-y:auto;">';
+  if (!filtered.length) { html += '<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">교재가 없습니다</div>'; }
+  filtered.forEach(function(tb) {
+    var isAdded = existingIds.indexOf(tb.id) !== -1;
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);">';
+    html += '<span style="flex:1;font-size:13px;">' + escHtml(tb.title) + '</span>';
+    if (tb.author) html += '<span style="font-size:12px;color:var(--text3);">' + escHtml(tb.author) + '</span>';
+    if (isAdded) {
+      html += '<button class="btn btn-sm" style="font-size:12px;" onclick="removeEpTextbookFromModal(\'' + tb.id + '\')" >제거</button>';
+    } else {
+      html += '<button class="btn btn-primary btn-sm" style="font-size:12px;" onclick="addEpTextbook(\'' + tb.id + '\')">추가</button>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  body.innerHTML = html;
+}
+
+function addEpTextbook(tbId) {
+  var eps = examPrepStudentsData.find(function(x) { return x.id === epAddTextbookEpsId; });
+  if (!eps) return;
+  var ids = eps.textbookIds ? eps.textbookIds.split(',').filter(Boolean) : [];
+  if (ids.indexOf(tbId) === -1) ids.push(tbId);
+  eps.textbookIds = ids.join(',');
+  renderEpAddTextbookBody();
+  renderExamPrepDetailBody();
+  expandedEpStudentIds.add(epAddTextbookEpsId);
+}
+
+function removeEpTextbookFromModal(tbId) {
+  var eps = examPrepStudentsData.find(function(x) { return x.id === epAddTextbookEpsId; });
+  if (!eps) return;
+  var ids = eps.textbookIds ? eps.textbookIds.split(',').filter(Boolean) : [];
+  eps.textbookIds = ids.filter(function(x) { return x !== tbId; }).join(',');
+  renderEpAddTextbookBody();
+  renderExamPrepDetailBody();
+  expandedEpStudentIds.add(epAddTextbookEpsId);
+}
+
+function removeEpTextbook(epsId, tbId) {
+  var eps = examPrepStudentsData.find(function(x) { return x.id === epsId; });
+  if (!eps) return;
+  var ids = eps.textbookIds ? eps.textbookIds.split(',').filter(Boolean) : [];
+  eps.textbookIds = ids.filter(function(x) { return x !== tbId; }).join(',');
+  renderExamPrepDetailBody();
+  expandedEpStudentIds.add(epsId);
 }
 
 // ── PWA 설치 배너 ──────────────────────────────────────────
