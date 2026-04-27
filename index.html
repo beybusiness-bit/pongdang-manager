@@ -12754,6 +12754,16 @@ function renderExamPrepDetailBody() {
         if (tbNames) {
           html += '<div style="' + infoStyle + '"><span style="' + lblStyle + '">교재</span>' + escHtml(tbNames) + '</div>';
         }
+        // 진행 체크 7개 가로 한 줄
+        html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:5px;">';
+        EP_CHECKS.forEach(function(c) {
+          var ck = eps[c.field];
+          html += '<span style="font-size:11px;display:flex;align-items:center;gap:3px;">';
+          html += '<span style="color:var(--text3);">' + c.label + '</span>';
+          html += ck ? '<span class="ep-check-on" style="font-size:14px;">✓</span>' : '<span class="ep-check-off" style="font-size:14px;">○</span>';
+          html += '</span>';
+        });
+        html += '</div>';
         html += '</div>';
         html += '</div>';
         html += '</div>';
