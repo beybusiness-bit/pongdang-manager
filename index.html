@@ -2705,6 +2705,41 @@ TEST : 분수 개념점검
   </div>
 </div>
 
+<!-- 회의록 작성/수정 모달 -->
+<div class="modal-backdrop" id="modal-meeting-form">
+  <div class="modal">
+    <div class="modal-title" id="meeting-form-modal-title">새 회의록 작성</div>
+    <div class="modal-body" id="meeting-form-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-meeting-form')">취소</button>
+      <button class="btn btn-primary btn-sm" onclick="saveMeeting()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 회의록 상세 모달 -->
+<div class="modal-backdrop" id="modal-meeting-detail">
+  <div class="modal">
+    <div class="modal-title" id="meeting-detail-modal-title">회의록</div>
+    <div class="modal-body" id="meeting-detail-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-meeting-detail')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 할일 추가/수정 모달 -->
+<div class="modal-backdrop" id="modal-task-form">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-title" id="task-form-modal-title">할일 추가</div>
+    <div class="modal-body" id="task-form-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-task-form')">취소</button>
+      <button class="btn btn-primary btn-sm" onclick="saveTask()">저장</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ============ 상수 ============
 const AUTH = {
@@ -2874,6 +2909,14 @@ let wlCurrentViewStudentIds = [];
 
 let feedbackTemplatesData = [];
 let feedbackTalksData = [];
+let meetingsData = [];
+let meetingTasksData = [];
+var currentMeetingFilter = { search: '', month: '' };
+var currentMeetingSort = 'date-desc';
+var currentEditingMeetingId = null;
+var meetingFormAttendees = [];
+var currentTaskId = null;
+var currentTaskMeetingId = null;
 let currentFeedbackStudentId = null;
 let currentFeedbackDateStr = null;
 let selectedFeedbackTemplateId = null;
@@ -3671,6 +3714,10 @@ function getPageContent(pageId) {
     return '<div id="feedback-page-content"></div>';
   }
 
+  if (pageId === 'meetings') {
+    return '<div id="meetings-page-content"></div>';
+  }
+
   // 설정 페이지만 특별 처리
   if (pageId === 'settings' && currentUser.role === ROLES.OWNER) {
     return `
@@ -3778,6 +3825,7 @@ function navigateTo(pageId) {
   if (pageId === 'teachers') renderTeachersPage();
   if (pageId === 'worklog') renderWorkLogPage();
   if (pageId === 'feedback') renderFeedbackPage();
+  if (pageId === 'meetings') renderMeetingsPage();
 
   // 교재 페이지 렌더링 (중복 제거)
 }
@@ -5328,7 +5376,24 @@ function loadSampleData() {
   appState.feedbackTalks = feedbackData;
   appState.examPreps = [];
   appState.workLogs = workLogsData;
-  appState.meetings = [];
+  meetingsData = [
+    { id: 'm1', date: '2026-04-14', title: '26년 4월 교무회의', content: '1. 5월 일정 논의\n   - 중간고사 대비 기간 확정\n   - 특강 일정 조율\n\n2. 교재 재고 확인\n   - 디딤돌 교재 부족 확인\n   - 주문 담당자 지정', attendees: '이은지,박찬혁', createdAt: '2026-04-14' },
+    { id: 'm2', date: '2026-03-25', title: '3월 운영 회의', content: '1. 3월 결산\n   - 수강생 변동 사항 공유\n\n2. 4월 준비사항 논의', attendees: '이은지,박찬혁,김희진,박현준', createdAt: '2026-03-25' },
+    { id: 'm3', date: '2026-02-10', title: '신학기 준비 회의', content: '1. 3월 시간표 확정\n2. 신규 학생 배치\n3. 교재 준비', attendees: '이은지,박찬혁', createdAt: '2026-02-10' }
+  ];
+  meetingTasksData = [
+    { id: 'mt1', meetingId: 'm1', assignee: '이은지', taskContent: '5월 일정표 작성', isComplete: false, completedDate: null, createdAt: '2026-04-14' },
+    { id: 'mt2', meetingId: 'm1', assignee: '박찬혁', taskContent: '교재 재고 확인 및 주문', isComplete: false, completedDate: null, createdAt: '2026-04-14' },
+    { id: 'mt3', meetingId: 'm1', assignee: '김희진', taskContent: '교실 청소', isComplete: true, completedDate: '2026-04-15', createdAt: '2026-04-14' },
+    { id: 'mt4', meetingId: 'm2', assignee: '이은지', taskContent: '3월 보고서 제출', isComplete: true, completedDate: '2026-03-20', createdAt: '2026-03-25' },
+    { id: 'mt5', meetingId: 'm2', assignee: '박찬혁', taskContent: '4월 수강료 안내문 작성', isComplete: true, completedDate: '2026-03-28', createdAt: '2026-03-25' },
+    { id: 'mt6', meetingId: 'm2', assignee: '김희진', taskContent: '학부모 상담 일정 조율', isComplete: true, completedDate: '2026-03-27', createdAt: '2026-03-25' },
+    { id: 'mt7', meetingId: 'm2', assignee: '박현준', taskContent: '교재 목록 업데이트', isComplete: true, completedDate: '2026-03-30', createdAt: '2026-03-25' },
+    { id: 'mt8', meetingId: 'm2', assignee: '이은지', taskContent: '4월 공지사항 작성', isComplete: true, completedDate: '2026-03-29', createdAt: '2026-03-25' },
+    { id: 'mt9', meetingId: 'm3', assignee: '이은지', taskContent: '시간표 확정본 배포', isComplete: true, completedDate: '2026-02-15', createdAt: '2026-02-10' },
+    { id: 'mt10', meetingId: 'm3', assignee: '박찬혁', taskContent: '신규 학생 배치 안내', isComplete: true, completedDate: '2026-02-28', createdAt: '2026-02-10' }
+  ];
+  appState.meetings = meetingsData;
 }
 
 // ============ 교재 관리 ============
@@ -6752,7 +6817,7 @@ function createDateCell(day, dateStr) {
     worklogsByTeacher[teacher]++;
   });
   
-  const hasMeeting = appState.meetings.some(m => m.date === dateStr);
+  const hasMeeting = meetingsData.some(m => m.date === dateStr);
   const hasExamPrep = appState.examPreps.some(e => 
     e.startDate <= dateStr && e.endDate >= dateStr
   );
@@ -11238,6 +11303,375 @@ function deleteCustomHoliday(id) {
   renderCustomHolidayList();
   showToast('휴일이 삭제되었습니다');
 }
+
+// ── 회의록 함수 ──────────────────────────────────────────
+
+function renderMeetingsPage() {
+  var container = document.getElementById('meetings-page-content');
+  if (!container) return;
+  var canWrite = currentUser && currentUser.role === ROLES.OWNER;
+  var IS = 'font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;';
+  var months = [];
+  meetingsData.forEach(function(m) {
+    var mo = m.date.slice(0, 7);
+    if (months.indexOf(mo) === -1) months.push(mo);
+  });
+  months.sort().reverse();
+  var monthOptions = '<option value="">전체</option>';
+  months.forEach(function(mo) {
+    var d = new Date(mo + '-01T00:00:00');
+    var label = (d.getFullYear()) + '년 ' + (d.getMonth() + 1) + '월';
+    monthOptions += '<option value="' + mo + '" ' + (currentMeetingFilter.month === mo ? 'selected' : '') + '>' + label + '</option>';
+  });
+  var html = '';
+  html += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">';
+  html += '<input type="text" id="meeting-search-input" placeholder="제목·참석자 검색" value="' + (currentMeetingFilter.search || '') + '" style="' + IS + 'flex:1;min-width:160px;" oninput="handleMeetingSearchInput(this)">';
+  html += '<select style="' + IS + '" onchange="updateMeetingMonth(this.value)">' + monthOptions + '</select>';
+  html += '<select style="' + IS + '" onchange="updateMeetingSort(this.value)">';
+  html += '<option value="date-desc" ' + (currentMeetingSort === 'date-desc' ? 'selected' : '') + '>최신순</option>';
+  html += '<option value="date-asc" ' + (currentMeetingSort === 'date-asc' ? 'selected' : '') + '>오래된순</option>';
+  html += '<option value="title" ' + (currentMeetingSort === 'title' ? 'selected' : '') + '>제목순</option>';
+  html += '</select>';
+  if (canWrite) html += '<button class="btn btn-primary btn-sm" onclick="openMeetingForm(null)">+ 새 회의록</button>';
+  html += '</div>';
+  html += '<div id="meetings-list-body"></div>';
+  container.innerHTML = html;
+  renderMeetingsListBody();
+}
+
+function handleMeetingSearchInput(input) {
+  currentMeetingFilter.search = input.value;
+  renderMeetingsListBody();
+}
+
+function updateMeetingMonth(val) {
+  currentMeetingFilter.month = val;
+  renderMeetingsListBody();
+}
+
+function updateMeetingSort(val) {
+  currentMeetingSort = val;
+  renderMeetingsListBody();
+}
+
+function renderMeetingsListBody() {
+  var body = document.getElementById('meetings-list-body');
+  if (!body) return;
+  var q = (currentMeetingFilter.search || '').trim().toLowerCase();
+  var mo = currentMeetingFilter.month || '';
+  var list = meetingsData.filter(function(m) {
+    if (mo && m.date.slice(0, 7) !== mo) return false;
+    if (q && m.title.toLowerCase().indexOf(q) === -1 && m.attendees.toLowerCase().indexOf(q) === -1) return false;
+    return true;
+  });
+  if (currentMeetingSort === 'date-asc') list.sort(function(a, b) { return a.date < b.date ? -1 : 1; });
+  else if (currentMeetingSort === 'title') list.sort(function(a, b) { return a.title < b.title ? -1 : 1; });
+  else list.sort(function(a, b) { return a.date < b.date ? 1 : -1; });
+
+  if (list.length === 0) {
+    body.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">회의록이 없습니다</div></div>';
+    return;
+  }
+  var html = '<div style="display:flex;flex-direction:column;gap:10px;">';
+  list.forEach(function(m) {
+    var tasks = meetingTasksData.filter(function(t) { return t.meetingId === m.id; });
+    var done = tasks.filter(function(t) { return t.isComplete; }).length;
+    var total = tasks.length;
+    var dateD = new Date(m.date + 'T00:00:00');
+    var dateLabel = (dateD.getFullYear()) + '-' + String(dateD.getMonth()+1).padStart(2,'0') + '-' + String(dateD.getDate()).padStart(2,'0');
+    var attendeeList = m.attendees ? m.attendees.split(',').map(function(a) { return a.trim(); }).join(', ') : '없음';
+    var taskLabel = total > 0 ? (done + '/' + total + ' 완료') : '할일 없음';
+    var taskColor = (total > 0 && done === total) ? 'var(--success)' : 'var(--text2)';
+    html += '<div class="clickable-row" onclick="openMeetingDetail(\'' + m.id + '\')" style="background:white;border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 18px;cursor:pointer;transition:box-shadow 0.15s;" onmouseenter="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.08)\'" onmouseleave="this.style.boxShadow=\'none\'">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">';
+    html += '<div style="font-weight:600;font-size:15px;color:var(--text);">' + escHtml(m.title) + '</div>';
+    html += '<div style="font-size:12px;color:var(--text3);white-space:nowrap;">' + dateLabel + '</div>';
+    html += '</div>';
+    html += '<div style="font-size:12px;color:var(--text2);margin-top:5px;">참석자: ' + escHtml(attendeeList) + '</div>';
+    html += '<div style="font-size:12px;color:' + taskColor + ';margin-top:4px;">할일 ' + taskLabel + '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  body.innerHTML = html;
+}
+
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function openMeetingDetail(id) {
+  var m = meetingsData.find(function(x) { return x.id === id; });
+  if (!m) return;
+  currentEditingMeetingId = id;
+  var isOwner = currentUser && currentUser.role === ROLES.OWNER;
+  var titleEl = document.getElementById('meeting-detail-modal-title');
+  if (titleEl) titleEl.textContent = m.title;
+  var body = document.getElementById('meeting-detail-modal-body');
+  if (!body) return;
+  var dateD = new Date(m.date + 'T00:00:00');
+  var dateLabel = (dateD.getFullYear()) + '년 ' + (dateD.getMonth()+1) + '월 ' + dateD.getDate() + '일';
+  var attendeeList = m.attendees ? m.attendees.split(',').map(function(a) { return a.trim(); }).join(', ') : '없음';
+  var tasks = meetingTasksData.filter(function(t) { return t.meetingId === id; });
+  var done = tasks.filter(function(t) { return t.isComplete; }).length;
+  var html = '';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">';
+  html += '<div>';
+  html += '<div style="font-size:13px;color:var(--text2);">날짜: ' + dateLabel + '</div>';
+  html += '<div style="font-size:13px;color:var(--text2);margin-top:3px;">참석자: ' + escHtml(attendeeList) + '</div>';
+  html += '</div>';
+  if (isOwner) {
+    html += '<div style="display:flex;gap:6px;">';
+    html += '<button class="btn btn-outline btn-sm" onclick="openMeetingFormFromDetail(\'' + id + '\')">수정</button>';
+    html += '<button class="btn btn-sm" style="background:var(--danger);color:white;" onclick="deleteMeeting(\'' + id + '\')">삭제</button>';
+    html += '</div>';
+  }
+  html += '</div>';
+  if (m.content) {
+    html += '<div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:16px;">';
+    html += '<div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;">회의 내용</div>';
+    html += '<div style="font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.7;background:var(--bg);border-radius:var(--radius-sm);padding:12px;">' + escHtml(m.content) + '</div>';
+    html += '</div>';
+  }
+  html += '<div style="border-top:1px solid var(--border);padding-top:14px;">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">';
+  html += '<div style="font-size:12px;font-weight:600;color:var(--text2);">할일 목록 (' + done + '/' + tasks.length + ' 완료)</div>';
+  if (isOwner) html += '<button class="btn btn-outline btn-sm" onclick="openTaskForm(\'' + id + '\',null)">+ 할일 추가</button>';
+  html += '</div>';
+  html += '<div id="meeting-tasks-list">' + renderTasksHtml(id) + '</div>';
+  html += '</div>';
+  body.innerHTML = html;
+  openModal('modal-meeting-detail');
+}
+
+function openMeetingFormFromDetail(id) {
+  closeModal('modal-meeting-detail');
+  setTimeout(function() { openMeetingForm(id); }, 120);
+}
+
+function renderTasksHtml(meetingId) {
+  var tasks = meetingTasksData.filter(function(t) { return t.meetingId === meetingId; });
+  if (tasks.length === 0) {
+    return '<div style="font-size:13px;color:var(--text3);text-align:center;padding:16px 0;">할일이 없습니다</div>';
+  }
+  var isOwner = currentUser && currentUser.role === ROLES.OWNER;
+  var myName = currentUser ? currentUser.name : '';
+  var html = '<div style="display:flex;flex-direction:column;gap:6px;">';
+  tasks.forEach(function(t) {
+    var canComplete = isOwner || t.assignee === myName;
+    var canEdit = isOwner;
+    var doneStyle = t.isComplete ? 'text-decoration:line-through;color:var(--text3);' : '';
+    var checkIcon = t.isComplete ? '✓' : '○';
+    var checkColor = t.isComplete ? 'var(--success)' : 'var(--text3)';
+    var checkCursor = canComplete ? 'pointer' : 'default';
+    var completedLabel = t.isComplete && t.completedDate ? ' <span style="font-size:11px;color:var(--text3);">완료: ' + t.completedDate.slice(5).replace('-','/') + '</span>' : '';
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border-radius:var(--radius-sm);">';
+    html += '<span style="font-size:16px;color:' + checkColor + ';cursor:' + checkCursor + ';min-width:20px;text-align:center;" onclick="' + (canComplete ? 'toggleTaskComplete(\'' + t.id + '\')' : '') + '">' + checkIcon + '</span>';
+    html += '<div style="flex:1;">';
+    html += '<span style="font-size:13px;' + doneStyle + '">' + escHtml(t.taskContent) + '</span>';
+    html += completedLabel;
+    html += '<div style="font-size:11px;color:var(--text3);margin-top:1px;">담당: ' + escHtml(t.assignee) + '</div>';
+    html += '</div>';
+    if (canEdit) {
+      html += '<div style="display:flex;gap:4px;">';
+      if (t.isComplete) html += '<button class="btn btn-sm" style="font-size:11px;padding:2px 6px;" onclick="uncompleteTask(\'' + t.id + '\')">완료취소</button>';
+      html += '<button class="btn btn-sm" style="font-size:11px;padding:2px 6px;" onclick="openTaskForm(\'' + meetingId + '\',\'' + t.id + '\')">수정</button>';
+      html += '<button class="btn btn-sm" style="font-size:11px;padding:2px 6px;background:var(--danger);color:white;" onclick="deleteTask(\'' + t.id + '\')">삭제</button>';
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function toggleTaskComplete(taskId) {
+  var t = meetingTasksData.find(function(x) { return x.id === taskId; });
+  if (!t) return;
+  t.isComplete = true;
+  t.completedDate = today();
+  refreshTasksList(t.meetingId);
+}
+
+function uncompleteTask(taskId) {
+  var t = meetingTasksData.find(function(x) { return x.id === taskId; });
+  if (!t) return;
+  t.isComplete = false;
+  t.completedDate = null;
+  refreshTasksList(t.meetingId);
+}
+
+function refreshTasksList(meetingId) {
+  var el = document.getElementById('meeting-tasks-list');
+  if (el) el.innerHTML = renderTasksHtml(meetingId);
+  var m = meetingsData.find(function(x) { return x.id === meetingId; });
+  var titleEl = document.getElementById('meeting-detail-modal-title');
+  if (titleEl && m) titleEl.textContent = m.title;
+  var tasks = meetingTasksData.filter(function(t) { return t.meetingId === meetingId; });
+  var done = tasks.filter(function(t) { return t.isComplete; }).length;
+  var countEl = document.querySelector('#meeting-detail-modal-body .tasks-count');
+  if (countEl) countEl.textContent = done + '/' + tasks.length + ' 완료';
+  renderMeetingsListBody();
+}
+
+function deleteTask(taskId) {
+  var t = meetingTasksData.find(function(x) { return x.id === taskId; });
+  if (!t) return;
+  if (!confirm('이 할일을 삭제하시겠습니까?')) return;
+  var mid = t.meetingId;
+  meetingTasksData = meetingTasksData.filter(function(x) { return x.id !== taskId; });
+  refreshTasksList(mid);
+}
+
+function openTaskForm(meetingId, taskId) {
+  currentTaskMeetingId = meetingId;
+  currentTaskId = taskId || null;
+  var t = taskId ? meetingTasksData.find(function(x) { return x.id === taskId; }) : null;
+  var titleEl = document.getElementById('task-form-modal-title');
+  if (titleEl) titleEl.textContent = taskId ? '할일 수정' : '할일 추가';
+  var body = document.getElementById('task-form-modal-body');
+  if (!body) return;
+  var IS = 'font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;width:100%;';
+  var teacherOptions = '<option value="">담당자 선택</option>';
+  teachersData.forEach(function(tc) {
+    var sel = (t && t.assignee === tc.name) ? 'selected' : '';
+    teacherOptions += '<option value="' + escHtml(tc.name) + '" ' + sel + '>' + escHtml(tc.name) + '</option>';
+  });
+  var html = '';
+  html += '<div style="margin-bottom:12px;">';
+  html += '<label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px;">할일 내용</label>';
+  html += '<input type="text" id="task-content-input" value="' + escHtml(t ? t.taskContent : '') + '" placeholder="할일을 입력하세요" style="' + IS + '">';
+  html += '</div>';
+  html += '<div>';
+  html += '<label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px;">담당자</label>';
+  html += '<select id="task-assignee-select" style="' + IS + '">' + teacherOptions + '</select>';
+  html += '</div>';
+  body.innerHTML = html;
+  openModal('modal-task-form');
+}
+
+function saveTask() {
+  var contentEl = document.getElementById('task-content-input');
+  var assigneeEl = document.getElementById('task-assignee-select');
+  if (!contentEl || !assigneeEl) return;
+  var content = contentEl.value.trim();
+  var assignee = assigneeEl.value;
+  if (!content) { showToast('할일 내용을 입력하세요'); return; }
+  if (!assignee) { showToast('담당자를 선택하세요'); return; }
+  if (currentTaskId) {
+    var t = meetingTasksData.find(function(x) { return x.id === currentTaskId; });
+    if (t) { t.taskContent = content; t.assignee = assignee; }
+  } else {
+    meetingTasksData.push({ id: uid(), meetingId: currentTaskMeetingId, assignee: assignee, taskContent: content, isComplete: false, completedDate: null, createdAt: today() });
+  }
+  closeModal('modal-task-form');
+  setTimeout(function() { refreshTasksList(currentTaskMeetingId); }, 100);
+}
+
+function openMeetingForm(id) {
+  currentEditingMeetingId = id || null;
+  var m = id ? meetingsData.find(function(x) { return x.id === id; }) : null;
+  var titleEl = document.getElementById('meeting-form-modal-title');
+  if (titleEl) titleEl.textContent = id ? '회의록 수정' : '새 회의록 작성';
+  meetingFormAttendees = m ? m.attendees.split(',').map(function(a) { return a.trim(); }).filter(Boolean) : [];
+  var IS = 'font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;width:100%;';
+  var body = document.getElementById('meeting-form-modal-body');
+  if (!body) return;
+  var html = '';
+  html += '<div style="margin-bottom:12px;">';
+  html += '<label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px;">날짜</label>';
+  html += '<input type="date" id="meeting-date-input" value="' + (m ? m.date : today()) + '" style="' + IS + '">';
+  html += '</div>';
+  html += '<div style="margin-bottom:12px;">';
+  html += '<label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px;">제목</label>';
+  html += '<input type="text" id="meeting-title-input" value="' + escHtml(m ? m.title : '') + '" placeholder="예: 26년 4월 교무회의" style="' + IS + '">';
+  html += '</div>';
+  html += '<div style="margin-bottom:12px;">';
+  html += '<label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px;">참석자</label>';
+  html += '<div id="meeting-attendee-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;min-height:24px;"></div>';
+  html += '<select id="meeting-attendee-select" style="' + IS + '" onchange="addMeetingAttendeeFromSelect(this)"><option value="">+ 참석자 추가</option></select>';
+  html += '</div>';
+  html += '<div>';
+  html += '<label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px;">회의 내용</label>';
+  html += '<textarea id="meeting-content-input" rows="7" placeholder="회의 내용을 입력하세요" style="' + IS + 'resize:vertical;font-family:inherit;line-height:1.6;">' + escHtml(m ? m.content : '') + '</textarea>';
+  html += '</div>';
+  body.innerHTML = html;
+  renderMeetingAttendeeTags();
+  openModal('modal-meeting-form');
+}
+
+function renderMeetingAttendeeTags() {
+  var tagsEl = document.getElementById('meeting-attendee-tags');
+  var selectEl = document.getElementById('meeting-attendee-select');
+  if (!tagsEl || !selectEl) return;
+  var html = '';
+  meetingFormAttendees.forEach(function(name) {
+    html += '<span style="display:inline-flex;align-items:center;gap:3px;background:var(--accent);color:white;font-size:12px;padding:3px 8px;border-radius:12px;">';
+    html += escHtml(name);
+    html += '<button type="button" onclick="removeMeetingAttendee(this)" data-name="' + escHtml(name) + '" style="background:none;border:none;color:white;cursor:pointer;font-size:13px;padding:0;line-height:1;">×</button>';
+    html += '</span>';
+  });
+  tagsEl.innerHTML = html;
+  var opts = '<option value="">+ 참석자 추가</option>';
+  teachersData.forEach(function(tc) {
+    if (meetingFormAttendees.indexOf(tc.name) === -1) {
+      opts += '<option value="' + escHtml(tc.name) + '">' + escHtml(tc.name) + '</option>';
+    }
+  });
+  selectEl.innerHTML = opts;
+}
+
+function addMeetingAttendeeFromSelect(sel) {
+  var name = sel.value;
+  if (!name) return;
+  if (meetingFormAttendees.indexOf(name) === -1) meetingFormAttendees.push(name);
+  renderMeetingAttendeeTags();
+}
+
+function removeMeetingAttendee(btn) {
+  var name = btn.dataset.name;
+  meetingFormAttendees = meetingFormAttendees.filter(function(a) { return a !== name; });
+  renderMeetingAttendeeTags();
+}
+
+function saveMeeting() {
+  var dateEl = document.getElementById('meeting-date-input');
+  var titleEl = document.getElementById('meeting-title-input');
+  var contentEl = document.getElementById('meeting-content-input');
+  if (!dateEl || !titleEl || !contentEl) return;
+  var date = dateEl.value;
+  var title = titleEl.value.trim();
+  var content = contentEl.value.trim();
+  if (!date) { showToast('날짜를 입력하세요'); return; }
+  if (!title) { showToast('제목을 입력하세요'); return; }
+  if (meetingFormAttendees.length === 0) { showToast('참석자를 최소 1명 추가하세요'); return; }
+  var attendeesStr = meetingFormAttendees.join(',');
+  if (currentEditingMeetingId) {
+    var m = meetingsData.find(function(x) { return x.id === currentEditingMeetingId; });
+    if (m) { m.date = date; m.title = title; m.content = content; m.attendees = attendeesStr; }
+  } else {
+    meetingsData.push({ id: uid(), date: date, title: title, content: content, attendees: attendeesStr, createdAt: today() });
+  }
+  appState.meetings = meetingsData;
+  closeModal('modal-meeting-form');
+  renderMeetingsListBody();
+  showToast(currentEditingMeetingId ? '수정됨' : '저장됨');
+}
+
+function deleteMeeting(id) {
+  var m = meetingsData.find(function(x) { return x.id === id; });
+  if (!m) return;
+  var relatedTasks = meetingTasksData.filter(function(t) { return t.meetingId === id; });
+  var confirmMsg = '이 회의록을 삭제하면' + (relatedTasks.length > 0 ? ' 관련된 할일 ' + relatedTasks.length + '개도 모두 삭제됩니다.' : '') + '\n복구할 수 없습니다. 계속하시겠습니까?';
+  if (!confirm(confirmMsg)) return;
+  meetingsData = meetingsData.filter(function(x) { return x.id !== id; });
+  meetingTasksData = meetingTasksData.filter(function(t) { return t.meetingId !== id; });
+  appState.meetings = meetingsData;
+  closeModal('modal-meeting-detail');
+  renderMeetingsListBody();
+  showToast('삭제됨');
+}
+
 </script>
 
 </body>
