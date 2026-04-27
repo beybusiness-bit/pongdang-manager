@@ -1836,6 +1836,7 @@ input[type="checkbox"] {
       <span id="detail-textbook-title">교재 상세</span>
       <div style="display: flex; gap: 8px;">
         <button class="btn btn-primary btn-sm" onclick="editTextbookFromDetail()">수정</button>
+        <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="deleteTextbookFromDetail()">삭제</button>
         <button class="btn btn-outline btn-sm" onclick="closeModal('modal-textbook-detail')">닫기</button>
       </div>
     </div>
@@ -1913,6 +1914,7 @@ input[type="checkbox"] {
       <span id="detail-student-name">학생 상세</span>
       <div style="display: flex; gap: 8px;">
         <button class="btn btn-primary btn-sm" onclick="editStudentFromDetail()">수정</button>
+        <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="deleteStudentFromDetail()">삭제</button>
         <button class="btn btn-outline btn-sm" onclick="closeModal('modal-student-detail')">닫기</button>
       </div>
     </div>
@@ -4066,6 +4068,7 @@ function renderStudentsListBody() {
   html += '<div class="bulk-actions-bar' + (selectedStudentIds.length > 0 ? ' show' : '') + '">';
   html += '  <span class="bulk-count">' + selectedStudentIds.length + '명 선택됨</span>';
   html += '  <button class="btn btn-primary btn-sm" onclick="openBulkEditModal()">일괄 수정</button>';
+  html += '  <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="bulkDeleteStudents()">선택 삭제</button>';
   html += '  <button class="btn btn-outline btn-sm" onclick="clearSelection()">선택 해제</button>';
   html += '</div>';
 
@@ -4796,6 +4799,13 @@ function saveStudent(e) {
   // TODO: Sheets에 저장
 }
 
+function deleteStudentFromDetail() {
+  if (!currentDetailStudent) return;
+  const id = currentDetailStudent.id;
+  closeModal('modal-student-detail');
+  setTimeout(function() { deleteStudent(id); }, 100);
+}
+
 function deleteStudent(studentId) {
   const student = studentsData.find(s => s.id === studentId);
   if (!student) return;
@@ -5503,7 +5513,12 @@ function renderTextbooksListBody() {
     html += '</div>';
   } else {
     if (currentTextbookView === 'grid' || window.innerWidth <= 768) {
-      html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-top: 20px;">';
+      var allPageSelected = pageTextbooks.length > 0 && pageTextbooks.every(t => selectedTextbookIds.includes(t.id));
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:6px 0;border-bottom:1px solid var(--border);">';
+      html += '<input type="checkbox" id="textbook-card-select-all" ' + (allPageSelected ? 'checked' : '') + ' onchange="toggleAllTextbooksSelection(this.checked)" style="width:16px;height:16px;cursor:pointer;">';
+      html += '<label for="textbook-card-select-all" style="font-size:13px;color:var(--text2);cursor:pointer;">전체 선택</label>';
+      html += '</div>';
+      html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-top: 8px;">';
 
       pageTextbooks.forEach(textbook => {
         const isSelected = selectedTextbookIds.includes(textbook.id);
@@ -5838,6 +5853,18 @@ function saveTextbook(e) {
   }
   
   closeModal('modal-textbook-form');
+  renderTextbooksPage();
+}
+
+function deleteTextbookFromDetail() {
+  if (!currentDetailTextbook) return;
+  const id = currentDetailTextbook.id;
+  const tb = textbooksData.find(t => t.id === id);
+  if (!tb) return;
+  if (!confirm(tb.title + ' 교재를 삭제하시겠습니까?')) return;
+  textbooksData = textbooksData.filter(t => t.id !== id);
+  showToast('교재가 삭제되었습니다');
+  closeModal('modal-textbook-detail');
   renderTextbooksPage();
 }
 
@@ -7411,8 +7438,10 @@ function renderPaymentRecordsListBody() {
   let html = '';
 
   if (canWrite && selectedPaymentIds.length > 0) {
-    html += '<div class="payment-delete-mobile" style="margin-bottom: 12px;">';
-    html += '  <button class="btn btn-outline btn-sm" onclick="bulkDeletePayments()" style="color: var(--danger); border-color: var(--danger); width: 100%;">선택 삭제 (' + selectedPaymentIds.length + ')</button>';
+    html += '<div class="bulk-actions-bar show" style="margin-bottom:12px;">';
+    html += '  <span class="bulk-count">' + selectedPaymentIds.length + '건 선택됨</span>';
+    html += '  <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="bulkDeletePayments()">선택 삭제</button>';
+    html += '  <button class="btn btn-outline btn-sm" onclick="selectedPaymentIds=[];renderPaymentRecordsListBody()">선택 해제</button>';
     html += '</div>';
   }
 
