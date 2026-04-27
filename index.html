@@ -3786,6 +3786,10 @@ function getPageContent(pageId) {
     return '<div id="meetings-page-content"></div>';
   }
 
+  if (pageId === 'exam-prep') {
+    return '<div id="exam-prep-page-content"></div>';
+  }
+
   // 설정 페이지만 특별 처리
   if (pageId === 'settings' && currentUser.role === ROLES.OWNER) {
     return `
@@ -11946,16 +11950,14 @@ function calcEpStudentDone(eps) {
 
 // ── 목록 페이지 ──
 function renderExamPrepPage() {
-  var container = document.getElementById('main');
+  var container = document.getElementById('exam-prep-page-content');
   if (!container) return;
   var isOwner = currentUser && currentUser.role === ROLES.OWNER;
   if (currentExamPrepId) {
     renderExamPrepDetail(container);
   } else {
-    var html = '<div class="page-header"><h1 class="page-title">시험대비 체크리스트</h1></div>';
-    html += '<div style="margin-bottom:16px;">';
-    if (isOwner) html += '<button class="btn btn-primary btn-sm" onclick="openExamPrepForm(null)">+ 새 시험대비 만들기</button>';
-    html += '</div>';
+    var html = '';
+    if (isOwner) html += '<div style="margin-bottom:16px;"><button class="btn btn-primary btn-sm" onclick="openExamPrepForm(null)">+ 새 시험대비 만들기</button></div>';
     html += '<div id="exam-prep-list-body"></div>';
     container.innerHTML = html;
     renderExamPrepListBody();
@@ -12022,9 +12024,9 @@ function renderExamPrepDetail(container) {
   var cnt = examPrepStudentsData.filter(function(x) { return x.examPrepId === ep.id; }).length;
   var rate = calcEpRate(ep.id);
 
-  var html = '<div class="page-header" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">';
+  var html = '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">';
   html += '<button class="btn btn-outline btn-sm" onclick="currentExamPrepId=null;renderExamPrepPage();">← 뒤로</button>';
-  html += '<h1 class="page-title" style="margin:0;">' + escHtml(ep.name) + '</h1>';
+  html += '<span style="font-weight:700;font-size:18px;">' + escHtml(ep.name) + '</span>';
   html += '<span style="font-size:13px;color:var(--text3);">' + ep.startDate + ' ~ ' + ep.endDate + '</span>';
   if (isOwner) {
     html += '<div style="margin-left:auto;display:flex;gap:6px;">';
