@@ -1564,6 +1564,17 @@ input[type="checkbox"] {
 <!-- 토스트 -->
 <div class="toast" id="toast"></div>
 
+<!-- PWA 설치 배너 -->
+<div id="pwa-install-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:white;border-top:1px solid var(--border);padding:12px 16px;align-items:center;gap:12px;box-shadow:0 -2px 12px rgba(0,0,0,0.1);">
+  <img src="icon-192.png" style="width:36px;height:36px;border-radius:8px;flex-shrink:0;" alt="">
+  <div style="flex:1;">
+    <div style="font-size:14px;font-weight:600;color:var(--text);">풍당수학 앱 설치</div>
+    <div style="font-size:12px;color:var(--text2);">홈 화면에 추가하면 더 빠르게 사용할 수 있어요</div>
+  </div>
+  <button class="btn btn-primary btn-sm" onclick="pwaTriggerInstall()" style="flex-shrink:0;">설치</button>
+  <button class="btn btn-outline btn-sm" onclick="pwaDismissBanner()" style="flex-shrink:0;">닫기</button>
+</div>
+
 <!-- 학생 추가/수정 모달 -->
 <div class="modal-backdrop" id="modal-student-form">
   <div class="modal modal-wide">
@@ -2726,13 +2737,15 @@ TEST : 분수 개념점검
   </div>
 </div>
 
-<!-- 회의록 상세 모달 -->
+<!-- 회의록 상세/편집 모달 -->
 <div class="modal-backdrop" id="modal-meeting-detail">
   <div class="modal">
     <div class="modal-title" id="meeting-detail-modal-title">회의록</div>
     <div class="modal-body" id="meeting-detail-modal-body"></div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('modal-meeting-detail')">닫기</button>
+      <button class="btn btn-outline btn-sm" id="meeting-detail-delete-btn" style="color:var(--danger);border-color:var(--danger);display:none;" onclick="deleteMeetingFromDetail()">삭제</button>
+      <button class="btn btn-primary btn-sm" id="meeting-detail-save-btn" style="display:none;" onclick="saveMeeting()">저장</button>
     </div>
   </div>
 </div>
@@ -6844,14 +6857,15 @@ function createDateCell(day, dateStr) {
   
   const worklogsByTeacher = {};
   appState.workLogs.filter(w => w.date === dateStr).forEach(w => {
-    const teacher = w.teacher || '미지정';
+    const student = studentsData.find(s => s.id === w.studentId);
+    const teacher = (student && student.teacher) || '미지정';
     if (!worklogsByTeacher[teacher]) {
       worklogsByTeacher[teacher] = 0;
     }
     worklogsByTeacher[teacher]++;
   });
-  
-  const hasMeeting = meetingsData.some(m => m.date === dateStr);
+
+  const dayMeetings = meetingsData.filter(m => m.date === dateStr);
   const hasExamPrep = appState.examPreps.some(e => 
     e.startDate <= dateStr && e.endDate >= dateStr
   );
@@ -6884,15 +6898,31 @@ function createDateCell(day, dateStr) {
     const teacherInfo = appState.teachers.find(t => t.name === teacher);
     const icon = teacherInfo?.icon || '✍️';
     const displayName = count > 1 ? teacher + '(' + count + ')' : teacher;
-    events.push('<div style="font-size: 10px; background: var(--accent); color: white; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px;">' + icon + ' ' + displayName + '</div>');
+    const safeTeacher = teacher.replace(/'/g, "\\'");
+    events.push('<div style="font-size: 10px; background: var(--accent); color: white; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; cursor:pointer;" onclick="calendarWorklogClick(\'' + safeTeacher + '\');event.stopPropagation();">' + icon + ' ' + displayName + '&nbsp;근무일지</div>');
   });
-  
-  if (hasMeeting) events.push('<div style="font-size: 10px; background: var(--accent2); color: white; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px;">회의록</div>');
+
+  dayMeetings.forEach(m => {
+    const safeId = m.id.replace(/'/g, "\\'");
+    events.push('<div style="font-size: 10px; background: var(--accent2); color: white; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; cursor:pointer;" onclick="calendarMeetingClick(\'' + safeId + '\');event.stopPropagation();">' + escHtml(m.title) + '</div>');
+  });
   if (hasExamPrep) events.push('<div style="font-size: 10px; background: var(--accent3); color: white; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px;">시험대비</div>');
   
   cell.innerHTML = dateHTML + events.join('');
   
   return cell;
+}
+
+function calendarMeetingClick(meetingId) {
+  navigateTo('meetings');
+  setTimeout(function() { openMeetingDetail(meetingId); }, 100);
+}
+
+function calendarWorklogClick(teacherName) {
+  currentWorkLogTab = 'teacher';
+  currentWorkLogTeacherFilter = teacherName;
+  navigateTo('worklog');
+  setTimeout(function() { renderWorkLogPage(); }, 100);
 }
 
 function changeMonth(delta) {
@@ -11397,7 +11427,7 @@ function renderMeetingsListBody() {
   var mo = currentMeetingFilter.month || '';
   var list = meetingsData.filter(function(m) {
     if (mo && m.date.slice(0, 7) !== mo) return false;
-    if (q && m.title.toLowerCase().indexOf(q) === -1 && m.attendees.toLowerCase().indexOf(q) === -1) return false;
+    if (q && m.title.toLowerCase().indexOf(q) === -1 && m.attendees.toLowerCase().indexOf(q) === -1 && m.date.indexOf(q) === -1) return false;
     return true;
   });
   if (currentMeetingSort === 'date-asc') list.sort(function(a, b) { return a.date < b.date ? -1 : 1; });
@@ -11441,48 +11471,82 @@ function openMeetingDetail(id) {
   if (!m) return;
   currentEditingMeetingId = id;
   var isOwner = currentUser && currentUser.role === ROLES.OWNER;
+
   var titleEl = document.getElementById('meeting-detail-modal-title');
   if (titleEl) titleEl.textContent = m.title;
+
+  var saveBtn = document.getElementById('meeting-detail-save-btn');
+  var deleteBtn = document.getElementById('meeting-detail-delete-btn');
+  if (saveBtn) saveBtn.style.display = isOwner ? '' : 'none';
+  if (deleteBtn) deleteBtn.style.display = isOwner ? '' : 'none';
+
+  meetingFormAttendees = m.attendees ? m.attendees.split(',').map(function(a) { return a.trim(); }).filter(Boolean) : [];
+
   var body = document.getElementById('meeting-detail-modal-body');
   if (!body) return;
-  var dateD = new Date(m.date + 'T00:00:00');
-  var dateLabel = (dateD.getFullYear()) + '년 ' + (dateD.getMonth()+1) + '월 ' + dateD.getDate() + '일';
-  var attendeeList = m.attendees ? m.attendees.split(',').map(function(a) { return a.trim(); }).join(', ') : '없음';
+  var IS = 'font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;width:100%;';
+  var LBL = 'font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px;';
   var tasks = meetingTasksData.filter(function(t) { return t.meetingId === id; });
   var done = tasks.filter(function(t) { return t.isComplete; }).length;
   var html = '';
-  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">';
-  html += '<div>';
-  html += '<div style="font-size:13px;color:var(--text2);">날짜: ' + dateLabel + '</div>';
-  html += '<div style="font-size:13px;color:var(--text2);margin-top:3px;">참석자: ' + escHtml(attendeeList) + '</div>';
-  html += '</div>';
+
   if (isOwner) {
-    html += '<div style="display:flex;gap:6px;">';
-    html += '<button class="btn btn-outline btn-sm" onclick="openMeetingFormFromDetail(\'' + id + '\')">수정</button>';
-    html += '<button class="btn btn-sm" style="background:var(--danger);color:white;" onclick="deleteMeeting(\'' + id + '\')">삭제</button>';
+    html += '<div style="margin-bottom:12px;">';
+    html += '<label style="' + LBL + '">날짜</label>';
+    html += '<input type="date" id="meeting-date-input" value="' + m.date + '" style="' + IS + '">';
     html += '</div>';
-  }
-  html += '</div>';
-  if (m.content) {
-    html += '<div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:16px;">';
-    html += '<div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;">회의 내용</div>';
-    html += '<div style="font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.7;background:var(--bg);border-radius:var(--radius-sm);padding:12px;">' + escHtml(m.content) + '</div>';
+    html += '<div style="margin-bottom:12px;">';
+    html += '<label style="' + LBL + '">제목</label>';
+    html += '<input type="text" id="meeting-title-input" value="' + escHtml(m.title) + '" placeholder="예: 26년 4월 교무회의" style="' + IS + '">';
     html += '</div>';
+    html += '<div style="margin-bottom:12px;">';
+    html += '<label style="' + LBL + '">참석자</label>';
+    html += '<div id="meeting-attendee-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;min-height:24px;"></div>';
+    html += '<select id="meeting-attendee-select" style="' + IS + '" onchange="addMeetingAttendeeFromSelect(this)"><option value="">+ 참석자 추가</option></select>';
+    html += '</div>';
+    html += '<div style="margin-bottom:16px;">';
+    html += '<label style="' + LBL + '">회의 내용</label>';
+    html += '<textarea id="meeting-content-input" rows="6" placeholder="회의 내용을 입력하세요" style="' + IS + 'resize:vertical;font-family:inherit;line-height:1.6;">' + escHtml(m.content) + '</textarea>';
+    html += '</div>';
+  } else {
+    var dateD = new Date(m.date + 'T00:00:00');
+    var dateLabel = dateD.getFullYear() + '년 ' + (dateD.getMonth()+1) + '월 ' + dateD.getDate() + '일';
+    var attendeeList = m.attendees ? m.attendees.split(',').map(function(a) { return a.trim(); }).join(', ') : '없음';
+    html += '<div style="font-size:13px;color:var(--text2);margin-bottom:14px;">' + dateLabel + ' &nbsp;|&nbsp; 참석자: ' + escHtml(attendeeList) + '</div>';
+    if (m.content) {
+      html += '<div style="font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.7;background:var(--bg);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;">' + escHtml(m.content) + '</div>';
+    }
   }
+
   html += '<div style="border-top:1px solid var(--border);padding-top:14px;">';
   html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">';
-  html += '<div style="font-size:12px;font-weight:600;color:var(--text2);">할일 목록 (' + done + '/' + tasks.length + ' 완료)</div>';
-  if (isOwner) html += '<button class="btn btn-outline btn-sm" onclick="openTaskForm(\'' + id + '\',null)">+ 할일 추가</button>';
+  html += '<div style="font-size:12px;font-weight:600;color:var(--text2);">할일 목록 (<span class="tasks-count">' + done + '/' + tasks.length + ' 완료</span>)</div>';
+  if (isOwner) html += '<button class="btn btn-outline btn-sm" onclick="showInlineTaskAdd(\'' + id + '\')">+ 할일 추가</button>';
   html += '</div>';
   html += '<div id="meeting-tasks-list">' + renderTasksHtml(id) + '</div>';
   html += '</div>';
+
   body.innerHTML = html;
+  if (isOwner) renderMeetingAttendeeTags();
   openModal('modal-meeting-detail');
+}
+
+function deleteMeetingFromDetail() {
+  if (currentEditingMeetingId) deleteMeeting(currentEditingMeetingId);
 }
 
 function openMeetingFormFromDetail(id) {
   closeModal('modal-meeting-detail');
   setTimeout(function() { openMeetingForm(id); }, 120);
+}
+
+function buildTeacherOptionsHtml(selectedName) {
+  var opts = '<option value="">담당자 선택</option>';
+  teachersData.forEach(function(tc) {
+    var sel = tc.name === selectedName ? ' selected' : '';
+    opts += '<option value="' + escHtml(tc.name) + '"' + sel + '>' + escHtml(tc.name) + '</option>';
+  });
+  return opts;
 }
 
 function renderTasksHtml(meetingId) {
@@ -11492,27 +11556,30 @@ function renderTasksHtml(meetingId) {
   }
   var isOwner = currentUser && currentUser.role === ROLES.OWNER;
   var myName = currentUser ? currentUser.name : '';
+  var btnOrd = 'font-size:10px;padding:1px 5px;line-height:1;';
   var html = '<div style="display:flex;flex-direction:column;gap:6px;">';
-  tasks.forEach(function(t) {
+  tasks.forEach(function(t, idx) {
     var canComplete = isOwner || t.assignee === myName;
-    var canEdit = isOwner;
     var doneStyle = t.isComplete ? 'text-decoration:line-through;color:var(--text3);' : '';
     var checkIcon = t.isComplete ? '✓' : '○';
     var checkColor = t.isComplete ? 'var(--success)' : 'var(--text3)';
     var checkCursor = canComplete ? 'pointer' : 'default';
     var completedLabel = t.isComplete && t.completedDate ? ' <span style="font-size:11px;color:var(--text3);">완료: ' + t.completedDate.slice(5).replace('-','/') + '</span>' : '';
-    html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border-radius:var(--radius-sm);">';
+    html += '<div id="task-row-' + t.id + '" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border-radius:var(--radius-sm);">';
     html += '<span style="font-size:16px;color:' + checkColor + ';cursor:' + checkCursor + ';min-width:20px;text-align:center;" onclick="' + (canComplete ? 'toggleTaskComplete(\'' + t.id + '\')' : '') + '">' + checkIcon + '</span>';
     html += '<div style="flex:1;">';
     html += '<span style="font-size:13px;' + doneStyle + '">' + escHtml(t.taskContent) + '</span>';
     html += completedLabel;
     html += '<div style="font-size:11px;color:var(--text3);margin-top:1px;">담당: ' + escHtml(t.assignee) + '</div>';
     html += '</div>';
-    if (canEdit) {
+    if (isOwner) {
+      html += '<div style="display:flex;flex-direction:column;gap:2px;">';
+      html += '<button class="btn btn-sm" style="' + btnOrd + '" onclick="moveTask(\'' + t.id + '\',-1)"' + (idx === 0 ? ' disabled' : '') + ' title="위로">▲</button>';
+      html += '<button class="btn btn-sm" style="' + btnOrd + '" onclick="moveTask(\'' + t.id + '\',1)"' + (idx === tasks.length - 1 ? ' disabled' : '') + ' title="아래로">▼</button>';
+      html += '</div>';
       html += '<div style="display:flex;gap:4px;">';
-      if (t.isComplete) html += '<button class="btn btn-sm" style="font-size:11px;padding:2px 6px;" onclick="uncompleteTask(\'' + t.id + '\')">완료취소</button>';
-      html += '<button class="btn btn-sm" style="font-size:11px;padding:2px 6px;" onclick="openTaskForm(\'' + meetingId + '\',\'' + t.id + '\')">수정</button>';
-      html += '<button class="btn btn-sm" style="font-size:11px;padding:2px 6px;background:var(--danger);color:white;" onclick="deleteTask(\'' + t.id + '\')">삭제</button>';
+      html += '<button class="btn btn-sm" style="font-size:14px;padding:2px 6px;line-height:1;" onclick="openInlineTaskEdit(\'' + meetingId + '\',\'' + t.id + '\')" title="수정">✏️</button>';
+      html += '<button class="btn btn-sm" style="font-size:14px;padding:2px 6px;line-height:1;" onclick="deleteTask(\'' + t.id + '\')" title="삭제">🗑️</button>';
       html += '</div>';
     }
     html += '</div>';
@@ -11521,19 +11588,85 @@ function renderTasksHtml(meetingId) {
   return html;
 }
 
+function showInlineTaskAdd(meetingId) {
+  var existing = document.getElementById('task-inline-add-row');
+  if (existing) { existing.remove(); }
+  var IS = 'font-size:13px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;';
+  var opts = buildTeacherOptionsHtml('');
+  var html = '<div id="task-inline-add-row" style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--bg);border-radius:var(--radius-sm);margin-top:6px;">';
+  html += '<input type="text" id="task-inline-content" placeholder="할일 내용" style="' + IS + 'flex:1;">';
+  html += '<select id="task-inline-assignee" style="' + IS + 'min-width:90px;">' + opts + '</select>';
+  html += '<button class="btn btn-primary btn-sm" onclick="saveInlineTask(\'' + meetingId + '\',null)">확인</button>';
+  html += '<button class="btn btn-outline btn-sm" onclick="cancelInlineTask(\'' + meetingId + '\')">취소</button>';
+  html += '</div>';
+  var list = document.getElementById('meeting-tasks-list');
+  if (!list) return;
+  list.insertAdjacentHTML('beforeend', html);
+  var input = document.getElementById('task-inline-content');
+  if (input) input.focus();
+}
+
+function openInlineTaskEdit(meetingId, taskId) {
+  var t = meetingTasksData.find(function(x) { return x.id === taskId; });
+  if (!t) return;
+  var IS = 'font-size:13px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;';
+  var opts = buildTeacherOptionsHtml(t.assignee);
+  var html = '<div id="task-edit-row-' + taskId + '" style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--bg);border-radius:var(--radius-sm);">';
+  html += '<input type="text" id="task-edit-content-' + taskId + '" value="' + escHtml(t.taskContent) + '" placeholder="할일 내용" style="' + IS + 'flex:1;">';
+  html += '<select id="task-edit-assignee-' + taskId + '" style="' + IS + 'min-width:90px;">' + opts + '</select>';
+  html += '<button class="btn btn-primary btn-sm" onclick="saveInlineTask(\'' + meetingId + '\',\'' + taskId + '\')">확인</button>';
+  html += '<button class="btn btn-outline btn-sm" onclick="cancelInlineTask(\'' + meetingId + '\')">취소</button>';
+  html += '</div>';
+  var row = document.getElementById('task-row-' + taskId);
+  if (row) {
+    row.outerHTML = html;
+    var input = document.getElementById('task-edit-content-' + taskId);
+    if (input) { input.focus(); input.select(); }
+  }
+}
+
+function saveInlineTask(meetingId, taskId) {
+  var contentEl = taskId ? document.getElementById('task-edit-content-' + taskId) : document.getElementById('task-inline-content');
+  var assigneeEl = taskId ? document.getElementById('task-edit-assignee-' + taskId) : document.getElementById('task-inline-assignee');
+  if (!contentEl || !assigneeEl) return;
+  var content = contentEl.value.trim();
+  var assignee = assigneeEl.value;
+  if (!content) { showToast('할일 내용을 입력하세요'); contentEl.focus(); return; }
+  if (!assignee) { showToast('담당자를 선택하세요'); assigneeEl.focus(); return; }
+  if (taskId) {
+    var t = meetingTasksData.find(function(x) { return x.id === taskId; });
+    if (t) { t.taskContent = content; t.assignee = assignee; }
+  } else {
+    meetingTasksData.push({ id: uid(), meetingId: meetingId, assignee: assignee, taskContent: content, isComplete: false, completedDate: null, createdAt: today() });
+  }
+  refreshTasksList(meetingId);
+}
+
+function cancelInlineTask(meetingId) {
+  refreshTasksList(meetingId);
+}
+
+function moveTask(taskId, direction) {
+  var t = meetingTasksData.find(function(x) { return x.id === taskId; });
+  if (!t) return;
+  var meetingId = t.meetingId;
+  var tasks = meetingTasksData.filter(function(x) { return x.meetingId === meetingId; });
+  var idx = tasks.indexOf(t);
+  var newIdx = idx + direction;
+  if (newIdx < 0 || newIdx >= tasks.length) return;
+  var globalA = meetingTasksData.indexOf(tasks[idx]);
+  var globalB = meetingTasksData.indexOf(tasks[newIdx]);
+  var tmp = meetingTasksData[globalA];
+  meetingTasksData[globalA] = meetingTasksData[globalB];
+  meetingTasksData[globalB] = tmp;
+  refreshTasksList(meetingId);
+}
+
 function toggleTaskComplete(taskId) {
   var t = meetingTasksData.find(function(x) { return x.id === taskId; });
   if (!t) return;
-  t.isComplete = true;
-  t.completedDate = today();
-  refreshTasksList(t.meetingId);
-}
-
-function uncompleteTask(taskId) {
-  var t = meetingTasksData.find(function(x) { return x.id === taskId; });
-  if (!t) return;
-  t.isComplete = false;
-  t.completedDate = null;
+  t.isComplete = !t.isComplete;
+  t.completedDate = t.isComplete ? today() : null;
   refreshTasksList(t.meetingId);
 }
 
@@ -11685,11 +11818,13 @@ function saveMeeting() {
   if (currentEditingMeetingId) {
     var m = meetingsData.find(function(x) { return x.id === currentEditingMeetingId; });
     if (m) { m.date = date; m.title = title; m.content = content; m.attendees = attendeesStr; }
+    appState.meetings = meetingsData;
+    closeModal('modal-meeting-detail');
   } else {
     meetingsData.push({ id: uid(), date: date, title: title, content: content, attendees: attendeesStr, createdAt: today() });
+    appState.meetings = meetingsData;
+    closeModal('modal-meeting-form');
   }
-  appState.meetings = meetingsData;
-  closeModal('modal-meeting-form');
   renderMeetingsListBody();
   showToast(currentEditingMeetingId ? '수정됨' : '저장됨');
 }
@@ -11706,6 +11841,43 @@ function deleteMeeting(id) {
   closeModal('modal-meeting-detail');
   renderMeetingsListBody();
   showToast('삭제됨');
+}
+
+// ── PWA 설치 배너 ──────────────────────────────────────────
+var _pwaInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  _pwaInstallPrompt = e;
+  var banner = document.getElementById('pwa-install-banner');
+  if (banner && sessionStorage.getItem('pwa-banner-dismissed') !== '1') {
+    banner.style.display = 'flex';
+  }
+});
+
+window.addEventListener('appinstalled', function() {
+  var banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.style.display = 'none';
+  _pwaInstallPrompt = null;
+  showToast('앱이 설치되었습니다!');
+});
+
+function pwaTriggerInstall() {
+  if (!_pwaInstallPrompt) return;
+  _pwaInstallPrompt.prompt();
+  _pwaInstallPrompt.userChoice.then(function(result) {
+    if (result.outcome === 'accepted') {
+      var banner = document.getElementById('pwa-install-banner');
+      if (banner) banner.style.display = 'none';
+    }
+    _pwaInstallPrompt = null;
+  });
+}
+
+function pwaDismissBanner() {
+  var banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.style.display = 'none';
+  sessionStorage.setItem('pwa-banner-dismissed', '1');
 }
 
 // ── Service Worker 등록 ──────────────────────────────────
