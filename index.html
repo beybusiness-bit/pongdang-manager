@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#4a90e2">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<script src="https://accounts.google.com/gsi/client" async></script>
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="풍당수학">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -1524,18 +1525,12 @@ input[type="checkbox"] {
   <div class="login-box">
     <div class="login-logo">🎓 퐁당수학</div>
     <div class="login-subtitle">학원 관리 시스템</div>
-    <form class="login-form" onsubmit="handleLogin(event)">
-      <div class="form-group">
-        <label class="form-label">이메일</label>
-        <input type="email" class="form-input" id="login-email" placeholder="example@gmail.com" required>
-      </div>
-      <div class="form-group">
-        <label class="form-label">비밀번호</label>
-        <input type="password" class="form-input" id="login-password" placeholder="비밀번호 입력" required>
-      </div>
-      <button type="submit" class="btn btn-primary btn-full">로그인</button>
-      <div class="error-msg" id="login-error">이메일 또는 비밀번호가 올바르지 않습니다.</div>
-    </form>
+    <p style="font-size:13px;color:var(--text2);margin:0 0 24px;text-align:center;">허가된 Google 계정으로 로그인하세요</p>
+    <button class="btn btn-primary btn-full" onclick="handleGoogleSignIn()" id="google-signin-btn" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;font-size:15px;">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#fff" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#fff" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#fff" d="M3.964 10.706A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/><path fill="#fff" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+      Google 계정으로 로그인
+    </button>
+    <div class="error-msg" id="login-error" style="margin-top:12px;"></div>
   </div>
 </div>
 
@@ -2951,8 +2946,8 @@ TEST : 분수 개념점검
 // ============ 상수 ============
 const AUTH = {
   ALLOWED_EMAILS: ['pongdang.math@gmail.com'],
-  CLIENT_ID: 'TBD',
-  SHEET_ID: '1_CFlWnHOi13EFlp8QAUYATdo6lruzXMDfAelxR1Xa0o',
+  CLIENT_ID: '336607866033-m4prif6mig0mnkeek64hbbch3j4thdhc.apps.googleusercontent.com',
+  SHEET_ID: '1kaKwSNmQk_HdHZjZiILoZcrXSVi08wwlDZxvr8PmNGI',
 };
 
 // 메뉴 구조 (14개)
@@ -3439,41 +3434,87 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ============ 로그인 처리 ============
-function handleLogin(e) {
-  e.preventDefault();
-  const email = document.getElementById('login-email').value;
-  const password = document.getElementById('login-password').value;
-  const errorMsg = document.getElementById('login-error');
-  
-  // 개발 단계: 간단한 인증 (pongdang.math@gmail.com / admin123)
-  if (email === 'pongdang.math@gmail.com' && password === 'admin123') {
-    currentUser = {
-      email: email,
-      name: '학원장',
-      role: ROLES.OWNER,
-      avatar: '원'
-    };
-    
-    errorMsg.classList.remove('show');
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').classList.add('active');
-    
-    initApp();
-    showToast('로그인 성공!');
+// ── Google OAuth (GIS) ──────────────────────────────────────
+var _gisTokenClient = null;
+
+function initGoogleAuth() {
+  if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) return;
+  _gisTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: AUTH.CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+    callback: handleGisToken
+  });
+}
+
+function initGisWhenReady() {
+  if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
+    initGoogleAuth();
   } else {
-    errorMsg.classList.add('show');
+    setTimeout(initGisWhenReady, 300);
   }
 }
 
-function handleLogout() {
-  if (confirm('로그아웃 하시겠습니까?')) {
-    currentUser = null;
-    document.getElementById('login-screen').style.display = 'flex';
-    document.getElementById('app').classList.remove('active');
-    document.getElementById('login-email').value = '';
-    document.getElementById('login-password').value = '';
-    showToast('로그아웃되었습니다.');
+function handleGoogleSignIn() {
+  var btn = document.getElementById('google-signin-btn');
+  if (btn) btn.textContent = '로그인 중...';
+  if (!_gisTokenClient) {
+    showLoginError('Google 인증 로드 중입니다. 잠시 후 다시 시도하세요.');
+    if (btn) btn.innerHTML = 'Google 계정으로 로그인';
+    return;
   }
+  _gisTokenClient.requestAccessToken({ prompt: 'select_account' });
+}
+
+async function handleGisToken(tokenResponse) {
+  var btn = document.getElementById('google-signin-btn');
+  if (tokenResponse.error) {
+    showLoginError('로그인 취소됨');
+    if (btn) btn.innerHTML = 'Google 계정으로 로그인';
+    return;
+  }
+  var accessToken = tokenResponse.access_token;
+  try {
+    var resp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: 'Bearer ' + accessToken }
+    });
+    var info = await resp.json();
+    if (!AUTH.ALLOWED_EMAILS.includes(info.email)) {
+      showLoginError('접근 권한이 없는 계정입니다. (' + info.email + ')');
+      if (btn) btn.innerHTML = 'Google 계정으로 로그인';
+      if (typeof google !== 'undefined') google.accounts.oauth2.revoke(accessToken, function() {});
+      return;
+    }
+    currentUser = {
+      email: info.email,
+      name: info.name || info.email,
+      role: ROLES.OWNER,
+      avatar: (info.name || info.email).charAt(0),
+      accessToken: accessToken
+    };
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').classList.add('active');
+    initApp();
+    showToast(info.name + '님, 환영합니다!');
+  } catch(e) {
+    showLoginError('사용자 정보 조회 실패. 다시 시도하세요.');
+    if (btn) btn.innerHTML = 'Google 계정으로 로그인';
+  }
+}
+
+function showLoginError(msg) {
+  var el = document.getElementById('login-error');
+  if (el) { el.textContent = msg; el.classList.add('show'); }
+}
+
+function handleLogout() {
+  if (!confirm('로그아웃 하시겠습니까?')) return;
+  if (currentUser && currentUser.accessToken && typeof google !== 'undefined') {
+    google.accounts.oauth2.revoke(currentUser.accessToken, function() {});
+  }
+  currentUser = null;
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').classList.remove('active');
+  showToast('로그아웃되었습니다.');
 }
 
 
@@ -3489,6 +3530,12 @@ async function sheetsApiRequest(method, path, body) {
     if (!resp.ok) {
       var errBody = await resp.json().catch(function() { return {}; });
       console.warn('[Sheets]', resp.status, errBody.error && errBody.error.message);
+      if (resp.status === 401) {
+        showToast('인증이 만료되었습니다. 다시 로그인해주세요.');
+        if (typeof google !== 'undefined' && _gisTokenClient) {
+          _gisTokenClient.requestAccessToken({ prompt: '' });
+        }
+      }
       return null;
     }
     return await resp.json();
@@ -10073,20 +10120,9 @@ function deleteTeacher(teacherId) {
   showToast('선생님이 삭제되었습니다');
 }
 
-// 앱 로드 시 초기화
-window.addEventListener('load', () => {
-  // 개발 단계: 로그인 건너뛰고 바로 진입
-  currentUser = {
-    email: 'pongdang.math@gmail.com',
-    name: '학원장',
-    role: ROLES.OWNER,
-    avatar: '원'
-  };
-  
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').classList.add('active');
-  
-  initApp();
+// 앱 로드 시 GIS 초기화 (로그인 화면 표시)
+window.addEventListener('load', function() {
+  initGisWhenReady();
 });
 
 // ============ 근무일지 ============
