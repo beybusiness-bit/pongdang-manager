@@ -1511,6 +1511,9 @@ input[type="checkbox"] {
 .ep-detail-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 12px; }
 .ep-detail-table th { position: sticky; top: 0; z-index: 10; background: var(--bg-side); padding: 8px 8px; text-align: center; white-space: nowrap; border-bottom: 2px solid var(--border); font-size: 11px; }
 .ep-detail-table td { padding: 7px 8px; border-bottom: 1px solid var(--border); text-align: center; vertical-align: middle; }
+.ep-detail-table td.ep-memo-cell { text-align: left; white-space: normal; min-width: 200px; max-width: 280px; word-break: break-word; }
+.ep-check-on  { display:inline-block; color: var(--success); font-size: 18px; line-height:1; font-weight:700; }
+.ep-check-off { display:inline-block; color: var(--border); font-size: 18px; line-height:1; }
 .ep-detail-table tr.ep-table-row:hover td { background: var(--bg-hover); cursor: pointer; }
 </style>
 </head>
@@ -2869,11 +2872,11 @@ TEST : 분수 개념점검
 
 <!-- 시험대비 학생 일괄수정 모달 -->
 <div class="modal-backdrop" id="modal-ep-bulk-edit">
-  <div class="modal" style="max-width:400px;">
+  <div class="modal" style="max-width:500px;">
     <div class="modal-title">시험대비 학생 일괄수정</div>
     <div class="modal-body">
-      <div style="margin-bottom:12px;font-size:13px;color:var(--text2);">
-        <strong><span id="ep-bulk-edit-count">0</span>명</strong> 학생에게 일괄 적용합니다. 빈 칸으로 두면 변경되지 않습니다.
+      <div style="margin-bottom:14px;font-size:13px;color:var(--text2);background:var(--bg);padding:8px 12px;border-radius:var(--radius-sm);">
+        <strong><span id="ep-bulk-edit-count">0</span>명</strong> 학생에게 일괄 적용합니다. 빈 칸·변경 안 함으로 두면 해당 항목은 변경되지 않습니다.
       </div>
       <div class="form-group">
         <label class="form-label">담당T</label>
@@ -2890,8 +2893,34 @@ TEST : 분수 개념점검
         <input type="text" class="form-input" id="ep-bulk-time" placeholder="변경 안 함">
       </div>
       <div class="form-group">
-        <label class="form-label">체크박스 일괄 체크 (선택 학생 전체 ON)</label>
-        <div id="ep-bulk-checks" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;"></div>
+        <label class="form-label">시험범위</label>
+        <input type="text" class="form-input" id="ep-bulk-scope" placeholder="변경 안 함">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">시험기간 시작</label>
+          <input type="date" class="form-input" id="ep-bulk-examstart">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">시험기간 종료</label>
+          <input type="date" class="form-input" id="ep-bulk-examend">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">시험대비 시작일</label>
+          <input type="date" class="form-input" id="ep-bulk-prepstart">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">직전보강일</label>
+          <input type="date" class="form-input" id="ep-bulk-lastrf">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">진행 체크박스 — ON으로 바꿀 항목</label>
+        <div id="ep-bulk-checks-on" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">진행 체크박스 — OFF로 바꿀 항목</label>
+        <div id="ep-bulk-checks-off" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -2905,7 +2934,12 @@ TEST : 분수 개념점검
 <div class="modal-backdrop" id="modal-ep-add-textbook">
   <div class="modal" style="max-width:440px;">
     <div class="modal-title">교재 선택</div>
-    <div class="modal-body" id="ep-add-textbook-body"></div>
+    <div class="modal-body">
+      <div style="margin-bottom:10px;">
+        <input type="text" id="ep-add-textbook-search-input" placeholder="교재명 검색" oninput="epAddTextbookSearch=this.value;renderEpAddTextbookBody();" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;width:100%;">
+      </div>
+      <div id="ep-add-textbook-body" style="max-height:340px;overflow-y:auto;"></div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('modal-ep-add-textbook')">닫기</button>
     </div>
@@ -12581,12 +12615,11 @@ function renderExamPrepDetailBody() {
       html += '<table class="ep-detail-table">';
       html += '<thead><tr>';
       if (canWrite) html += '<th style="width:36px;"></th>';
-      html += '<th>이름</th><th>학교</th><th>학년</th><th>담당T</th>';
-      html += '<th>보강요일</th><th>보강시간</th><th>시험기간</th>';
+      html += '<th>이름</th><th>학년</th><th>담당T</th>';
+      html += '<th>보강요일</th><th>보강시간</th><th>시험범위</th><th>시험기간</th>';
       html += '<th>시험대비시작일</th><th>직전보강일</th><th>시험대비교재</th>';
       EP_CHECKS.forEach(function(c) { html += '<th>' + c.label + '</th>'; });
-      html += '<th>결과</th><th>메모</th>';
-      if (canWrite) html += '<th></th>';
+      html += '<th>결과</th><th style="min-width:200px;">메모</th>';
       html += '</tr></thead>';
       html += '<tbody>';
       groupItems.forEach(function(eps) {
@@ -12602,26 +12635,23 @@ function renderExamPrepDetailBody() {
           html += '<td onclick="event.stopPropagation()"><input type="checkbox"' + (isSelected ? ' checked' : '') + ' onchange="toggleEpStudentSelection(\'' + eps.id + '\',this.checked)"></td>';
         }
         html += '<td style="font-weight:600;white-space:nowrap;">' + escHtml(st.name || '') + '</td>';
-        html += '<td style="white-space:nowrap;">' + escHtml(st.school || '') + '</td>';
         html += '<td>' + escHtml(st.grade || '') + '</td>';
-        html += '<td>' + escHtml(st.teacher || '') + '</td>';
+        html += '<td>' + escHtml(eps.teacher || st.teacher || '') + '</td>';
         html += '<td>' + escHtml(eps.reinforcementDays || '') + '</td>';
         html += '<td>' + escHtml(eps.reinforcementTime || '') + '</td>';
+        html += '<td style="white-space:nowrap;">' + escHtml(eps.examScope || '') + '</td>';
         html += '<td style="white-space:nowrap;">' + escHtml(examRange) + '</td>';
         html += '<td>' + escHtml(eps.prepStart || '') + '</td>';
         html += '<td>' + escHtml(eps.lastReinforcement || '') + '</td>';
-        html += '<td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escHtml(tbNames) + '">' + escHtml(tbNames) + '</td>';
+        html += '<td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escHtml(tbNames) + '">' + escHtml(tbNames) + '</td>';
         EP_CHECKS.forEach(function(c) {
           var checked = eps[c.field];
-          html += '<td onclick="event.stopPropagation();toggleEpCheck(\'' + eps.id + '\',\'' + c.field + '\')" style="cursor:pointer;" title="클릭하여 토글">';
-          html += checked ? '<span style="color:var(--success);font-weight:700;">✓</span>' : '<span style="color:var(--text3);">○</span>';
+          html += '<td onclick="event.stopPropagation();toggleEpCheck(\'' + eps.id + '\',\'' + c.field + '\')" style="cursor:pointer;" title="' + c.label + ' 클릭하여 토글">';
+          html += checked ? '<span class="ep-check-on">✓</span>' : '<span class="ep-check-off">○</span>';
           html += '</td>';
         });
         html += '<td style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(eps.result || '') + '</td>';
-        html += '<td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(eps.memo || '') + '</td>';
-        if (canWrite) {
-          html += '<td onclick="event.stopPropagation()"><button class="btn btn-outline btn-sm" onclick="openEpStudentEditModal(\'' + eps.id + '\')">수정</button></td>';
-        }
+        html += '<td class="ep-memo-cell">' + escHtml(eps.memo || '') + '</td>';
         html += '</tr>';
       });
       html += '</tbody></table>';
@@ -12658,24 +12688,19 @@ function renderExamPrepDetailBody() {
         var canEditThis = isOwner || (canWrite && teacher === myName);
         var isExpCard = expandedEpStudentIds.has(eps.id);
         var isSelected = selectedEpStudentIds.has(eps.id);
-        var checkBar = EP_CHECKS.map(function(c) { return eps[c.field] ? '✓' : '○'; }).join('');
-        var progressColor = isComplete ? 'var(--success)' : 'var(--accent3)';
+        var epTeacher = eps.teacher || teacher;
 
         html += '<div id="ep-card-' + eps.id + '" style="background:white;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;' + (isSelected ? 'border-color:var(--accent);' : '') + '">';
         html += '<div style="padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;" onclick="toggleEpCard(\'' + eps.id + '\')">';
         if (canWrite) {
-          html += '<input type="checkbox"' + (isSelected ? ' checked' : '') + ' onclick="event.stopPropagation();toggleEpStudentSelection(\'' + eps.id + '\',this.checked)" style="flex-shrink:0;">';
+          html += '<input type="checkbox"' + (isSelected ? ' checked' : '') + ' onclick="event.stopPropagation();toggleEpStudentSelection(\'' + eps.id + '\',this.checked)" style="flex-shrink:0;width:18px;height:18px;">';
         }
         html += '<div style="flex:1;">';
         html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">';
         html += '<span style="font-weight:600;font-size:14px;">' + escHtml(name) + '</span>';
         html += '<span style="font-size:12px;color:var(--text2);">' + escHtml(grade) + '</span>';
-        if (teacher) html += '<span style="font-size:12px;color:var(--accent);">' + escHtml(teacher) + '</span>';
+        if (epTeacher) html += '<span style="font-size:12px;color:var(--accent);">' + escHtml(epTeacher) + '</span>';
         if (isComplete) html += '<span style="font-size:11px;background:var(--success);color:white;padding:1px 6px;border-radius:10px;">완료 ✅</span>';
-        html += '</div>';
-        html += '<div style="display:flex;align-items:center;gap:8px;margin-top:4px;">';
-        html += '<span style="font-size:11px;color:var(--text3);font-family:monospace;">' + checkBar + '</span>';
-        html += '<span style="font-size:11px;color:' + progressColor + ';font-weight:600;">' + done + '/' + EP_CHECKS.length + '</span>';
         html += '</div>';
         html += '</div>';
         html += '<span style="font-size:16px;color:var(--text3);">' + (isExpCard ? '▲' : '▼') + '</span>';
@@ -12683,46 +12708,60 @@ function renderExamPrepDetailBody() {
 
         if (isExpCard) {
           html += '<div style="border-top:1px solid var(--border);padding:14px;">';
-          html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">📅 일정 정보</div>';
-          html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">';
+          // 담당T
+          html += '<div style="margin-bottom:10px;"><label style="' + LBL + '">담당T</label>';
+          if (canEditThis) {
+            html += '<select id="ep-days-teacher-' + eps.id + '" style="' + IS + '">';
+            html += '<option value="">선택</option>';
+            teachersData.forEach(function(t) { html += '<option value="' + escHtml(t.name) + '"' + (epTeacher === t.name ? ' selected' : '') + '>' + escHtml(t.name) + '</option>'; });
+            html += '</select>';
+          } else {
+            html += '<input readonly type="text" value="' + escHtml(epTeacher) + '" style="' + IS + '">';
+          }
+          html += '</div>';
+          // 보강요일/시간
+          html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">';
           html += '<div><label style="' + LBL + '">보강요일</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-days-' + eps.id + '" value="' + escHtml(eps.reinforcementDays || '') + '" style="' + IS + '"></div>';
           html += '<div><label style="' + LBL + '">보강시간</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-time-' + eps.id + '" value="' + escHtml(eps.reinforcementTime || '') + '" style="' + IS + '"></div>';
+          html += '</div>';
+          // 시험범위
+          html += '<div style="margin-bottom:10px;"><label style="' + LBL + '">시험범위</label>';
+          html += '<input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-scope-' + eps.id + '" value="' + escHtml(eps.examScope || '') + '" placeholder="예: 3-1 도형, 분수" style="' + IS + '"></div>';
+          // 시험기간 / 시험대비시작일 / 직전보강일
+          html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">';
           html += '<div><label style="' + LBL + '">시험기간 시작</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-examstart-' + eps.id + '" value="' + (eps.examStart || '') + '" style="' + IS + '"></div>';
           html += '<div><label style="' + LBL + '">시험기간 종료</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-examend-' + eps.id + '" value="' + (eps.examEnd || '') + '" style="' + IS + '"></div>';
           html += '<div><label style="' + LBL + '">시험대비 시작일</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-prepstart-' + eps.id + '" value="' + (eps.prepStart || '') + '" style="' + IS + '"></div>';
           html += '<div><label style="' + LBL + '">직전보강일</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-lastrf-' + eps.id + '" value="' + (eps.lastReinforcement || '') + '" style="' + IS + '"></div>';
           html += '</div>';
-          html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">📖 시험 정보</div>';
-          html += '<div style="margin-bottom:10px;font-size:12px;color:var(--text3);">학교: ' + escHtml(st.school || '') + '</div>';
-          html += '<div style="margin-bottom:12px;"><label style="' + LBL + '">시험범위</label>';
-          html += '<input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-scope-' + eps.id + '" value="' + escHtml(eps.examScope || '') + '" placeholder="예: 3-1 도형, 분수" style="' + IS + '"></div>';
-          html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">📚 시험대비 교재</div>';
+          // 교재
+          html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">📚 시험대비 교재</div>';
           var tbIds = eps.textbookIds ? eps.textbookIds.split(',').filter(Boolean) : [];
           if (tbIds.length) {
             tbIds.forEach(function(tbId) {
               var tb = textbooksData.find(function(x) { return x.id === tbId; });
-              var tbName = tb ? tb.title : '(삭제된 교재)';
               html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
-              html += '<span style="font-size:13px;">📖 ' + escHtml(tbName) + '</span>';
+              html += '<span style="font-size:13px;flex:1;">📖 ' + escHtml(tb ? tb.title : '(삭제된 교재)') + '</span>';
               if (canEditThis) html += '<button class="btn btn-sm" style="font-size:12px;padding:1px 5px;color:var(--danger);" onclick="removeEpTextbook(\'' + eps.id + '\',\'' + tbId + '\')">×</button>';
               html += '</div>';
             });
           } else {
-            html += '<div style="font-size:12px;color:var(--text3);margin-bottom:6px;">교재 없음</div>';
+            html += '<div style="font-size:12px;color:var(--text3);margin-bottom:4px;">교재 없음</div>';
           }
           if (canEditThis) html += '<button class="btn btn-outline btn-sm" style="margin-bottom:12px;" onclick="openEpAddTextbook(\'' + eps.id + '\')">+ 교재 추가</button>';
-          else html += '<div style="margin-bottom:12px;"></div>';
+          else html += '<div style="margin-bottom:10px;"></div>';
+          // 체크박스 (속성명 포함)
           html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">✅ 진행 상황</div>';
-          html += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">';
+          html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">';
           EP_CHECKS.forEach(function(c) {
             var checked = eps[c.field];
-            html += '<label style="display:flex;align-items:center;gap:8px;cursor:' + (canEditThis ? 'pointer' : 'default') + ';font-size:13px;">';
-            html += '<input type="checkbox"' + (checked ? ' checked' : '') + (canEditThis ? ' onclick="toggleEpCheck(\'' + eps.id + '\',\'' + c.field + '\')"' : ' disabled') + ' style="width:16px;height:16px;">';
-            html += '<span style="' + (checked ? 'text-decoration:line-through;color:var(--text3);' : '') + '">' + c.label + '</span>';
+            html += '<label style="display:flex;align-items:center;gap:8px;cursor:' + (canEditThis ? 'pointer' : 'default') + ';font-size:13px;padding:4px 0;">';
+            html += '<input type="checkbox"' + (checked ? ' checked' : '') + (canEditThis ? ' onclick="toggleEpCheck(\'' + eps.id + '\',\'' + c.field + '\')"' : ' disabled') + ' style="width:18px;height:18px;flex-shrink:0;">';
+            html += '<span style="' + (checked ? 'color:var(--success);font-weight:600;' : '') + '">' + c.label + '</span>';
             html += '</label>';
           });
           html += '</div>';
-          html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">📊 결과 / 메모</div>';
+          // 결과 / 메모
           html += '<div style="margin-bottom:8px;"><label style="' + LBL + '">결과</label>';
           html += '<input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-result-' + eps.id + '" value="' + escHtml(eps.result || '') + '" placeholder="예: 95점" style="' + IS + '"></div>';
           html += '<div style="margin-bottom:12px;"><label style="' + LBL + '">메모</label>';
@@ -12826,25 +12865,56 @@ function openEpStudentEditModal(epsId) {
   if (!body) return;
   var IS = 'font-size:13px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;width:100%;';
   var LBL = 'font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:3px;';
+  var epTeacher = eps.teacher || st.teacher || '';
+  var G2 = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;';
   var html = '';
   html += '<div style="font-size:13px;font-weight:700;margin-bottom:12px;">' + escHtml(st.name || '') + ' · ' + escHtml(st.grade || '') + ' · ' + escHtml(st.school || '') + '</div>';
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">';
+  // 담당T (column order: 이름,학년,담당T,보강요일,보강시간,시험범위,시험기간,시험대비시작일,직전보강일,교재,체크,결과,메모)
+  html += '<div style="margin-bottom:12px;"><label style="' + LBL + '">담당T</label>';
+  if (canEditThis) {
+    html += '<select id="ep-edit-teacher" style="' + IS + '">';
+    html += '<option value="">선택</option>';
+    teachersData.forEach(function(t) { html += '<option value="' + escHtml(t.name) + '"' + (epTeacher === t.name ? ' selected' : '') + '>' + escHtml(t.name) + '</option>'; });
+    html += '</select>';
+  } else {
+    html += '<input readonly type="text" id="ep-edit-teacher" value="' + escHtml(epTeacher) + '" style="' + IS + '">';
+  }
+  html += '</div>';
+  html += '<div style="' + G2 + '">';
   html += '<div><label style="' + LBL + '">보강요일</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-edit-days" value="' + escHtml(eps.reinforcementDays || '') + '" style="' + IS + '"></div>';
   html += '<div><label style="' + LBL + '">보강시간</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-edit-time" value="' + escHtml(eps.reinforcementTime || '') + '" style="' + IS + '"></div>';
+  html += '</div>';
+  html += '<div style="margin-bottom:12px;"><label style="' + LBL + '">시험범위</label>';
+  html += '<input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-edit-scope" value="' + escHtml(eps.examScope || '') + '" style="' + IS + '"></div>';
+  html += '<div style="' + G2 + '">';
   html += '<div><label style="' + LBL + '">시험기간 시작</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-edit-examstart" value="' + (eps.examStart || '') + '" style="' + IS + '"></div>';
   html += '<div><label style="' + LBL + '">시험기간 종료</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-edit-examend" value="' + (eps.examEnd || '') + '" style="' + IS + '"></div>';
   html += '<div><label style="' + LBL + '">시험대비 시작일</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-edit-prepstart" value="' + (eps.prepStart || '') + '" style="' + IS + '"></div>';
   html += '<div><label style="' + LBL + '">직전보강일</label><input ' + (canEditThis ? '' : 'readonly ') + 'type="date" id="ep-edit-lastrf" value="' + (eps.lastReinforcement || '') + '" style="' + IS + '"></div>';
   html += '</div>';
-  html += '<div style="margin-bottom:12px;"><label style="' + LBL + '">시험범위</label>';
-  html += '<input ' + (canEditThis ? '' : 'readonly ') + 'type="text" id="ep-edit-scope" value="' + escHtml(eps.examScope || '') + '" style="' + IS + '"></div>';
+  // 교재
+  html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">📚 시험대비 교재</div>';
+  var tbIds2 = eps.textbookIds ? eps.textbookIds.split(',').filter(Boolean) : [];
+  if (tbIds2.length) {
+    tbIds2.forEach(function(tbId) {
+      var tb = textbooksData.find(function(x) { return x.id === tbId; });
+      html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
+      html += '<span style="font-size:13px;flex:1;">📖 ' + escHtml(tb ? tb.title : '(삭제된 교재)') + '</span>';
+      if (canEditThis) html += '<button class="btn btn-sm" style="color:var(--danger);font-size:12px;" onclick="removeEpTextbookEdit(\'' + tbId + '\')">×</button>';
+      html += '</div>';
+    });
+  } else {
+    html += '<div style="font-size:12px;color:var(--text3);margin-bottom:6px;">교재 없음</div>';
+  }
+  if (canEditThis) html += '<button class="btn btn-outline btn-sm" style="margin-bottom:14px;" onclick="openEpAddTextbookFromEdit()">+ 교재 추가</button>';
+  // 진행 상황
   html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">✅ 진행 상황</div>';
-  html += '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;">';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">';
   EP_CHECKS.forEach(function(c) {
     var checked = eps[c.field];
-    html += '<label style="display:flex;align-items:center;gap:6px;cursor:' + (canEditThis ? 'pointer' : 'default') + ';font-size:13px;">';
-    html += '<input type="checkbox" id="ep-edit-check-' + c.field + '"' + (checked ? ' checked' : '') + (canEditThis ? '' : ' disabled') + ' style="width:15px;height:15px;">';
-    html += c.label + '</label>';
+    html += '<label style="display:flex;align-items:center;gap:8px;cursor:' + (canEditThis ? 'pointer' : 'default') + ';font-size:13px;">';
+    html += '<input type="checkbox" id="ep-edit-check-' + c.field + '"' + (checked ? ' checked' : '') + (canEditThis ? '' : ' disabled') + ' style="width:18px;height:18px;cursor:pointer;">';
+    html += '<span>' + c.label + '</span></label>';
   });
   html += '</div>';
   html += '<div style="margin-bottom:8px;"><label style="' + LBL + '">결과</label>';
@@ -12860,13 +12930,14 @@ function saveEpStudentEdit() {
   if (!eps) return;
   var get = function(id) { var el = document.getElementById(id); return el ? el.value : ''; };
   var getCheck = function(field) { var el = document.getElementById('ep-edit-check-' + field); return el ? el.checked : false; };
+  eps.teacher = get('ep-edit-teacher');
   eps.reinforcementDays = get('ep-edit-days');
   eps.reinforcementTime = get('ep-edit-time');
+  eps.examScope = get('ep-edit-scope');
   eps.examStart = get('ep-edit-examstart');
   eps.examEnd = get('ep-edit-examend');
   eps.prepStart = get('ep-edit-prepstart');
   eps.lastReinforcement = get('ep-edit-lastrf');
-  eps.examScope = get('ep-edit-scope');
   eps.result = get('ep-edit-result');
   var memoEl = document.getElementById('ep-edit-memo');
   eps.memo = memoEl ? memoEl.value : '';
@@ -12888,39 +12959,56 @@ function openEpBulkEditModal() {
       teacherSelect.innerHTML += '<option value="' + escHtml(t.name) + '">' + escHtml(t.name) + '</option>';
     });
   }
-  var checksDiv = document.getElementById('ep-bulk-checks');
-  if (checksDiv) {
+  var checksOnDiv = document.getElementById('ep-bulk-checks-on');
+  var checksOffDiv = document.getElementById('ep-bulk-checks-off');
+  if (checksOnDiv && checksOffDiv) {
     var cHtml = '';
     EP_CHECKS.forEach(function(c) {
-      cHtml += '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">';
-      cHtml += '<input type="checkbox" id="ep-bulk-check-' + c.field + '" style="width:15px;height:15px;">';
+      cHtml += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">';
+      cHtml += '<input type="checkbox" id="ep-bulk-check-on-' + c.field + '" style="width:18px;height:18px;">';
       cHtml += c.label + '</label>';
     });
-    checksDiv.innerHTML = cHtml;
+    checksOnDiv.innerHTML = cHtml;
+    var cHtml2 = '';
+    EP_CHECKS.forEach(function(c) {
+      cHtml2 += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">';
+      cHtml2 += '<input type="checkbox" id="ep-bulk-check-off-' + c.field + '" style="width:18px;height:18px;">';
+      cHtml2 += c.label + '</label>';
+    });
+    checksOffDiv.innerHTML = cHtml2;
   }
-  var daysEl = document.getElementById('ep-bulk-days');
-  if (daysEl) daysEl.value = '';
-  var timeEl = document.getElementById('ep-bulk-time');
-  if (timeEl) timeEl.value = '';
+  ['ep-bulk-days','ep-bulk-time','ep-bulk-scope','ep-bulk-examstart','ep-bulk-examend','ep-bulk-prepstart','ep-bulk-lastrf'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
   openModal('modal-ep-bulk-edit');
 }
 
 function saveEpBulkEdit() {
-  var teacher = document.getElementById('ep-bulk-teacher') ? document.getElementById('ep-bulk-teacher').value : '';
-  var days = document.getElementById('ep-bulk-days') ? document.getElementById('ep-bulk-days').value : '';
-  var time = document.getElementById('ep-bulk-time') ? document.getElementById('ep-bulk-time').value : '';
-  var checkFields = EP_CHECKS.filter(function(c) {
-    var el = document.getElementById('ep-bulk-check-' + c.field);
-    return el && el.checked;
-  }).map(function(c) { return c.field; });
+  var get = function(id) { var el = document.getElementById(id); return el ? el.value : ''; };
+  var teacher     = get('ep-bulk-teacher');
+  var days        = get('ep-bulk-days');
+  var time        = get('ep-bulk-time');
+  var scope       = get('ep-bulk-scope');
+  var examStart   = get('ep-bulk-examstart');
+  var examEnd     = get('ep-bulk-examend');
+  var prepStart   = get('ep-bulk-prepstart');
+  var lastRf      = get('ep-bulk-lastrf');
+  var checkOnFields  = EP_CHECKS.filter(function(c) { var el = document.getElementById('ep-bulk-check-on-' + c.field);  return el && el.checked; }).map(function(c) { return c.field; });
+  var checkOffFields = EP_CHECKS.filter(function(c) { var el = document.getElementById('ep-bulk-check-off-' + c.field); return el && el.checked; }).map(function(c) { return c.field; });
   var count = 0;
   examPrepStudentsData.forEach(function(eps) {
     if (!selectedEpStudentIds.has(eps.id)) return;
     var prevBE = Object.assign({}, eps);
-    if (teacher) eps.teacher = teacher;
-    if (days) eps.reinforcementDays = days;
-    if (time) eps.reinforcementTime = time;
-    checkFields.forEach(function(field) { eps[field] = true; });
+    if (teacher)   eps.teacher = teacher;
+    if (days)      eps.reinforcementDays = days;
+    if (time)      eps.reinforcementTime = time;
+    if (scope)     eps.examScope = scope;
+    if (examStart) eps.examStart = examStart;
+    if (examEnd)   eps.examEnd = examEnd;
+    if (prepStart) eps.prepStart = prepStart;
+    if (lastRf)    eps.lastReinforcement = lastRf;
+    checkOnFields.forEach(function(field)  { eps[field] = true; });
+    checkOffFields.forEach(function(field) { eps[field] = false; });
     addEventLog('UPDATE', 'examPrepStudent', eps.id, eps, prevBE);
     count++;
   });
@@ -13119,13 +13207,15 @@ function saveEpStudentDetails(epsId) {
   var eps = examPrepStudentsData.find(function(x) { return x.id === epsId; });
   if (!eps) return;
   var get = function(id) { var el = document.getElementById(id); return el ? el.value : ''; };
+  var teacherEl = document.getElementById('ep-days-teacher-' + epsId);
+  if (teacherEl) eps.teacher = teacherEl.value;
   eps.reinforcementDays = get('ep-days-' + epsId);
   eps.reinforcementTime = get('ep-time-' + epsId);
+  eps.examScope         = get('ep-scope-' + epsId);
   eps.examStart         = get('ep-examstart-' + epsId);
   eps.examEnd           = get('ep-examend-' + epsId);
   eps.prepStart         = get('ep-prepstart-' + epsId);
   eps.lastReinforcement = get('ep-lastrf-' + epsId);
-  eps.examScope         = get('ep-scope-' + epsId);
   eps.result            = get('ep-result-' + epsId);
   var memoEl = document.getElementById('ep-memo-' + epsId);
   eps.memo = memoEl ? memoEl.value : '';
@@ -13139,8 +13229,25 @@ function saveEpStudentDetails(epsId) {
 function openEpAddTextbook(epsId) {
   epAddTextbookEpsId = epsId;
   epAddTextbookSearch = '';
+  var si = document.getElementById('ep-add-textbook-search-input');
+  if (si) si.value = '';
   renderEpAddTextbookBody();
   openModal('modal-ep-add-textbook');
+}
+
+function openEpAddTextbookFromEdit() {
+  var eps = examPrepStudentsData.find(function(x) { return x.id === currentEditingEpsId; });
+  if (!eps) return;
+  openEpAddTextbook(eps.id);
+}
+
+function removeEpTextbookEdit(tbId) {
+  var eps = examPrepStudentsData.find(function(x) { return x.id === currentEditingEpsId; });
+  if (!eps) return;
+  var ids = eps.textbookIds ? eps.textbookIds.split(',').filter(Boolean) : [];
+  eps.textbookIds = ids.filter(function(x) { return x !== tbId; }).join(',');
+  addEventLog('UPDATE', 'examPrepStudent', eps.id, eps);
+  openEpStudentEditModal(currentEditingEpsId);
 }
 
 function renderEpAddTextbookBody() {
@@ -13155,10 +13262,7 @@ function renderEpAddTextbookBody() {
     return (tb.title && tb.title.toLowerCase().indexOf(q) !== -1) ||
            (tb.author && tb.author.toLowerCase().indexOf(q) !== -1);
   });
-  var html = '<div style="margin-bottom:10px;">';
-  html += '<input type="text" placeholder="교재명 검색" value="' + escHtml(epAddTextbookSearch) + '" oninput="epAddTextbookSearch=this.value;renderEpAddTextbookBody();" style="' + IS + '">';
-  html += '</div>';
-  html += '<div style="max-height:320px;overflow-y:auto;">';
+  var html = '';
   if (!filtered.length) { html += '<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">교재가 없습니다</div>'; }
   filtered.forEach(function(tb) {
     var isAdded = existingIds.indexOf(tb.id) !== -1;
@@ -13166,13 +13270,12 @@ function renderEpAddTextbookBody() {
     html += '<span style="flex:1;font-size:13px;">' + escHtml(tb.title) + '</span>';
     if (tb.author) html += '<span style="font-size:12px;color:var(--text3);">' + escHtml(tb.author) + '</span>';
     if (isAdded) {
-      html += '<button class="btn btn-sm" style="font-size:12px;" onclick="removeEpTextbookFromModal(\'' + tb.id + '\')" >제거</button>';
+      html += '<button class="btn btn-sm" style="font-size:12px;" onclick="removeEpTextbookFromModal(\'' + tb.id + '\')">제거</button>';
     } else {
       html += '<button class="btn btn-primary btn-sm" style="font-size:12px;" onclick="addEpTextbook(\'' + tb.id + '\')">추가</button>';
     }
     html += '</div>';
   });
-  html += '</div>';
   body.innerHTML = html;
 }
 
