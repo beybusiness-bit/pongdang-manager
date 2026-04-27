@@ -3115,6 +3115,7 @@ let feedbackBulkWeekOverride = '';
 let feedbackHistorySearch = '';
 let feedbackHistoryPagination = { currentPage: 1, pageSize: 10, totalItems: 0 };
 let selectedFeedbackTalkIds = [];
+let eventLogData = []; // 이벤트 로그 (메모리)
 
 let currentPaymentTab = 'register'; // register(월별등록대장) 또는 records(결제기록)
 let ledgerMonths = []; // 등록대장에 표시할 월 목록 (예: ['2026-04', '2026-03'])
@@ -3440,10 +3441,202 @@ function handleLogout() {
   }
 }
 
+
+// ============ Google Sheets API (REST) ============
+
+async function sheetsApiRequest(method, path, body) {
+  if (!currentUser || !currentUser.accessToken) return null;
+  try {
+    var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + AUTH.SHEET_ID + path;
+    var opts = { method: method, headers: { 'Authorization': 'Bearer ' + currentUser.accessToken } };
+    if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+    var resp = await fetch(url, opts);
+    if (!resp.ok) {
+      var errBody = await resp.json().catch(function() { return {}; });
+      console.warn('[Sheets]', resp.status, errBody.error && errBody.error.message);
+      return null;
+    }
+    return await resp.json();
+  } catch(e) {
+    console.warn('[Sheets] 요청 실패:', e.message);
+    return null;
+  }
+}
+
+async function sheetsAppend(sheetName, values) {
+  return sheetsApiRequest('POST',
+    '/values/' + encodeURIComponent(sheetName) + ':append?valueInputOption=RAW&insertDataOption=INSERT_ROWS',
+    { values: [values] });
+}
+
+async function sheetsRead(sheetName) {
+  var result = await sheetsApiRequest('GET', '/values/' + encodeURIComponent(sheetName));
+  return result ? (result.values || []) : null;
+}
+
+// 시트 전체 덮어쓰기 (헤더 포함)
+async function sheetsClear(sheetName) {
+  return sheetsApiRequest('POST', '/values/' + encodeURIComponent(sheetName) + ':clear', {});
+}
+async function sheetsWrite(sheetName, rows) {
+  return sheetsApiRequest('PUT',
+    '/values/' + encodeURIComponent(sheetName) + '?valueInputOption=RAW',
+    { values: rows });
+}
+
+// ============ 이벤트 로그 ============
+
+// action: CREATE | UPDATE | DELETE
+// entityType: student | textbook | payment | class | school | teacher |
+//             workLog | customHoliday | feedbackTemplate | feedbackTalk |
+//             meeting | meetingTask | examPrep | examPrepStudent | enrollmentRecord
+function addEventLog(action, entityType, entityId, data, previousData) {
+  var now = new Date();
+  var ts = now.getFullYear() + '-' +
+    String(now.getMonth()+1).padStart(2,'0') + '-' +
+    String(now.getDate()).padStart(2,'0') + ' ' +
+    String(now.getHours()).padStart(2,'0') + ':' +
+    String(now.getMinutes()).padStart(2,'0') + ':' +
+    String(now.getSeconds()).padStart(2,'0');
+
+  var evt = {
+    id: uid(),
+    timestamp: ts,
+    userEmail: currentUser ? currentUser.email : 'system',
+    userName: currentUser ? currentUser.name : 'system',
+    action: action,
+    entityType: entityType,
+    entityId: entityId,
+    data: data ? JSON.parse(JSON.stringify(data)) : null,
+    previousData: previousData ? JSON.parse(JSON.stringify(previousData)) : null
+  };
+
+  eventLogData.push(evt);
+
+  // localStorage 백업 (최근 1000건)
+  try {
+    var stored = JSON.parse(localStorage.getItem('pongdang_eventLog') || '[]');
+    stored.push(evt);
+    if (stored.length > 1000) stored = stored.slice(-1000);
+    localStorage.setItem('pongdang_eventLog', JSON.stringify(stored));
+  } catch(e) { /* 저장 공간 부족 시 무시 */ }
+
+  // Sheets 비동기 기록 (토큰 있을 때만 실제 전송, 실패해도 무시)
+  sheetsAppend('EventLog', [
+    evt.id, evt.timestamp, evt.userEmail, evt.userName,
+    evt.action, evt.entityType, evt.entityId,
+    JSON.stringify(evt.data), JSON.stringify(evt.previousData)
+  ]);
+}
+
+// EventLog 배열을 순서대로 재생(replay)하여 현재 상태 재구성
+function replayEventLog(events) {
+  // entityType → 배열 매핑
+  function getArr(type) {
+    if (type === 'student') return studentsData;
+    if (type === 'textbook') return textbooksData;
+    if (type === 'payment') return paymentsData;
+    if (type === 'class') return classesData;
+    if (type === 'school') return schoolsData;
+    if (type === 'teacher') return teachersData;
+    if (type === 'workLog') return workLogsData;
+    if (type === 'customHoliday') return customHolidaysData;
+    if (type === 'feedbackTemplate') return feedbackTemplatesData;
+    if (type === 'feedbackTalk') return feedbackTalksData;
+    if (type === 'meeting') return meetingsData;
+    if (type === 'meetingTask') return meetingTasksData;
+    if (type === 'examPrep') return examPrepsData;
+    if (type === 'examPrepStudent') return examPrepStudentsData;
+    return null;
+  }
+
+  events.forEach(function(evt) {
+    var arr = getArr(evt.entityType);
+    if (!arr) return;
+    if (evt.action === 'DELETE') {
+      var ri = arr.findIndex(function(x) { return x.id === evt.entityId; });
+      if (ri !== -1) arr.splice(ri, 1);
+    } else if (evt.data) {
+      var ui = arr.findIndex(function(x) { return x.id === evt.entityId; });
+      if (ui === -1) arr.push(evt.data);
+      else arr[ui] = evt.data;
+    }
+  });
+}
+
+function clearAllDataArrays() {
+  studentsData.length = 0; textbooksData.length = 0; paymentsData.length = 0;
+  classesData.length = 0; schoolsData.length = 0; teachersData.length = 0;
+  workLogsData.length = 0; customHolidaysData.length = 0;
+  feedbackTemplatesData.length = 0; feedbackTalksData.length = 0;
+  meetingsData.length = 0; meetingTasksData.length = 0;
+  examPrepsData.length = 0; examPrepStudentsData.length = 0;
+  eventLogData.length = 0;
+}
+
+// Sheets EventLog 시트에서 데이터 로드 → 재생 (OAuth 토큰 필요)
+async function loadDataFromSheets() {
+  var rows = await sheetsRead('EventLog');
+  if (!rows || rows.length <= 1) return false;
+  clearAllDataArrays();
+  var events = [];
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i];
+    if (!r[0] || !r[4] || !r[5]) continue;
+    var evt = {
+      id: r[0], timestamp: r[1] || '', userEmail: r[2] || '',
+      userName: r[3] || '', action: r[4], entityType: r[5], entityId: r[6] || '',
+      data: null, previousData: null
+    };
+    try { evt.data = r[7] ? JSON.parse(r[7]) : null; } catch(e) {}
+    try { evt.previousData = r[8] ? JSON.parse(r[8]) : null; } catch(e) {}
+    events.push(evt);
+  }
+  replayEventLog(events);
+  eventLogData = events;
+  return events.length > 0;
+}
+
+// localStorage 이벤트 로그로 복원
+function loadDataFromLocalStorage() {
+  try {
+    var stored = JSON.parse(localStorage.getItem('pongdang_eventLog') || '[]');
+    if (!stored.length) return false;
+    clearAllDataArrays();
+    replayEventLog(stored);
+    eventLogData = stored;
+    return true;
+  } catch(e) { return false; }
+}
+
+// 앱 시작 시 데이터 로드 우선순위: Sheets → localStorage → 샘플 데이터
+async function initDataSources() {
+  if (currentUser && currentUser.accessToken) {
+    try {
+      var loaded = await loadDataFromSheets();
+      if (loaded) { showToast('데이터 로드 완료 (Sheets)'); return; }
+    } catch(e) { console.warn('Sheets 로드 실패:', e); }
+  }
+  if (loadDataFromLocalStorage()) {
+    showToast('데이터 로드 완료 (로컬 저장)');
+    return;
+  }
+  loadSampleData();
+}
+
+// EventLog 시트 헤더 초기화 (최초 1회 실행용)
+async function initEventLogSheet() {
+  if (!currentUser || !currentUser.accessToken) return;
+  var rows = await sheetsRead('EventLog');
+  if (!rows || rows.length === 0) {
+    await sheetsAppend('EventLog', ['id','timestamp','userEmail','userName','action','entityType','entityId','data','previousData']);
+  }
+}
+
 // ============ 앱 초기화 ============
 function initApp() {
   initDefaultPermissions();
-  loadSampleData();
+  initDataSources(); // Sheets → localStorage → 샘플 데이터 순서로 로드
   updateUserInfo();
   renderSidebar();
   renderPages();
@@ -4935,51 +5128,33 @@ function saveStudent(e) {
   };
   
   if (id) {
-    // 수정
     const index = studentsData.findIndex(s => s.id === id);
     if (index !== -1) {
+      const prev = Object.assign({}, studentsData[index]);
       studentsData[index] = { ...studentsData[index], ...studentData };
+      addEventLog('UPDATE', 'student', id, studentsData[index], prev);
       showToast('학생 정보가 수정되었습니다');
     }
   } else {
-    // 추가
     const newStudent = {
       id: uid(),
       ...studentData,
-      enrollmentRecords: [
-        {
-          id: uid(),
-          type: '등록',
-          date: today(),
-          memo: '최초 등록'
-        }
-      ],
+      enrollmentRecords: [{ id: uid(), type: '등록', date: today(), memo: '최초 등록' }],
       createdAt: today()
     };
     studentsData.push(newStudent);
     savedStudentId = newStudent.id;
+    addEventLog('CREATE', 'student', newStudent.id, newStudent);
     showToast('학생이 추가되었습니다');
   }
-  
+
   closeModal('modal-student-form');
   window.tempStudentProfileImage = null;
-  
-  // 옵션 처리
+
   const opts = window.studentFormOptions || {};
   window.studentFormOptions = null;
-  
-  // 학생 목록 페이지 리렌더 (skipRerender 옵션이 true가 아닐 때만)
-  if (!opts.skipRerender) {
-    renderStudentsPage();
-  }
-  
-  // 저장 완료 콜백 호출
-  if (typeof opts.onSuccess === 'function') {
-    const resultId = id || savedStudentId;
-    opts.onSuccess(resultId);
-  }
-  
-  // TODO: Sheets에 저장
+  if (!opts.skipRerender) renderStudentsPage();
+  if (typeof opts.onSuccess === 'function') opts.onSuccess(id || savedStudentId);
 }
 
 function deleteStudentFromDetail() {
@@ -4995,11 +5170,10 @@ function deleteStudent(studentId) {
   
   if (!confirm(student.name + ' 학생을 삭제하시겠습니까?')) return;
   
+  addEventLog('DELETE', 'student', studentId, { id: studentId });
   studentsData = studentsData.filter(s => s.id !== studentId);
   showToast('학생이 삭제되었습니다');
   renderStudentsPage();
-  
-  // TODO: Sheets에서 삭제
 }
 
 function openStudentDetail(studentId) {
@@ -6037,7 +6211,9 @@ function saveTextbook(e) {
     // 수정
     const index = textbooksData.findIndex(t => t.id === id);
     if (index !== -1) {
-      textbooksData[index] = { ...textbooksData[index], ...textbookData };
+      const prevTb = Object.assign({}, textbooksData[index]);
+    textbooksData[index] = { ...textbooksData[index], ...textbookData };
+    addEventLog('UPDATE', 'textbook', id, textbooksData[index], prevTb);
       showToast('교재 정보가 수정되었습니다');
     }
   } else {
@@ -6048,6 +6224,7 @@ function saveTextbook(e) {
       createdAt: today()
     };
     textbooksData.push(newTextbook);
+    addEventLog('CREATE', 'textbook', newTextbook.id, newTextbook);
     showToast('교재가 추가되었습니다');
   }
   
@@ -6061,6 +6238,7 @@ function deleteTextbookFromDetail() {
   const tb = textbooksData.find(t => t.id === id);
   if (!tb) return;
   if (!confirm(tb.title + ' 교재를 삭제하시겠습니까?')) return;
+  addEventLog('DELETE', 'textbook', id, { id: id });
   textbooksData = textbooksData.filter(t => t.id !== id);
   showToast('교재가 삭제되었습니다');
   closeModal('modal-textbook-detail');
@@ -8489,6 +8667,7 @@ function savePayment() {
     // 수정
     const idx = paymentsData.findIndex(p => p.id === id);
     if (idx !== -1) {
+      const prevP = Object.assign({}, paymentsData[idx]);
       paymentsData[idx] = {
         ...paymentsData[idx],
         studentId,
@@ -8510,6 +8689,7 @@ function savePayment() {
         isNewStudent,
         isTeacherPayment
       };
+      addEventLog('UPDATE', 'payment', id, paymentsData[idx], prevP);
       showToast('결제가 수정되었습니다');
       
       // 요일이 변경되었으면 학생 정보도 업데이트
@@ -8545,6 +8725,7 @@ function savePayment() {
       createdAt: today()
     };
     paymentsData.push(newPayment);
+    addEventLog('CREATE', 'payment', newPayment.id, newPayment);
     showToast('결제가 추가되었습니다');
     
     // 요일이 학생 원래 요일과 다르면 학생 정보도 업데이트
@@ -8614,7 +8795,7 @@ function addLedgerMonth() {
 
 function deletePayment(id) {
   if (!confirm('정말 이 결제를 삭제하시겠습니까?')) return;
-  
+  addEventLog('DELETE', 'payment', id, { id: id });
   paymentsData = paymentsData.filter(p => p.id !== id);
   selectedPaymentIds = selectedPaymentIds.filter(sid => sid !== id);
   showToast('결제가 삭제되었습니다');
@@ -8655,6 +8836,7 @@ function bulkDeletePayments() {
   if (selectedPaymentIds.length === 0) return;
   if (!confirm(selectedPaymentIds.length + '개의 결제를 삭제하시겠습니까?')) return;
 
+  selectedPaymentIds.forEach(function(pid) { addEventLog('DELETE', 'payment', pid, { id: pid }); });
   paymentsData = paymentsData.filter(p => !selectedPaymentIds.includes(p.id));
   selectedPaymentIds = [];
   showToast('선택한 결제가 삭제되었습니다');
@@ -8696,9 +8878,11 @@ function savePaymentBulkEdit() {
   let count = 0;
   paymentsData.forEach(p => {
     if (!selectedPaymentIds.includes(p.id)) return;
+    const prevBP = Object.assign({}, p);
     if (teacher) p.teacherName = teacher;
     if (classId) p.classId = classId;
     if (methodId) p.paymentMethodId = methodId;
+    addEventLog('UPDATE', 'payment', p.id, p, prevBP);
     count++;
   });
   showToast(count + '건 일괄 수정됨');
@@ -9153,7 +9337,7 @@ function openClassForm(classId) {
   openModal('modal-class-form');
 }
 
-function saveClass(e) {
+function saveClass(e) { // 수강반 추가/수정
   e.preventDefault();
   const id = document.getElementById('class-form-id').value;
   const data = {
@@ -9163,9 +9347,14 @@ function saveClass(e) {
   };
   if (id) {
     const idx = classesData.findIndex(c => c.id === id);
-    if (idx !== -1) classesData[idx] = Object.assign(classesData[idx], data);
+    if (idx !== -1) {
+      classesData[idx] = Object.assign(classesData[idx], data);
+      addEventLog('UPDATE', 'class', id, classesData[idx]);
+    }
   } else {
-    classesData.push(Object.assign({ id: uid() }, data));
+    const newClass = Object.assign({ id: uid() }, data);
+    classesData.push(newClass);
+    addEventLog('CREATE', 'class', newClass.id, newClass);
   }
   closeModal('modal-class-form');
   renderClassesListBody();
@@ -9174,6 +9363,7 @@ function saveClass(e) {
 
 function deleteClass(classId) {
   if (!confirm('이 수강반을 삭제하시겠습니까?')) return;
+  addEventLog('DELETE', 'class', classId, { id: classId });
   classesData = classesData.filter(c => c.id !== classId);
   selectedClassIds = selectedClassIds.filter(id => id !== classId);
   renderClassesListBody();
@@ -9466,9 +9656,14 @@ function saveSchool(e) {
   };
   if (id) {
     const idx = schoolsData.findIndex(s => s.id === id);
-    if (idx !== -1) schoolsData[idx] = Object.assign(schoolsData[idx], data);
+    if (idx !== -1) {
+      schoolsData[idx] = Object.assign(schoolsData[idx], data);
+      addEventLog('UPDATE', 'school', id, schoolsData[idx]);
+    }
   } else {
-    schoolsData.push(Object.assign({ id: uid() }, data));
+    const newSchool = Object.assign({ id: uid() }, data);
+    schoolsData.push(newSchool);
+    addEventLog('CREATE', 'school', newSchool.id, newSchool);
   }
   closeModal('modal-school-form');
   renderSchoolsListBody();
@@ -9477,6 +9672,7 @@ function saveSchool(e) {
 
 function deleteSchool(schoolId) {
   if (!confirm('이 학교를 삭제하시겠습니까?')) return;
+  addEventLog('DELETE', 'school', schoolId, { id: schoolId });
   schoolsData = schoolsData.filter(s => s.id !== schoolId);
   selectedSchoolIds = selectedSchoolIds.filter(id => id !== schoolId);
   renderSchoolsListBody();
@@ -9794,9 +9990,14 @@ function saveTeacher(e) {
   }
   if (id) {
     const idx = teachersData.findIndex(tc => tc.id === id);
-    if (idx !== -1) teachersData[idx] = Object.assign(teachersData[idx], data);
+    if (idx !== -1) {
+      teachersData[idx] = Object.assign(teachersData[idx], data);
+      addEventLog('UPDATE', 'teacher', id, teachersData[idx]);
+    }
   } else {
-    teachersData.push(Object.assign({ id: uid() }, data));
+    const newTeacher = Object.assign({ id: uid() }, data);
+    teachersData.push(newTeacher);
+    addEventLog('CREATE', 'teacher', newTeacher.id, newTeacher);
   }
   closeModal('modal-teacher-form');
   renderTeachersListBody();
@@ -9805,6 +10006,7 @@ function saveTeacher(e) {
 
 function deleteTeacher(teacherId) {
   if (!confirm('이 선생님을 삭제하시겠습니까?')) return;
+  addEventLog('DELETE', 'teacher', teacherId, { id: teacherId });
   teachersData = teachersData.filter(tc => tc.id !== teacherId);
   selectedTeacherIds = selectedTeacherIds.filter(id => id !== teacherId);
   renderTeachersListBody();
@@ -10170,10 +10372,14 @@ function saveFeedbackTalk() {
     return f.date === currentFeedbackDateStr && f.studentId === currentFeedbackStudentId && f.templateId === selectedFeedbackTemplateId;
   });
   if (existing) {
+    const prevFT = Object.assign({}, existing);
     existing.content = ta.value;
     existing.createdAt = today();
+    addEventLog('UPDATE', 'feedbackTalk', existing.id, existing, prevFT);
   } else {
-    feedbackTalksData.push({ id: uid(), date: currentFeedbackDateStr, studentId: currentFeedbackStudentId, templateId: selectedFeedbackTemplateId, content: ta.value, createdAt: today() });
+    var newFT = { id: uid(), date: currentFeedbackDateStr, studentId: currentFeedbackStudentId, templateId: selectedFeedbackTemplateId, content: ta.value, createdAt: today() };
+    feedbackTalksData.push(newFT);
+    addEventLog('CREATE', 'feedbackTalk', newFT.id, newFT);
   }
   showToast('피드백톡 저장됨');
   closeModal('modal-feedback-preview');
@@ -10461,6 +10667,7 @@ function updateFbBulkBtn() {
 function bulkDeleteFeedbackTalks() {
   if (selectedFeedbackTalkIds.length === 0) return;
   if (!confirm(selectedFeedbackTalkIds.length + '개의 피드백톡을 삭제할까요?')) return;
+  selectedFeedbackTalkIds.forEach(function(fid) { addEventLog('DELETE', 'feedbackTalk', fid, { id: fid }); });
   feedbackTalksData = feedbackTalksData.filter(function(ft) { return selectedFeedbackTalkIds.indexOf(ft.id) === -1; });
   selectedFeedbackTalkIds = [];
   showToast('삭제됨');
@@ -10598,14 +10805,17 @@ function saveFeedbackTemplateForm() {
       existing.name = nameEl.value.trim();
       existing.content = contentEl.value;
       existing.variables = vars.join(',');
+      addEventLog('UPDATE', 'feedbackTemplate', tplId, existing);
     }
   } else {
-    feedbackTemplatesData.push({
+    var newTpl = {
       id: uid(),
       name: nameEl.value.trim(),
       content: contentEl.value,
       variables: vars.join(',')
-    });
+    };
+    feedbackTemplatesData.push(newTpl);
+    addEventLog('CREATE', 'feedbackTemplate', newTpl.id, newTpl);
   }
   closeModal('modal-feedback-tpl-form');
   showToast('저장됨');
@@ -10615,6 +10825,7 @@ function saveFeedbackTemplateForm() {
 
 function deleteFeedbackTemplate(tplId) {
   if (!confirm('이 템플릿을 삭제할까요?')) return;
+  addEventLog('DELETE', 'feedbackTemplate', tplId, { id: tplId });
   feedbackTemplatesData = feedbackTemplatesData.filter(function(t) { return t.id !== tplId; });
   showToast('삭제됨');
   renderFeedbackPage();
@@ -10717,9 +10928,13 @@ function saveWorkLogEntry(studentId, dateStr) {
   };
   var entry = getWorkLogEntry(dateStr, studentId);
   if (!entry) {
-    workLogsData.push(Object.assign({ id: uid(), date: dateStr, studentId: studentId, createdAt: today() }, data));
+    var newWL = Object.assign({ id: uid(), date: dateStr, studentId: studentId, createdAt: today() }, data);
+    workLogsData.push(newWL);
+    addEventLog('CREATE', 'workLog', newWL.id, newWL);
   } else {
+    var prevWL = Object.assign({}, entry);
     Object.assign(entry, data);
+    addEventLog('UPDATE', 'workLog', entry.id, entry, prevWL);
   }
   showToast('저장되었습니다');
 }
@@ -11597,7 +11812,9 @@ function addCustomHoliday() {
   if (customHolidaysData.find(function(h) { return h.date === date; })) {
     showToast('이미 등록된 날짜입니다'); return;
   }
-  customHolidaysData.push({ id: uid(), date: date, name: name });
+  var newHol = { id: uid(), date: date, name: name };
+  customHolidaysData.push(newHol);
+  addEventLog('CREATE', 'customHoliday', newHol.id, newHol);
   if (dateEl) dateEl.value = '';
   if (nameEl) nameEl.value = '';
   renderCustomHolidayList();
@@ -11606,7 +11823,10 @@ function addCustomHoliday() {
 
 function deleteCustomHoliday(id) {
   var idx = customHolidaysData.findIndex(function(h) { return h.id === id; });
-  if (idx !== -1) customHolidaysData.splice(idx, 1);
+  if (idx !== -1) {
+    addEventLog('DELETE', 'customHoliday', id, { id: id });
+    customHolidaysData.splice(idx, 1);
+  }
   renderCustomHolidayList();
   showToast('휴일이 삭제되었습니다');
 }
@@ -11906,8 +12126,10 @@ function moveTask(taskId, direction) {
 function toggleTaskComplete(taskId) {
   var t = meetingTasksData.find(function(x) { return x.id === taskId; });
   if (!t) return;
+  var prevTask = Object.assign({}, t);
   t.isComplete = !t.isComplete;
   t.completedDate = t.isComplete ? today() : null;
+  addEventLog('UPDATE', 'meetingTask', t.id, t, prevTask);
   refreshTasksList(t.meetingId);
 }
 
@@ -11929,6 +12151,7 @@ function deleteTask(taskId) {
   if (!t) return;
   if (!confirm('이 할일을 삭제하시겠습니까?')) return;
   var mid = t.meetingId;
+  addEventLog('DELETE', 'meetingTask', taskId, { id: taskId });
   meetingTasksData = meetingTasksData.filter(function(x) { return x.id !== taskId; });
   refreshTasksList(mid);
 }
@@ -11970,9 +12193,15 @@ function saveTask() {
   if (!assignee) { showToast('담당자를 선택하세요'); return; }
   if (currentTaskId) {
     var t = meetingTasksData.find(function(x) { return x.id === currentTaskId; });
-    if (t) { t.taskContent = content; t.assignee = assignee; }
+    if (t) {
+      var prevST = Object.assign({}, t);
+      t.taskContent = content; t.assignee = assignee;
+      addEventLog('UPDATE', 'meetingTask', t.id, t, prevST);
+    }
   } else {
-    meetingTasksData.push({ id: uid(), meetingId: currentTaskMeetingId, assignee: assignee, taskContent: content, isComplete: false, completedDate: null, createdAt: today() });
+    var newTask = { id: uid(), meetingId: currentTaskMeetingId, assignee: assignee, taskContent: content, isComplete: false, completedDate: null, createdAt: today() };
+    meetingTasksData.push(newTask);
+    addEventLog('CREATE', 'meetingTask', newTask.id, newTask);
   }
   closeModal('modal-task-form');
   setTimeout(function() { refreshTasksList(currentTaskMeetingId); }, 100);
@@ -12058,11 +12287,17 @@ function saveMeeting() {
   var attendeesStr = meetingFormAttendees.join(',');
   if (currentEditingMeetingId) {
     var m = meetingsData.find(function(x) { return x.id === currentEditingMeetingId; });
-    if (m) { m.date = date; m.title = title; m.content = content; m.attendees = attendeesStr; }
+    if (m) {
+      var prevM = Object.assign({}, m);
+      m.date = date; m.title = title; m.content = content; m.attendees = attendeesStr;
+      addEventLog('UPDATE', 'meeting', m.id, m, prevM);
+    }
     appState.meetings = meetingsData;
     closeModal('modal-meeting-detail');
   } else {
-    meetingsData.push({ id: uid(), date: date, title: title, content: content, attendees: attendeesStr, createdAt: today() });
+    var newMeeting = { id: uid(), date: date, title: title, content: content, attendees: attendeesStr, createdAt: today() };
+    meetingsData.push(newMeeting);
+    addEventLog('CREATE', 'meeting', newMeeting.id, newMeeting);
     appState.meetings = meetingsData;
     closeModal('modal-meeting-form');
   }
@@ -12076,6 +12311,8 @@ function deleteMeeting(id) {
   var relatedTasks = meetingTasksData.filter(function(t) { return t.meetingId === id; });
   var confirmMsg = '이 회의록을 삭제하면' + (relatedTasks.length > 0 ? ' 관련된 할일 ' + relatedTasks.length + '개도 모두 삭제됩니다.' : '') + '\n복구할 수 없습니다. 계속하시겠습니까?';
   if (!confirm(confirmMsg)) return;
+  addEventLog('DELETE', 'meeting', id, { id: id });
+  meetingTasksData.filter(function(t) { return t.meetingId === id; }).forEach(function(t) { addEventLog('DELETE', 'meetingTask', t.id, { id: t.id }); });
   meetingsData = meetingsData.filter(function(x) { return x.id !== id; });
   meetingTasksData = meetingTasksData.filter(function(t) { return t.meetingId !== id; });
   appState.meetings = meetingsData;
@@ -12634,6 +12871,7 @@ function saveEpStudentEdit() {
   var memoEl = document.getElementById('ep-edit-memo');
   eps.memo = memoEl ? memoEl.value : '';
   EP_CHECKS.forEach(function(c) { eps[c.field] = getCheck(c.field); });
+  addEventLog('UPDATE', 'examPrepStudent', currentEditingEpsId, eps);
   showToast('저장됨');
   closeModal('modal-ep-student-edit');
   renderExamPrepDetailBody();
@@ -12678,10 +12916,12 @@ function saveEpBulkEdit() {
   var count = 0;
   examPrepStudentsData.forEach(function(eps) {
     if (!selectedEpStudentIds.has(eps.id)) return;
+    var prevBE = Object.assign({}, eps);
     if (teacher) eps.teacher = teacher;
     if (days) eps.reinforcementDays = days;
     if (time) eps.reinforcementTime = time;
     checkFields.forEach(function(field) { eps[field] = true; });
+    addEventLog('UPDATE', 'examPrepStudent', eps.id, eps, prevBE);
     count++;
   });
   showToast(count + '명 일괄 수정됨');
@@ -12692,6 +12932,7 @@ function saveEpBulkEdit() {
 function bulkDeleteEpStudents() {
   if (!selectedEpStudentIds.size) return;
   if (!confirm(selectedEpStudentIds.size + '명의 학생을 시험대비에서 제거하시겠습니까?')) return;
+  selectedEpStudentIds.forEach(function(eid) { addEventLog('DELETE', 'examPrepStudent', eid, { id: eid }); });
   examPrepStudentsData = examPrepStudentsData.filter(function(x) { return !selectedEpStudentIds.has(x.id); });
   selectedEpStudentIds = new Set();
   showToast('제거됨');
@@ -12738,9 +12979,14 @@ function saveExamPrep() {
   if (endDate < startDate) { showToast('종료일은 시작일보다 늦어야 합니다'); return; }
   if (currentEditingEpId) {
     var ep = examPrepsData.find(function(x) { return x.id === currentEditingEpId; });
-    if (ep) { ep.name = name; ep.startDate = startDate; ep.endDate = endDate; }
+    if (ep) {
+      ep.name = name; ep.startDate = startDate; ep.endDate = endDate;
+      addEventLog('UPDATE', 'examPrep', currentEditingEpId, ep);
+    }
   } else {
-    examPrepsData.push({ id: uid(), name: name, startDate: startDate, endDate: endDate, createdAt: today() });
+    var newEp = { id: uid(), name: name, startDate: startDate, endDate: endDate, createdAt: today() };
+    examPrepsData.push(newEp);
+    addEventLog('CREATE', 'examPrep', newEp.id, newEp);
   }
   appState.examPreps = examPrepsData;
   closeModal('modal-exam-prep-form');
@@ -12754,6 +13000,8 @@ function deleteExamPrep(id) {
   var relCnt = examPrepStudentsData.filter(function(x) { return x.examPrepId === id; }).length;
   var msg = '이 시험대비를 삭제하면' + (relCnt > 0 ? ' 참여 학생 ' + relCnt + '명의 데이터도 모두 삭제됩니다.' : '') + '\n복구할 수 없습니다. 계속하시겠습니까?';
   if (!confirm(msg)) return;
+  addEventLog('DELETE', 'examPrep', id, { id: id });
+  examPrepStudentsData.filter(function(x) { return x.examPrepId === id; }).forEach(function(eps) { addEventLog('DELETE', 'examPrepStudent', eps.id, { id: eps.id }); });
   examPrepsData = examPrepsData.filter(function(x) { return x.id !== id; });
   examPrepStudentsData = examPrepStudentsData.filter(function(x) { return x.examPrepId !== id; });
   appState.examPreps = examPrepsData;
@@ -12829,6 +13077,7 @@ function confirmAddStudentsToExamPrep() {
       checkTest10: false, checkTextbookMaterial: false, checkSchoolMaterial: false, checkConceptSummary: false,
       result: '', memo: '', createdAt: today()
     });
+    addEventLog('CREATE', 'examPrepStudent', newEps.id, newEps);
   });
   // 추가된 학생들의 학교를 expandedEpSchoolGroups에 추가
   epAddStudentSelected.forEach(function(sid) {
@@ -12846,6 +13095,7 @@ function removeStudentFromExamPrep(epsId) {
   var st = studentsData.find(function(s) { return s.id === eps.studentId; });
   var name = st ? st.name : '이 학생';
   if (!confirm(escHtml(name) + '을(를) 시험대비에서 제거하시겠습니까?')) return;
+  addEventLog('DELETE', 'examPrepStudent', epsId, { id: epsId });
   examPrepStudentsData = examPrepStudentsData.filter(function(x) { return x.id !== epsId; });
   expandedEpStudentIds.delete(epsId);
   selectedEpStudentIds.delete(epsId);
@@ -12857,10 +13107,10 @@ function removeStudentFromExamPrep(epsId) {
 function toggleEpCheck(epsId, field) {
   var eps = examPrepStudentsData.find(function(x) { return x.id === epsId; });
   if (!eps) return;
+  var prevEC = Object.assign({}, eps);
   eps[field] = !eps[field];
-  // 헤더만 갱신 (전체 재렌더)
+  addEventLog('UPDATE', 'examPrepStudent', epsId, eps, prevEC);
   renderExamPrepDetailBody();
-  // 카드 다시 펼침
   expandedEpStudentIds.add(epsId);
 }
 
@@ -12879,6 +13129,7 @@ function saveEpStudentDetails(epsId) {
   eps.result            = get('ep-result-' + epsId);
   var memoEl = document.getElementById('ep-memo-' + epsId);
   eps.memo = memoEl ? memoEl.value : '';
+  addEventLog('UPDATE', 'examPrepStudent', epsId, eps);
   showToast('저장됨');
   renderExamPrepDetailBody();
   expandedEpStudentIds.add(epsId);
@@ -12951,6 +13202,7 @@ function removeEpTextbook(epsId, tbId) {
   if (!eps) return;
   var ids = eps.textbookIds ? eps.textbookIds.split(',').filter(Boolean) : [];
   eps.textbookIds = ids.filter(function(x) { return x !== tbId; }).join(',');
+  addEventLog('UPDATE', 'examPrepStudent', epsId, eps);
   renderExamPrepDetailBody();
   expandedEpStudentIds.add(epsId);
 }
