@@ -2942,6 +2942,36 @@ TEST : 분수 개념점검
   </div>
 </div>
 
+<!-- 허용 계정 추가/수정 모달 -->
+<div class="modal-backdrop" id="modal-add-account">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-title" id="add-account-modal-title">계정 추가</div>
+    <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:14px;">
+      <input type="hidden" id="add-account-id">
+      <div>
+        <label style="font-size:13px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px;">이름</label>
+        <input type="text" id="add-account-name" placeholder="예: 김선생님" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:13px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px;">Google 이메일</label>
+        <input type="email" id="add-account-email" placeholder="example@gmail.com" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:13px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px;">역할</label>
+        <select id="add-account-role" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;">
+          <option value="TEACHER">선생님</option>
+          <option value="ASSISTANT">보조선생님</option>
+          <option value="OWNER">학원장</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-add-account')">취소</button>
+      <button class="btn btn-primary" onclick="saveAccountFromModal()">저장</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ============ 상수 ============
 const AUTH = {
@@ -3146,6 +3176,7 @@ let feedbackHistorySearch = '';
 let feedbackHistoryPagination = { currentPage: 1, pageSize: 10, totalItems: 0 };
 let selectedFeedbackTalkIds = [];
 let eventLogData = []; // 이벤트 로그 (메모리)
+let allowedAccountsData = []; // 허용된 Google 계정 목록 { id, email, name, role, isActive, createdAt }
 
 let currentPaymentTab = 'register'; // register(월별등록대장) 또는 records(결제기록)
 let ledgerMonths = []; // 등록대장에 표시할 월 목록 (예: ['2026-04', '2026-03'])
@@ -3465,6 +3496,54 @@ function handleGoogleSignIn() {
   _gisTokenClient.requestAccessToken({ prompt: 'select_account' });
 }
 
+// AllowedAccounts 시트 직접 fetch (로그인 시 currentUser 없는 상태에서 사용)
+async function fetchAllowedAccountsWithToken(accessToken) {
+  try {
+    var resp = await fetch(
+      'https://sheets.googleapis.com/v4/spreadsheets/' + AUTH.SHEET_ID + '/values/' + encodeURIComponent('AllowedAccounts'),
+      { headers: { Authorization: 'Bearer ' + accessToken } }
+    );
+    if (!resp.ok) return [];
+    var data = await resp.json();
+    var rows = data.values || [];
+    if (rows.length <= 1) return [];
+    return rows.slice(1).map(function(r) {
+      return {
+        id: r[0] || '',
+        email: (r[1] || '').toLowerCase().trim(),
+        name: r[2] || '',
+        role: r[3] || ROLES.TEACHER,
+        isActive: (r[4] || 'true') !== 'false',
+        createdAt: r[5] || today()
+      };
+    }).filter(function(a) { return a.email; });
+  } catch(e) { return []; }
+}
+
+// AllowedAccounts 시트를 처음 만들 때 오너 계정 seed
+async function seedAllowedAccountsSheet(accessToken, ownerEmail, ownerName) {
+  var headers = ['id', 'email', 'name', 'role', 'isActive', 'createdAt'];
+  var row = [Date.now().toString(), ownerEmail, ownerName, ROLES.OWNER, 'true', today()];
+  await fetch(
+    'https://sheets.googleapis.com/v4/spreadsheets/' + AUTH.SHEET_ID + '/values/' + encodeURIComponent('AllowedAccounts') + ':append?valueInputOption=RAW',
+    {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: [headers, row] })
+    }
+  ).catch(function() {});
+}
+
+// AllowedAccounts 전체를 시트에 저장 (clear + write)
+async function saveAllowedAccountsToSheet() {
+  await clearSheet('AllowedAccounts');
+  var rows = [['id', 'email', 'name', 'role', 'isActive', 'createdAt']];
+  allowedAccountsData.forEach(function(a) {
+    rows.push([a.id, a.email, a.name, a.role, a.isActive ? 'true' : 'false', a.createdAt]);
+  });
+  await writeSheet('AllowedAccounts', rows);
+}
+
 async function handleGisToken(tokenResponse) {
   var btn = document.getElementById('google-signin-btn');
   if (tokenResponse.error) {
@@ -3478,23 +3557,46 @@ async function handleGisToken(tokenResponse) {
       headers: { Authorization: 'Bearer ' + accessToken }
     });
     var info = await resp.json();
-    if (!AUTH.ALLOWED_EMAILS.includes(info.email)) {
-      showLoginError('접근 권한이 없는 계정입니다. (' + info.email + ')');
-      if (btn) btn.innerHTML = 'Google 계정으로 로그인';
-      if (typeof google !== 'undefined') google.accounts.oauth2.revoke(accessToken, function() {});
-      return;
+    var email = (info.email || '').toLowerCase().trim();
+
+    // AllowedAccounts 시트에서 허용 계정 목록 로드
+    var accounts = await fetchAllowedAccountsWithToken(accessToken);
+    var userAccount = null;
+
+    if (accounts.length === 0) {
+      // 첫 설정: 하드코딩된 ALLOWED_EMAILS로 fallback
+      if (!AUTH.ALLOWED_EMAILS.map(function(e) { return e.toLowerCase(); }).includes(email)) {
+        showLoginError('접근 권한이 없는 계정입니다. (' + info.email + ')');
+        if (btn) btn.innerHTML = 'Google 계정으로 로그인';
+        if (typeof google !== 'undefined') google.accounts.oauth2.revoke(accessToken, function() {});
+        return;
+      }
+      // 오너 계정 자동 seed
+      await seedAllowedAccountsSheet(accessToken, email, info.name || email);
+      userAccount = { id: Date.now().toString(), email: email, name: info.name || email, role: ROLES.OWNER, isActive: true, createdAt: today() };
+      allowedAccountsData = [userAccount];
+    } else {
+      allowedAccountsData = accounts;
+      userAccount = accounts.find(function(a) { return a.email === email && a.isActive; });
+      if (!userAccount) {
+        showLoginError('접근 권한이 없는 계정입니다. (' + info.email + ')');
+        if (btn) btn.innerHTML = 'Google 계정으로 로그인';
+        if (typeof google !== 'undefined') google.accounts.oauth2.revoke(accessToken, function() {});
+        return;
+      }
     }
+
     currentUser = {
-      email: info.email,
-      name: info.name || info.email,
-      role: ROLES.OWNER,
-      avatar: (info.name || info.email).charAt(0),
+      email: email,
+      name: info.name || email,
+      role: userAccount.role,
+      avatar: (info.name || email).charAt(0),
       accessToken: accessToken
     };
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').classList.add('active');
     initApp();
-    showToast(info.name + '님, 환영합니다!');
+    showToast((info.name || email) + '님, 환영합니다!');
   } catch(e) {
     showLoginError('사용자 정보 조회 실패. 다시 시도하세요.');
     if (btn) btn.innerHTML = 'Google 계정으로 로그인';
@@ -4197,11 +4299,14 @@ function getPageContent(pageId) {
         </div>
         
         <div style="padding: 20px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-          <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">계정 관리</h3>
-          <p style="font-size: 14px; color: var(--text2); margin-bottom: 16px;">
-            선생님과 보조쌤 계정을 추가하거나 삭제합니다.
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h3 style="font-size: 16px; font-weight: 600; margin:0;">로그인 허용 계정</h3>
+            <button class="btn btn-primary btn-sm" onclick="openAddAccountModal()">+ 계정 추가</button>
+          </div>
+          <p style="font-size: 13px; color: var(--text2); margin-bottom: 16px;">
+            앱에 로그인할 수 있는 Google 계정을 관리합니다. 비활성화된 계정은 로그인이 차단됩니다.
           </p>
-          <button class="btn btn-outline btn-sm" onclick="showToast('계정 관리 기능은 다음 단계에서 구현됩니다')">계정 관리</button>
+          <div id="allowed-accounts-list"></div>
         </div>
         
         <div style="padding: 20px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
@@ -4222,6 +4327,123 @@ function getPageContent(pageId) {
       <div class="empty-text">이 기능은 다음 단계에서 구현됩니다</div>
     </div>
   `;
+}
+
+// ============ 허용 계정 관리 ============
+function renderAllowedAccountsList() {
+  var el = document.getElementById('allowed-accounts-list');
+  if (!el) return;
+  if (!allowedAccountsData.length) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0;">등록된 계정이 없습니다.</div>';
+    return;
+  }
+  var roleLabel = function(r) {
+    if (r === ROLES.OWNER) return '<span style="background:#fff3cd;color:#856404;font-size:11px;padding:2px 7px;border-radius:10px;font-weight:600;">학원장</span>';
+    if (r === ROLES.TEACHER) return '<span style="background:#d1ecf1;color:#0c5460;font-size:11px;padding:2px 7px;border-radius:10px;font-weight:600;">선생님</span>';
+    return '<span style="background:#f8d7da;color:#721c24;font-size:11px;padding:2px 7px;border-radius:10px;font-weight:600;">보조선생님</span>';
+  };
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
+  html += '<thead><tr style="border-bottom:2px solid var(--border);">';
+  html += '<th style="text-align:left;padding:8px 6px;color:var(--text2);font-weight:500;">이름</th>';
+  html += '<th style="text-align:left;padding:8px 6px;color:var(--text2);font-weight:500;">Google 이메일</th>';
+  html += '<th style="text-align:center;padding:8px 6px;color:var(--text2);font-weight:500;">역할</th>';
+  html += '<th style="text-align:center;padding:8px 6px;color:var(--text2);font-weight:500;">상태</th>';
+  html += '<th style="text-align:center;padding:8px 6px;color:var(--text2);font-weight:500;">관리</th>';
+  html += '</tr></thead><tbody>';
+  allowedAccountsData.forEach(function(a) {
+    var isMe = a.email === currentUser.email;
+    html += '<tr style="border-bottom:1px solid var(--border);">';
+    html += '<td style="padding:10px 6px;font-weight:500;">' + escHtml(a.name) + (isMe ? ' <span style="font-size:10px;color:var(--text3);">(본인)</span>' : '') + '</td>';
+    html += '<td style="padding:10px 6px;color:var(--text2);">' + escHtml(a.email) + '</td>';
+    html += '<td style="padding:10px 6px;text-align:center;">' + roleLabel(a.role) + '</td>';
+    html += '<td style="padding:10px 6px;text-align:center;">';
+    if (isMe) {
+      html += '<span style="font-size:12px;color:var(--text3);">변경불가</span>';
+    } else {
+      html += '<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 8px;" onclick="toggleAccountActive(\'' + a.id + '\')">' + (a.isActive ? '비활성화' : '활성화') + '</button>';
+    }
+    html += '</td>';
+    html += '<td style="padding:10px 6px;text-align:center;">';
+    if (!isMe) {
+      html += '<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 8px;margin-right:4px;" onclick="openEditAccountModal(\'' + a.id + '\')"">수정</button>';
+      html += '<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 8px;color:var(--danger);border-color:var(--danger);" onclick="deleteAllowedAccount(\'' + a.id + '\')"">삭제</button>';
+    }
+    html += '</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function openAddAccountModal() {
+  var modal = document.getElementById('modal-add-account');
+  if (!modal) return;
+  document.getElementById('add-account-id').value = '';
+  document.getElementById('add-account-email').value = '';
+  document.getElementById('add-account-name').value = '';
+  document.getElementById('add-account-role').value = ROLES.TEACHER;
+  document.getElementById('add-account-modal-title').textContent = '계정 추가';
+  openModal('modal-add-account');
+}
+
+function openEditAccountModal(id) {
+  var a = allowedAccountsData.find(function(x) { return x.id === id; });
+  if (!a) return;
+  var modal = document.getElementById('modal-add-account');
+  if (!modal) return;
+  document.getElementById('add-account-id').value = a.id;
+  document.getElementById('add-account-email').value = a.email;
+  document.getElementById('add-account-name').value = a.name;
+  document.getElementById('add-account-role').value = a.role;
+  document.getElementById('add-account-modal-title').textContent = '계정 수정';
+  openModal('modal-add-account');
+}
+
+async function saveAccountFromModal() {
+  var id = document.getElementById('add-account-id').value.trim();
+  var email = (document.getElementById('add-account-email').value || '').toLowerCase().trim();
+  var name = (document.getElementById('add-account-name').value || '').trim();
+  var role = document.getElementById('add-account-role').value;
+  if (!email) { showToast('이메일을 입력하세요'); return; }
+  if (!name) { showToast('이름을 입력하세요'); return; }
+  if (id) {
+    // 수정
+    var idx = allowedAccountsData.findIndex(function(a) { return a.id === id; });
+    if (idx >= 0) {
+      allowedAccountsData[idx].email = email;
+      allowedAccountsData[idx].name = name;
+      allowedAccountsData[idx].role = role;
+    }
+  } else {
+    // 추가 — 중복 체크
+    if (allowedAccountsData.find(function(a) { return a.email === email; })) {
+      showToast('이미 등록된 이메일입니다'); return;
+    }
+    allowedAccountsData.push({ id: Date.now().toString(), email: email, name: name, role: role, isActive: true, createdAt: today() });
+  }
+  await saveAllowedAccountsToSheet();
+  closeModal('modal-add-account');
+  renderAllowedAccountsList();
+  showToast('저장되었습니다');
+}
+
+async function toggleAccountActive(id) {
+  var a = allowedAccountsData.find(function(x) { return x.id === id; });
+  if (!a) return;
+  a.isActive = !a.isActive;
+  await saveAllowedAccountsToSheet();
+  renderAllowedAccountsList();
+  showToast(a.isActive ? '계정이 활성화되었습니다' : '계정이 비활성화되었습니다');
+}
+
+async function deleteAllowedAccount(id) {
+  var a = allowedAccountsData.find(function(x) { return x.id === id; });
+  if (!a) return;
+  if (!confirm(escHtml(a.name) + ' (' + escHtml(a.email) + ') 계정을 삭제하시겠습니까?')) return;
+  allowedAccountsData = allowedAccountsData.filter(function(x) { return x.id !== id; });
+  await saveAllowedAccountsToSheet();
+  renderAllowedAccountsList();
+  showToast('계정이 삭제되었습니다');
 }
 
 function navigateTo(pageId) {
@@ -4293,6 +4515,7 @@ function navigateTo(pageId) {
   if (pageId === 'feedback') renderFeedbackPage();
   if (pageId === 'meetings') renderMeetingsPage();
   if (pageId === 'exam-prep') { currentExamPrepId = null; renderExamPrepPage(); }
+  if (pageId === 'settings') setTimeout(renderAllowedAccountsList, 50);
 
   // 교재 페이지 렌더링 (중복 제거)
 }
