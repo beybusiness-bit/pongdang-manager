@@ -13343,14 +13343,30 @@ function renderSalesReportBody() {
   var m = currentReportMonth;
 
   var salesData = calcMonthSalesData(m);
+  var curMonthStr = today().substring(0, 7);
+  var isCurrentMonth = (m === curMonthStr);
+
   var salary = monthlySalaryData.find(function(x) { return x.monthYear === m; });
   if (!salary) {
-    var _teacherRatios = {}, _assistantRatios = {};
-    teachersData.filter(function(t) { return t.type === '선생님'; }).forEach(function(t) { _teacherRatios[t.id] = t.settlementRate || 48; });
-    teachersData.filter(function(t) { return t.type === '보조선생님'; }).forEach(function(t) { _assistantRatios[t.id] = t.settlementRate || 50; });
-    salary = { id: uid(), monthYear: m, teacherRatios: _teacherRatios, assistantRatios: _assistantRatios, assistants: [] };
+    salary = { id: uid(), monthYear: m, teacherRatios: {}, assistantRatios: {}, assistants: [] };
     monthlySalaryData.push(salary);
   }
+  // 지난 달: 비율 스냅샷이 없으면 지금 시점에서 굳힘 (달이 넘어간 뒤 첫 조회)
+  if (!isCurrentMonth && (!salary.teacherRatios || Object.keys(salary.teacherRatios).length === 0)) {
+    teachersData.filter(function(t) { return t.type === '선생님'; }).forEach(function(t) { salary.teacherRatios[t.id] = t.settlementRate || 48; });
+    teachersData.filter(function(t) { return t.type === '보조선생님'; }).forEach(function(t) { salary.assistantRatios[t.id] = t.settlementRate || 50; });
+    addEventLog('UPDATE', 'monthlySalary', salary.id, salary);
+  }
+
+  // 비율 조회 헬퍼 — 이번 달: 실시간, 지난 달: 스냅샷
+  var getTeacherRatio = function(t) {
+    if (isCurrentMonth) return t.settlementRate || 48;
+    return (salary.teacherRatios && salary.teacherRatios[t.id]) || t.settlementRate || 48;
+  };
+  var getAssistantRatio = function(ast) {
+    if (isCurrentMonth) return ast.settlementRate || 50;
+    return (salary.assistantRatios && salary.assistantRatios[ast.id]) || ast.settlementRate || 50;
+  };
 
   var html = '<div style="max-width:900px;">';
   var fmt = function(n) { return (n||0).toLocaleString(); };
@@ -13456,8 +13472,7 @@ function renderSalesReportBody() {
     mainTeachers.forEach(function(t) {
       var th = (entry.teacherHours || []).find(function(x) { return x.teacherId === t.id; });
       var thHours = th ? th.hours : 0;
-      var _astRatio = (salary.assistantRatios && salary.assistantRatios[ast.id]) || ast.settlementRate || 50;
-      var applied = thHours * (entry.hourlyRate || 0) * _astRatio / 100;
+      var applied = thHours * (entry.hourlyRate || 0) * getAssistantRatio(ast) / 100;
       html += '<td style="padding:9px 12px;text-align:right;"><input type="number" step="0.25" value="' + thHours + '" style="width:70px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;text-align:right;" onchange="updateTeacherHours(\'' + m + '\',\'' + ast.id + '\',\'' + t.id + '\',+this.value)"></td>';
       html += '<td style="padding:9px 12px;text-align:right;">' + fmt(applied) + '</td>';
     });
@@ -13480,7 +13495,7 @@ function renderSalesReportBody() {
   html += '</tr></thead><tbody>';
   mainTeachers.forEach(function(t) {
     var tSales = salesData.byTeacher[t.name] || { sales: 0 };
-    var ratio = ((salary.teacherRatios && salary.teacherRatios[t.id]) || t.settlementRate || 48) / 100;
+    var ratio = getTeacherRatio(t) / 100;
     var teacherShare = Math.round(tSales.sales * ratio);
     var academyShare = tSales.sales - teacherShare;
     var assistCost = 0;
@@ -13488,10 +13503,7 @@ function renderSalesReportBody() {
       var entry = (salary.assistants || []).find(function(a) { return a.assistantId === ast.id; })
         || { teacherHours: [], hourlyRate: ast.settlementRate || 15000 };
       var th = (entry.teacherHours || []).find(function(x) { return x.teacherId === t.id; });
-      if (th) {
-        var _ratio2 = (salary.assistantRatios && salary.assistantRatios[ast.id]) || ast.settlementRate || 50;
-        assistCost += th.hours * (entry.hourlyRate || 0) * _ratio2 / 100;
-      }
+      if (th) assistCost += th.hours * (entry.hourlyRate || 0) * getAssistantRatio(ast) / 100;
     });
     html += '<tr style="border-bottom:1px solid var(--border);">';
     html += '<td style="padding:9px 12px;font-weight:500;">' + escHtml(t.name) + '</td>';
