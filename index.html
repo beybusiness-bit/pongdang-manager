@@ -3654,9 +3654,10 @@ function clearAllDataArrays() {
 
 // Sheets EventLog 시트에서 데이터 로드 → 재생 (OAuth 토큰 필요)
 async function loadDataFromFirestore() {
+  setSyncStatus('syncing', '동기화 중...');
   try {
     var snap = await _db.collection('eventLog').orderBy('timestamp').get();
-    if (snap.empty) return false;
+    if (snap.empty) { setSyncStatus('ok', 'Firestore 연결됨'); return false; }
     var events = snap.docs.map(function(doc) {
       var d = doc.data();
       return {
@@ -3668,9 +3669,11 @@ async function loadDataFromFirestore() {
     clearAllDataArrays();
     replayEventLog(events);
     eventLogData = events;
+    setSyncStatus('ok', 'Firestore 연결됨');
     return true;
   } catch(e) {
     console.warn('Firestore load failed:', e);
+    setSyncStatus('err', '연결 실패');
     return false;
   }
 }
@@ -3712,6 +3715,7 @@ function startRealtimeSync() {
   var initialized = false;
   _unsubscribeEventLog = _db.collection('eventLog').orderBy('timestamp')
     .onSnapshot(function(snap) {
+      setSyncStatus('ok', '실시간 동기화 중');
       if (!initialized) { initialized = true; return; } // 초기 로드는 skip
       var added = [];
       snap.docChanges().forEach(function(change) {
@@ -3734,7 +3738,7 @@ function startRealtimeSync() {
           else navigateTo(currentPage);
         }
       }
-    }, function(e) { console.warn('onSnapshot error:', e); });
+    }, function(e) { console.warn('onSnapshot error:', e); setSyncStatus('err', '동기화 오류'); });
 }
 
 // ============ 앱 초기화 ============
