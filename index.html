@@ -7957,7 +7957,9 @@ function renderPaymentRecordsListBody() {
   html += '  <tr style="border-bottom: 2px solid var(--border);">';
   const _thStickyBase = 'position: sticky; top: 0; z-index: 10; background: var(--bg-side);';
   if (canWrite) {
-    html += '    <th style="' + _thStickyBase + ' padding: 12px; width: 40px; text-align: center;"><input type="checkbox" id="select-all-payments" onchange="toggleSelectAllPayments(this.checked)"></th>';
+    const _pageIds = pagePayments.map(p => p.id);
+    const _allChecked = _pageIds.length > 0 && _pageIds.every(id => selectedPaymentIds.includes(id));
+    html += '    <th style="' + _thStickyBase + ' padding: 12px; width: 40px; text-align: center;"><input type="checkbox" id="select-all-payments"' + (_allChecked ? ' checked' : '') + ' onchange="toggleSelectAllPayments(this.checked)"></th>';
   }
   html += '    <th style="' + _thStickyBase + ' padding: 12px; width: 110px; text-align: center;">학생</th>';
   html += '    <th style="' + _thStickyBase + ' padding: 12px; width: 50px; text-align: center;">학교급</th>';
@@ -13143,8 +13145,12 @@ function toggleEpCheck(epsId, field) {
   var prevEC = Object.assign({}, eps);
   eps[field] = !eps[field];
   addEventLog('UPDATE', 'examPrepStudent', epsId, eps, prevEC);
+  var wrapper = document.querySelector('.ep-detail-table-wrapper');
+  var savedScroll = wrapper ? wrapper.scrollLeft : 0;
   renderExamPrepDetailBody();
   expandedEpStudentIds.add(epsId);
+  var wrapperAfter = document.querySelector('.ep-detail-table-wrapper');
+  if (wrapperAfter) wrapperAfter.scrollLeft = savedScroll;
 }
 
 // ── 학생 정보 저장 ──
