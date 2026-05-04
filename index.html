@@ -8,7 +8,9 @@
 <meta name="theme-color" content="#4a90e2">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<script src="https://accounts.google.com/gsi/client" async></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="풍당수학">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -2975,9 +2977,15 @@ TEST : 분수 개념점검
 <script>
 // ============ 상수 ============
 const AUTH = {
-  ALLOWED_EMAILS: ['pongdang.math@gmail.com'],
-  CLIENT_ID: '336607866033-m4prif6mig0mnkeek64hbbch3j4thdhc.apps.googleusercontent.com',
-  SHEET_ID: '1kaKwSNmQk_HdHZjZiILoZcrXSVi08wwlDZxvr8PmNGI',
+  ALLOWED_EMAILS: ['pongdang.math@gmail.com'], // 최초 설정 fallback
+  FIREBASE_CONFIG: {
+    apiKey: 'AIzaSyAYH-DR8A7zhDlNlZ76KHbSzdOIK-53ZeM',
+    authDomain: 'pongdang-manager.firebaseapp.com',
+    projectId: 'pongdang-manager',
+    storageBucket: 'pongdang-manager.firebasestorage.app',
+    messagingSenderId: '336607866033',
+    appId: '1:336607866033:web:e447f1b2c643488abe4690'
+  }
 };
 
 // 메뉴 구조 (14개)
@@ -3465,143 +3473,88 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ============ 로그인 처리 ============
-// ── Google OAuth (GIS) ──────────────────────────────────────
-var _gisTokenClient = null;
+// ── Firebase Auth ──────────────────────────────────────
+var _db = null;
+var _auth = null;
+var _unsubscribeEventLog = null;
 
-function initGoogleAuth() {
-  if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) return;
-  _gisTokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: AUTH.CLIENT_ID,
-    scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
-    callback: handleGisToken
+function initFirebase() {
+  firebase.initializeApp(AUTH.FIREBASE_CONFIG);
+  _db = firebase.firestore();
+  _auth = firebase.auth();
+  _auth.onAuthStateChanged(function(user) {
+    if (user) {
+      handleFirebaseUser(user);
+    } else {
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('app').classList.remove('active');
+    }
   });
-}
-
-function initGisWhenReady() {
-  if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
-    initGoogleAuth();
-  } else {
-    setTimeout(initGisWhenReady, 300);
-  }
 }
 
 function handleGoogleSignIn() {
   var btn = document.getElementById('google-signin-btn');
   if (btn) btn.textContent = '로그인 중...';
-  if (!_gisTokenClient) {
-    showLoginError('Google 인증 로드 중입니다. 잠시 후 다시 시도하세요.');
+  var provider = new firebase.auth.GoogleAuthProvider();
+  _auth.signInWithPopup(provider).catch(function(e) {
+    showLoginError('로그인 실패: ' + e.message);
     if (btn) btn.innerHTML = 'Google 계정으로 로그인';
-    return;
-  }
-  _gisTokenClient.requestAccessToken({ prompt: 'select_account' });
+  });
 }
 
-// AllowedAccounts 시트 직접 fetch (로그인 시 currentUser 없는 상태에서 사용)
-async function fetchAllowedAccountsWithToken(accessToken) {
+async function handleFirebaseUser(user) {
+  var email = (user.email || '').toLowerCase().trim();
+  var accounts = await fetchAllowedAccountsFromFirestore();
+  var userAccount = null;
+  if (accounts.length === 0) {
+    if (!AUTH.ALLOWED_EMAILS.map(function(e) { return e.toLowerCase(); }).includes(email)) {
+      showLoginError('접근 권한이 없는 계정입니다. (' + user.email + ')');
+      _auth.signOut();
+      return;
+    }
+    await seedAllowedAccountsFirestore(email, user.displayName || email);
+    userAccount = { email: email, name: user.displayName || email, role: ROLES.OWNER, isActive: true, createdAt: today() };
+    allowedAccountsData = [userAccount];
+  } else {
+    allowedAccountsData = accounts;
+    userAccount = accounts.find(function(a) { return a.email === email && a.isActive; });
+    if (!userAccount) {
+      showLoginError('접근 권한이 없는 계정입니다. (' + user.email + ')');
+      _auth.signOut();
+      return;
+    }
+  }
+  currentUser = {
+    email: email,
+    name: user.displayName || email,
+    role: userAccount.role,
+    avatar: (user.displayName || email).charAt(0),
+    uid: user.uid
+  };
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').classList.add('active');
+  initApp();
+  showToast((user.displayName || email) + '님, 환영합니다!');
+}
+
+// ============ AllowedAccounts (Firestore) ============
+async function fetchAllowedAccountsFromFirestore() {
   try {
-    var resp = await fetch(
-      'https://sheets.googleapis.com/v4/spreadsheets/' + AUTH.SHEET_ID + '/values/' + encodeURIComponent('AllowedAccounts'),
-      { headers: { Authorization: 'Bearer ' + accessToken } }
-    );
-    if (!resp.ok) return [];
-    var data = await resp.json();
-    var rows = data.values || [];
-    if (rows.length <= 1) return [];
-    return rows.slice(1).map(function(r) {
-      return {
-        id: r[0] || '',
-        email: (r[1] || '').toLowerCase().trim(),
-        name: r[2] || '',
-        role: r[3] || ROLES.TEACHER,
-        isActive: (r[4] || 'true') !== 'false',
-        createdAt: r[5] || today()
-      };
-    }).filter(function(a) { return a.email; });
+    var snap = await _db.collection('allowedAccounts').get();
+    return snap.docs.map(function(doc) {
+      var d = doc.data();
+      return { id: doc.id, email: (d.email||'').toLowerCase().trim(), name: d.name||'', role: d.role||ROLES.TEACHER, isActive: d.isActive !== false, createdAt: d.createdAt||today() };
+    });
   } catch(e) { return []; }
 }
 
-// AllowedAccounts 시트를 처음 만들 때 오너 계정 seed
-async function seedAllowedAccountsSheet(accessToken, ownerEmail, ownerName) {
-  var headers = ['id', 'email', 'name', 'role', 'isActive', 'createdAt'];
-  var row = [Date.now().toString(), ownerEmail, ownerName, ROLES.OWNER, 'true', today()];
-  await fetch(
-    'https://sheets.googleapis.com/v4/spreadsheets/' + AUTH.SHEET_ID + '/values/' + encodeURIComponent('AllowedAccounts') + ':append?valueInputOption=RAW',
-    {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ values: [headers, row] })
-    }
-  ).catch(function() {});
-}
-
-// AllowedAccounts 전체를 시트에 저장 (clear + write)
-async function saveAllowedAccountsToSheet() {
-  await clearSheet('AllowedAccounts');
-  var rows = [['id', 'email', 'name', 'role', 'isActive', 'createdAt']];
-  allowedAccountsData.forEach(function(a) {
-    rows.push([a.id, a.email, a.name, a.role, a.isActive ? 'true' : 'false', a.createdAt]);
-  });
-  await writeSheet('AllowedAccounts', rows);
-}
-
-async function handleGisToken(tokenResponse) {
-  var btn = document.getElementById('google-signin-btn');
-  if (tokenResponse.error) {
-    showLoginError('로그인 취소됨');
-    if (btn) btn.innerHTML = 'Google 계정으로 로그인';
-    return;
-  }
-  var accessToken = tokenResponse.access_token;
+async function seedAllowedAccountsFirestore(email, name) {
   try {
-    var resp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: 'Bearer ' + accessToken }
-    });
-    var info = await resp.json();
-    var email = (info.email || '').toLowerCase().trim();
-
-    // AllowedAccounts 시트에서 허용 계정 목록 로드
-    var accounts = await fetchAllowedAccountsWithToken(accessToken);
-    var userAccount = null;
-
-    if (accounts.length === 0) {
-      // 첫 설정: 하드코딩된 ALLOWED_EMAILS로 fallback
-      if (!AUTH.ALLOWED_EMAILS.map(function(e) { return e.toLowerCase(); }).includes(email)) {
-        showLoginError('접근 권한이 없는 계정입니다. (' + info.email + ')');
-        if (btn) btn.innerHTML = 'Google 계정으로 로그인';
-        if (typeof google !== 'undefined') google.accounts.oauth2.revoke(accessToken, function() {});
-        return;
-      }
-      // 오너 계정 자동 seed
-      await seedAllowedAccountsSheet(accessToken, email, info.name || email);
-      userAccount = { id: Date.now().toString(), email: email, name: info.name || email, role: ROLES.OWNER, isActive: true, createdAt: today() };
-      allowedAccountsData = [userAccount];
-    } else {
-      allowedAccountsData = accounts;
-      userAccount = accounts.find(function(a) { return a.email === email && a.isActive; });
-      if (!userAccount) {
-        showLoginError('접근 권한이 없는 계정입니다. (' + info.email + ')');
-        if (btn) btn.innerHTML = 'Google 계정으로 로그인';
-        if (typeof google !== 'undefined') google.accounts.oauth2.revoke(accessToken, function() {});
-        return;
-      }
-    }
-
-    currentUser = {
-      email: email,
-      name: info.name || email,
-      role: userAccount.role,
-      avatar: (info.name || email).charAt(0),
-      accessToken: accessToken
-    };
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').classList.add('active');
-    initApp();
-    showToast((info.name || email) + '님, 환영합니다!');
-  } catch(e) {
-    showLoginError('사용자 정보 조회 실패. 다시 시도하세요.');
-    if (btn) btn.innerHTML = 'Google 계정으로 로그인';
-  }
+    await _db.collection('allowedAccounts').add({ email: email, name: name, role: ROLES.OWNER, isActive: true, createdAt: today() });
+  } catch(e) { console.warn('seed allowedAccounts failed:', e); }
 }
+
+
 
 function showLoginError(msg) {
   var el = document.getElementById('login-error');
@@ -3610,63 +3563,14 @@ function showLoginError(msg) {
 
 function handleLogout() {
   if (!confirm('로그아웃 하시겠습니까?')) return;
-  if (currentUser && currentUser.accessToken && typeof google !== 'undefined') {
-    google.accounts.oauth2.revoke(currentUser.accessToken, function() {});
-  }
+  if (_unsubscribeEventLog) { _unsubscribeEventLog(); _unsubscribeEventLog = null; }
+  _auth.signOut();
   currentUser = null;
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('app').classList.remove('active');
   showToast('로그아웃되었습니다.');
 }
 
 
-// ============ Google Sheets API (REST) ============
 
-async function sheetsApiRequest(method, path, body) {
-  if (!currentUser || !currentUser.accessToken) return null;
-  try {
-    var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + AUTH.SHEET_ID + path;
-    var opts = { method: method, headers: { 'Authorization': 'Bearer ' + currentUser.accessToken } };
-    if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
-    var resp = await fetch(url, opts);
-    if (!resp.ok) {
-      var errBody = await resp.json().catch(function() { return {}; });
-      console.warn('[Sheets]', resp.status, errBody.error && errBody.error.message);
-      if (resp.status === 401) {
-        showToast('인증이 만료되었습니다. 다시 로그인해주세요.');
-        if (typeof google !== 'undefined' && _gisTokenClient) {
-          _gisTokenClient.requestAccessToken({ prompt: '' });
-        }
-      }
-      return null;
-    }
-    return await resp.json();
-  } catch(e) {
-    console.warn('[Sheets] 요청 실패:', e.message);
-    return null;
-  }
-}
-
-async function sheetsAppend(sheetName, values) {
-  return sheetsApiRequest('POST',
-    '/values/' + encodeURIComponent(sheetName) + ':append?valueInputOption=RAW&insertDataOption=INSERT_ROWS',
-    { values: [values] });
-}
-
-async function sheetsRead(sheetName) {
-  var result = await sheetsApiRequest('GET', '/values/' + encodeURIComponent(sheetName));
-  return result ? (result.values || []) : null;
-}
-
-// 시트 전체 덮어쓰기 (헤더 포함)
-async function sheetsClear(sheetName) {
-  return sheetsApiRequest('POST', '/values/' + encodeURIComponent(sheetName) + ':clear', {});
-}
-async function sheetsWrite(sheetName, rows) {
-  return sheetsApiRequest('PUT',
-    '/values/' + encodeURIComponent(sheetName) + '?valueInputOption=RAW',
-    { values: rows });
-}
 
 // ============ 이벤트 로그 ============
 
@@ -3697,20 +3601,10 @@ function addEventLog(action, entityType, entityId, data, previousData) {
 
   eventLogData.push(evt);
 
-  // localStorage 백업 (최근 1000건)
-  try {
-    var stored = JSON.parse(localStorage.getItem('pongdang_eventLog') || '[]');
-    stored.push(evt);
-    if (stored.length > 1000) stored = stored.slice(-1000);
-    localStorage.setItem('pongdang_eventLog', JSON.stringify(stored));
-  } catch(e) { /* 저장 공간 부족 시 무시 */ }
-
-  // Sheets 비동기 기록 (토큰 있을 때만 실제 전송, 실패해도 무시)
-  sheetsAppend('EventLog', [
-    evt.id, evt.timestamp, evt.userEmail, evt.userName,
-    evt.action, evt.entityType, evt.entityId,
-    JSON.stringify(evt.data), JSON.stringify(evt.previousData)
-  ]);
+  // Firestore에 비동기 저장 (실패해도 무시)
+  if (_db) {
+    _db.collection('eventLog').add(evt).catch(function(e) { console.warn('EventLog write failed:', e); });
+  }
 }
 
 // EventLog 배열을 순서대로 재생(replay)하여 현재 상태 재구성
@@ -3759,29 +3653,29 @@ function clearAllDataArrays() {
 }
 
 // Sheets EventLog 시트에서 데이터 로드 → 재생 (OAuth 토큰 필요)
-async function loadDataFromSheets() {
-  var rows = await sheetsRead('EventLog');
-  if (!rows || rows.length <= 1) return false;
-  clearAllDataArrays();
-  var events = [];
-  for (var i = 1; i < rows.length; i++) {
-    var r = rows[i];
-    if (!r[0] || !r[4] || !r[5]) continue;
-    var evt = {
-      id: r[0], timestamp: r[1] || '', userEmail: r[2] || '',
-      userName: r[3] || '', action: r[4], entityType: r[5], entityId: r[6] || '',
-      data: null, previousData: null
-    };
-    try { evt.data = r[7] ? JSON.parse(r[7]) : null; } catch(e) {}
-    try { evt.previousData = r[8] ? JSON.parse(r[8]) : null; } catch(e) {}
-    events.push(evt);
+async function loadDataFromFirestore() {
+  try {
+    var snap = await _db.collection('eventLog').orderBy('timestamp').get();
+    if (snap.empty) return false;
+    var events = snap.docs.map(function(doc) {
+      var d = doc.data();
+      return {
+        id: d.id || doc.id, timestamp: d.timestamp || '', userEmail: d.userEmail || '',
+        userName: d.userName || '', action: d.action, entityType: d.entityType,
+        entityId: d.entityId || '', data: d.data || null, previousData: d.previousData || null
+      };
+    });
+    clearAllDataArrays();
+    replayEventLog(events);
+    eventLogData = events;
+    return true;
+  } catch(e) {
+    console.warn('Firestore load failed:', e);
+    return false;
   }
-  replayEventLog(events);
-  eventLogData = events;
-  return events.length > 0;
 }
 
-// localStorage 이벤트 로그로 복원
+// localStorage 이벤트 로그로 복원 (오프라인 fallback)
 function loadDataFromLocalStorage() {
   try {
     var stored = JSON.parse(localStorage.getItem('pongdang_eventLog') || '[]');
@@ -3793,28 +3687,54 @@ function loadDataFromLocalStorage() {
   } catch(e) { return false; }
 }
 
-// 앱 시작 시 데이터 로드 우선순위: Sheets → localStorage → 샘플 데이터
+// 앱 시작 시 데이터 로드: Firestore → localStorage → 샘플 데이터
 async function initDataSources() {
-  if (currentUser && currentUser.accessToken) {
+  if (_db) {
     try {
-      var loaded = await loadDataFromSheets();
-      if (loaded) { showToast('데이터 로드 완료 (Sheets)'); return; }
-    } catch(e) { console.warn('Sheets 로드 실패:', e); }
+      var loaded = await loadDataFromFirestore();
+      if (loaded) {
+        startRealtimeSync();
+        return;
+      }
+    } catch(e) { console.warn('Firestore 로드 실패:', e); }
   }
   if (loadDataFromLocalStorage()) {
-    showToast('데이터 로드 완료 (로컬 저장)');
+    showToast('오프라인 데이터로 로드됨');
     return;
   }
   loadSampleData();
 }
 
-// EventLog 시트 헤더 초기화 (최초 1회 실행용)
-async function initEventLogSheet() {
-  if (!currentUser || !currentUser.accessToken) return;
-  var rows = await sheetsRead('EventLog');
-  if (!rows || rows.length === 0) {
-    await sheetsAppend('EventLog', ['id','timestamp','userEmail','userName','action','entityType','entityId','data','previousData']);
-  }
+// 실시간 동기화: 다른 기기의 변경사항 자동 반영
+function startRealtimeSync() {
+  if (_unsubscribeEventLog) _unsubscribeEventLog();
+  var initialCount = eventLogData.length;
+  var initialized = false;
+  _unsubscribeEventLog = _db.collection('eventLog').orderBy('timestamp')
+    .onSnapshot(function(snap) {
+      if (!initialized) { initialized = true; return; } // 초기 로드는 skip
+      var added = [];
+      snap.docChanges().forEach(function(change) {
+        if (change.type !== 'added') return;
+        var d = change.doc.data();
+        var evt = {
+          id: d.id || change.doc.id, timestamp: d.timestamp || '', userEmail: d.userEmail || '',
+          userName: d.userName || '', action: d.action, entityType: d.entityType,
+          entityId: d.entityId || '', data: d.data || null, previousData: d.previousData || null
+        };
+        if (!eventLogData.find(function(e) { return e.id === evt.id; })) {
+          added.push(evt);
+        }
+      });
+      if (added.length > 0) {
+        added.forEach(function(evt) { eventLogData.push(evt); });
+        replayEventLog(added);
+        if (currentPage) {
+          if (currentPage === 'dashboard') updateDashboard();
+          else navigateTo(currentPage);
+        }
+      }
+    }, function(e) { console.warn('onSnapshot error:', e); });
 }
 
 // ============ 앱 초기화 ============
@@ -4406,44 +4326,45 @@ async function saveAccountFromModal() {
   var role = document.getElementById('add-account-role').value;
   if (!email) { showToast('이메일을 입력하세요'); return; }
   if (!name) { showToast('이름을 입력하세요'); return; }
-  if (id) {
-    // 수정
-    var idx = allowedAccountsData.findIndex(function(a) { return a.id === id; });
-    if (idx >= 0) {
-      allowedAccountsData[idx].email = email;
-      allowedAccountsData[idx].name = name;
-      allowedAccountsData[idx].role = role;
+  try {
+    if (id) {
+      // 수정
+      await _db.collection('allowedAccounts').doc(id).update({ email: email, name: name, role: role });
+      var idx = allowedAccountsData.findIndex(function(a) { return a.id === id; });
+      if (idx >= 0) { allowedAccountsData[idx].email = email; allowedAccountsData[idx].name = name; allowedAccountsData[idx].role = role; }
+    } else {
+      // 추가 — 중복 체크
+      if (allowedAccountsData.find(function(a) { return a.email === email; })) { showToast('이미 등록된 이메일입니다'); return; }
+      var docRef = await _db.collection('allowedAccounts').add({ email: email, name: name, role: role, isActive: true, createdAt: today() });
+      allowedAccountsData.push({ id: docRef.id, email: email, name: name, role: role, isActive: true, createdAt: today() });
     }
-  } else {
-    // 추가 — 중복 체크
-    if (allowedAccountsData.find(function(a) { return a.email === email; })) {
-      showToast('이미 등록된 이메일입니다'); return;
-    }
-    allowedAccountsData.push({ id: Date.now().toString(), email: email, name: name, role: role, isActive: true, createdAt: today() });
-  }
-  await saveAllowedAccountsToSheet();
-  closeModal('modal-add-account');
-  renderAllowedAccountsList();
-  showToast('저장되었습니다');
+    closeModal('modal-add-account');
+    renderAllowedAccountsList();
+    showToast('저장되었습니다');
+  } catch(e) { showToast('저장 실패: ' + e.message); }
 }
 
 async function toggleAccountActive(id) {
   var a = allowedAccountsData.find(function(x) { return x.id === id; });
   if (!a) return;
   a.isActive = !a.isActive;
-  await saveAllowedAccountsToSheet();
-  renderAllowedAccountsList();
-  showToast(a.isActive ? '계정이 활성화되었습니다' : '계정이 비활성화되었습니다');
+  try {
+    await _db.collection('allowedAccounts').doc(id).update({ isActive: a.isActive });
+    renderAllowedAccountsList();
+    showToast(a.isActive ? '계정이 활성화되었습니다' : '계정이 비활성화되었습니다');
+  } catch(e) { a.isActive = !a.isActive; showToast('저장 실패'); }
 }
 
 async function deleteAllowedAccount(id) {
   var a = allowedAccountsData.find(function(x) { return x.id === id; });
   if (!a) return;
-  if (!confirm(escHtml(a.name) + ' (' + escHtml(a.email) + ') 계정을 삭제하시겠습니까?')) return;
-  allowedAccountsData = allowedAccountsData.filter(function(x) { return x.id !== id; });
-  await saveAllowedAccountsToSheet();
-  renderAllowedAccountsList();
-  showToast('계정이 삭제되었습니다');
+  if (!confirm(a.name + ' (' + a.email + ') 계정을 삭제하시겠습니까?')) return;
+  try {
+    await _db.collection('allowedAccounts').doc(id).delete();
+    allowedAccountsData = allowedAccountsData.filter(function(x) { return x.id !== id; });
+    renderAllowedAccountsList();
+    showToast('계정이 삭제되었습니다');
+  } catch(e) { showToast('삭제 실패: ' + e.message); }
 }
 
 function navigateTo(pageId) {
@@ -5797,11 +5718,11 @@ function editStudentFromDetail() {
 }
 
 function resetToSampleData() {
-  if (!confirm('localStorage의 모든 데이터를 삭제하고 샘플 데이터로 초기화합니다. 계속하시겠습니까?')) return;
-  localStorage.removeItem('pongdang_eventLog');
+  if (!confirm('샘플 데이터로 초기화합니다. Firestore 데이터는 건드리지 않고 이 화면에서만 샘플 데이터로 전환됩니다. 계속하시겠습니까?')) return;
+  if (_unsubscribeEventLog) { _unsubscribeEventLog(); _unsubscribeEventLog = null; }
   eventLogData = [];
   loadSampleData();
-  showToast('샘플 데이터로 초기화되었습니다');
+  showToast('샘플 데이터로 초기화되었습니다 (화면 전용)');
   navigateTo(currentPage || 'dashboard');
 }
 
@@ -10345,7 +10266,7 @@ function deleteTeacher(teacherId) {
 
 // 앱 로드 시 GIS 초기화 (로그인 화면 표시)
 window.addEventListener('load', function() {
-  initGisWhenReady();
+  initFirebase();
 });
 
 // ============ 근무일지 ============
