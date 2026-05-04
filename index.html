@@ -2342,22 +2342,6 @@ input[type="checkbox"] {
   </div>
 </div>
 
-<!-- 월 추가 모달 -->
-<div class="modal-backdrop" id="modal-add-ledger-month">
-  <div class="modal" style="max-width: 400px;">
-    <div class="modal-title">월 추가</div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label class="form-label">추가할 월 선택 *</label>
-        <input type="month" class="form-input" id="add-ledger-month-input">
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-add-ledger-month')">취소</button>
-      <button class="btn btn-primary btn-sm" onclick="addLedgerMonth()">추가</button>
-    </div>
-  </div>
-</div>
 
 <!-- 결제 CSV 업로드 모달 -->
 <div class="modal-backdrop" id="modal-payment-csv-upload">
@@ -3212,7 +3196,7 @@ let eventLogData = []; // 이벤트 로그 (메모리)
 let allowedAccountsData = []; // 허용된 Google 계정 목록 { id, email, name, role, isActive, createdAt }
 
 let currentPaymentTab = 'register'; // register(월별등록대장) 또는 records(결제기록)
-let ledgerMonths = []; // 등록대장에 표시할 월 목록 (예: ['2026-04', '2026-03'])
+let ledgerMonths = []; // (레거시, 더 이상 직접 사용 안 함 — getAutoLedgerMonths() 사용)
 let currentLedgerMonth = ''; // 현재 선택된 등록대장 월
 let ledgerSortOrder = 'desc'; // 월 정렬 순서 (desc: 최신순, asc: 오래된순)
 let originalStudentDays = ''; // 학생에서 불러온 원래 요일 (변경 감지용)
@@ -7788,14 +7772,11 @@ function renderEnrollmentLedger(canWrite) {
   // 쉘: 검색 입력/정렬 버튼/월 추가 버튼 — 재렌더 시에도 보존 (한글 IME 안정성)
   let html = '';
   html += '<div style="margin-bottom: 20px;">';
-  html += '  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">';
-  html += '    <div style="display: flex; gap: 8px; align-items: center;">';
-  html += '      <input type="text" placeholder="월 검색 (예: 2026-04)" id="ledger-month-search" value="' + (ledgerMonthSearchApplied || '').replace(/"/g, '&quot;') + '" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; width: 180px;" oninput="handleLedgerMonthSearchInput(this)">';
-  html += '      <button class="btn btn-outline btn-sm" id="ledger-sort-btn" onclick="toggleLedgerSortOrder()" style="padding: 6px 12px;">';
-  html += '        ' + (ledgerSortOrder === 'desc' ? '↓ 최신순' : '↑ 오래된순');
-  html += '      </button>';
-  html += '    </div>';
-  html += '    <button class="btn btn-primary btn-sm" onclick="openAddLedgerMonthModal()">+ 월 추가</button>';
+  html += '  <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">';
+  html += '    <input type="text" placeholder="월 검색 (예: 2026-04)" id="ledger-month-search" value="' + (ledgerMonthSearchApplied || '').replace(/"/g, '&quot;') + '" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; width: 180px;" oninput="handleLedgerMonthSearchInput(this)">';
+  html += '    <button class="btn btn-outline btn-sm" id="ledger-sort-btn" onclick="toggleLedgerSortOrder()" style="padding: 6px 12px;">';
+  html += '      ' + (ledgerSortOrder === 'desc' ? '↓ 최신순' : '↑ 오래된순');
+  html += '    </button>';
   html += '  </div>';
   // 월 탭 mount
   html += '  <div id="ledger-month-tabs" style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 8px; border-bottom: 1px solid var(--border);"></div>';
@@ -7808,31 +7789,49 @@ function renderEnrollmentLedger(canWrite) {
   renderLedgerMonthData(canWrite);
 }
 
+function getAutoLedgerMonths() {
+  const curM = today().substring(0, 7);
+  // paymentsData에서 가장 이른 enrollmentMonth 탐색
+  const allMonths = paymentsData.map(p => p.enrollmentMonth).filter(Boolean);
+  const earliest = allMonths.length
+    ? allMonths.reduce((a, b) => (a < b ? a : b))
+    : curM;
+  // earliest ~ curM 사이 모든 월 생성
+  const result = [];
+  let y = parseInt(earliest.substring(0, 4));
+  let mo = parseInt(earliest.substring(5, 7));
+  const cy = parseInt(curM.substring(0, 4));
+  const cm = parseInt(curM.substring(5, 7));
+  while (y < cy || (y === cy && mo <= cm)) {
+    result.push(y + '-' + String(mo).padStart(2, '0'));
+    mo++;
+    if (mo > 12) { mo = 1; y++; }
+  }
+  return result;
+}
+
 function renderLedgerMonthTabs() {
   const el = document.getElementById('ledger-month-tabs');
   if (!el) return;
 
-  const currentMonthStr = today().substring(0, 7);
-  if (!ledgerMonths.includes(currentMonthStr)) {
-    ledgerMonths.push(currentMonthStr);
-  }
-  if (!currentLedgerMonth) {
-    currentLedgerMonth = currentMonthStr;
-  }
+  const curM = today().substring(0, 7);
+  if (!currentLedgerMonth) currentLedgerMonth = curM;
 
-  const sortedMonths = [...ledgerMonths].sort((a, b) => {
+  const allMonths = getAutoLedgerMonths();
+  const sortedMonths = [...allMonths].sort((a, b) => {
     return ledgerSortOrder === 'desc' ? b.localeCompare(a) : a.localeCompare(b);
   });
-
-  const filteredMonths = ledgerMonthSearchApplied ? sortedMonths.filter(m => m.includes(ledgerMonthSearchApplied)) : sortedMonths;
+  const filteredMonths = ledgerMonthSearchApplied
+    ? sortedMonths.filter(m => m.includes(ledgerMonthSearchApplied))
+    : sortedMonths;
 
   let html = '';
   filteredMonths.forEach(month => {
     const isActive = month === currentLedgerMonth;
     const activeStyle = isActive ? 'background: var(--accent); color: white;' : 'background: white; color: var(--text);';
-    html += '    <button class="btn btn-sm" onclick="selectLedgerMonth(\'' + month + '\')" style="' + activeStyle + ' min-width: 100px; padding: 8px 16px; border: 1px solid var(--border);">';
-    html += '      ' + month;
-    html += '    </button>';
+    html += '<button class="btn btn-sm" onclick="selectLedgerMonth(\'' + month + '\')" style="' + activeStyle + ' min-width: 100px; padding: 8px 16px; border: 1px solid var(--border);">';
+    html += month;
+    html += '</button>';
   });
 
   el.innerHTML = html;
@@ -9067,44 +9066,6 @@ function selectLedgerMonth(month) {
   renderLedgerMonthData();
 }
 
-function openAddLedgerMonthModal() {
-  // 현재 월을 기본값으로 설정하고 앱내 모달 오픈
-  const currentMonth = today().substring(0, 7);
-  const input = document.getElementById('add-ledger-month-input');
-  if (input) input.value = currentMonth;
-  openModal('modal-add-ledger-month');
-}
-
-function addLedgerMonth() {
-  const input = document.getElementById('add-ledger-month-input');
-  const month = input ? input.value : '';
-  
-  if (!month) {
-    showToast('월을 선택해주세요');
-    return;
-  }
-  
-  // 형식 검증
-  if (!/^\d{4}-\d{2}$/.test(month)) {
-    showToast('올바른 형식이 아닙니다');
-    return;
-  }
-  
-  // 이미 존재하는지 확인
-  if (ledgerMonths.includes(month)) {
-    showToast('이미 존재하는 월입니다');
-    closeModal('modal-add-ledger-month');
-    return;
-  }
-  
-  // 추가
-  ledgerMonths.push(month);
-  currentLedgerMonth = month;
-  closeModal('modal-add-ledger-month');
-  showToast(month + ' 월이 추가되었습니다');
-  renderPaymentsPage();
-}
-
 function deletePayment(id) {
   if (!confirm('정말 이 결제를 삭제하시겠습니까?')) return;
   addEventLog('DELETE', 'payment', id, { id: id });
@@ -10336,13 +10297,12 @@ function renderSalesReportPage() {
   var container = document.getElementById('sales-page-content');
   if (!container) return;
 
-  // ledgerMonths 동기화
   var curM = today().substring(0, 7);
-  if (!ledgerMonths.includes(curM)) ledgerMonths.push(curM);
-  if (!currentReportMonth || !ledgerMonths.includes(currentReportMonth)) {
+  var allMs = getAutoLedgerMonths();
+  if (!currentReportMonth || !allMs.includes(currentReportMonth)) {
     currentReportMonth = curM;
   }
-  var sorted = ledgerMonths.slice().sort(function(a, b) { return b > a ? 1 : -1; });
+  var sorted = allMs.slice().sort(function(a, b) { return b > a ? 1 : -1; });
 
   var tabHtml = '<div id="sales-report-month-tabs" style="display:flex;gap:4px;overflow-x:auto;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:20px;">';
   sorted.forEach(function(m) {
@@ -10359,7 +10319,7 @@ function renderSalesReportPage() {
 function renderSalesReportMonthTabs() {
   var el = document.getElementById('sales-report-month-tabs');
   if (!el) return;
-  var sorted = ledgerMonths.slice().sort(function(a, b) { return b > a ? 1 : -1; });
+  var sorted = getAutoLedgerMonths().slice().sort(function(a, b) { return b > a ? 1 : -1; });
   var html = '';
   sorted.forEach(function(m) {
     var active = m === currentReportMonth;
