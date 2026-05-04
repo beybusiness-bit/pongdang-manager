@@ -7597,6 +7597,12 @@ function renderLedgerMonthData(canWrite) {
 
   const monthPayments = paymentsData.filter(p => p.enrollmentMonth === currentLedgerMonth);
 
+  if (canWrite) {
+    html += '<div style="display:flex;justify-content:flex-end;margin-bottom:12px;gap:8px;">';
+    html += '<button class="btn btn-outline btn-sm" onclick="copyPaymentsFromPrevLedgerMonth()">전월 복사</button>';
+    html += '</div>';
+  }
+
   if (monthPayments.length === 0) {
     html += '<div class="empty-state">';
     html += '  <div class="empty-icon">📋</div>';
@@ -13145,12 +13151,22 @@ function toggleEpCheck(epsId, field) {
   var prevEC = Object.assign({}, eps);
   eps[field] = !eps[field];
   addEventLog('UPDATE', 'examPrepStudent', epsId, eps, prevEC);
+  var scrollMap = [];
   var wrapper = document.querySelector('.ep-detail-table-wrapper');
-  var savedScroll = wrapper ? wrapper.scrollLeft : 0;
+  if (wrapper) {
+    wrapper.querySelectorAll('div[style*="overflow-x"]').forEach(function(el, i) {
+      scrollMap[i] = el.scrollLeft;
+    });
+  }
   renderExamPrepDetailBody();
   expandedEpStudentIds.add(epsId);
-  var wrapperAfter = document.querySelector('.ep-detail-table-wrapper');
-  if (wrapperAfter) wrapperAfter.scrollLeft = savedScroll;
+  requestAnimationFrame(function() {
+    var w = document.querySelector('.ep-detail-table-wrapper');
+    if (!w) return;
+    w.querySelectorAll('div[style*="overflow-x"]').forEach(function(el, i) {
+      if (scrollMap[i] !== undefined) el.scrollLeft = scrollMap[i];
+    });
+  });
 }
 
 // ── 학생 정보 저장 ──
@@ -13296,15 +13312,29 @@ function renderSalesReportPage() {
   }
   var sorted = ledgerMonths.slice().sort(function(a, b) { return b > a ? 1 : -1; });
 
-  var tabHtml = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:20px;">';
+  var tabHtml = '<div id="sales-report-month-tabs" style="display:flex;gap:4px;overflow-x:auto;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:20px;">';
   sorted.forEach(function(m) {
     var active = m === currentReportMonth;
-    tabHtml += '<button class="tab-btn' + (active ? ' active' : '') + '" onclick="currentReportMonth=\'' + m + '\';renderSalesReportBody()">' + m + '</button>';
+    var activeStyle = active ? 'background:var(--accent);color:white;' : 'background:white;color:var(--text);';
+    tabHtml += '<button class="btn btn-sm" onclick="currentReportMonth=\'' + m + '\';renderSalesReportMonthTabs();renderSalesReportBody()" style="' + activeStyle + ' min-width:100px;padding:8px 16px;border:1px solid var(--border);">' + m + '</button>';
   });
   tabHtml += '</div>';
 
   container.innerHTML = tabHtml + '<div id="sales-report-body"></div>';
   renderSalesReportBody();
+}
+
+function renderSalesReportMonthTabs() {
+  var el = document.getElementById('sales-report-month-tabs');
+  if (!el) return;
+  var sorted = ledgerMonths.slice().sort(function(a, b) { return b > a ? 1 : -1; });
+  var html = '';
+  sorted.forEach(function(m) {
+    var active = m === currentReportMonth;
+    var activeStyle = active ? 'background:var(--accent);color:white;' : 'background:white;color:var(--text);';
+    html += '<button class="btn btn-sm" onclick="currentReportMonth=\'' + m + '\';renderSalesReportMonthTabs();renderSalesReportBody()" style="' + activeStyle + ' min-width:100px;padding:8px 16px;border:1px solid var(--border);">' + m + '</button>';
+  });
+  el.innerHTML = html;
 }
 
 function renderSalesReportBody() {
@@ -13315,11 +13345,14 @@ function renderSalesReportBody() {
   var salesData = calcMonthSalesData(m);
   var salary = monthlySalaryData.find(function(x) { return x.monthYear === m; });
   if (!salary) {
-    salary = { id: uid(), monthYear: m, teacherRatio: 48, assistantRatio: 50, assistants: [] };
+    var _teacherRatios = {}, _assistantRatios = {};
+    teachersData.filter(function(t) { return t.type === '선생님'; }).forEach(function(t) { _teacherRatios[t.id] = t.settlementRate || 48; });
+    teachersData.filter(function(t) { return t.type === '보조선생님'; }).forEach(function(t) { _assistantRatios[t.id] = t.settlementRate || 50; });
+    salary = { id: uid(), monthYear: m, teacherRatios: _teacherRatios, assistantRatios: _assistantRatios, assistants: [] };
     monthlySalaryData.push(salary);
   }
 
-  var html = '';
+  var html = '<div style="max-width:900px;">';
   var fmt = function(n) { return (n||0).toLocaleString(); };
 
   // ── 1. 매출 대시보드 ──
@@ -13394,13 +13427,6 @@ function renderSalesReportBody() {
   // ── 3. 급여 계산 ──
   html += '<div style="margin-bottom:24px;">';
   html += '<h3 style="font-size:15px;font-weight:700;margin:0 0 12px;color:var(--text);">💼 급여 계산</h3>';
-  html += '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;">';
-  html += '<div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:10px;">계산 기준</div>';
-  html += '<div style="display:flex;gap:20px;flex-wrap:wrap;">';
-  html += '<label style="font-size:13px;display:flex;align-items:center;gap:6px;">강사 비율 <input type="number" min="0" max="100" value="' + (salary.teacherRatio||48) + '" style="width:60px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px;" onchange="updateSalaryField(\'' + m + '\',\'teacherRatio\',+this.value)"> %</label>';
-  html += '<label style="font-size:13px;display:flex;align-items:center;gap:6px;">학원 비율 <span style="padding:4px 8px;font-weight:600;">' + (100 - (salary.teacherRatio||48)) + ' %</span></label>';
-  html += '<label style="font-size:13px;display:flex;align-items:center;gap:6px;">보조T 비율 <input type="number" min="0" max="100" value="' + (salary.assistantRatio||50) + '" style="width:60px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px;" onchange="updateSalaryField(\'' + m + '\',\'assistantRatio\',+this.value)"> %</label>';
-  html += '</div></div>';
 
   var assistants = teachersData.filter(function(t) { return t.type === '보조선생님'; });
   var mainTeachers = teachersData.filter(function(t) { return t.type === '선생님'; });
@@ -13430,7 +13456,8 @@ function renderSalesReportBody() {
     mainTeachers.forEach(function(t) {
       var th = (entry.teacherHours || []).find(function(x) { return x.teacherId === t.id; });
       var thHours = th ? th.hours : 0;
-      var applied = thHours * (entry.hourlyRate || 0) * (salary.assistantRatio || 50) / 100;
+      var _astRatio = (salary.assistantRatios && salary.assistantRatios[ast.id]) || ast.settlementRate || 50;
+      var applied = thHours * (entry.hourlyRate || 0) * _astRatio / 100;
       html += '<td style="padding:9px 12px;text-align:right;"><input type="number" step="0.25" value="' + thHours + '" style="width:70px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;text-align:right;" onchange="updateTeacherHours(\'' + m + '\',\'' + ast.id + '\',\'' + t.id + '\',+this.value)"></td>';
       html += '<td style="padding:9px 12px;text-align:right;">' + fmt(applied) + '</td>';
     });
@@ -13447,13 +13474,13 @@ function renderSalesReportBody() {
   html += '<thead><tr style="border-bottom:2px solid var(--border);">';
   html += '<th style="padding:9px 12px;text-align:left;">강사</th>';
   html += '<th style="padding:9px 12px;text-align:right;">총 매출</th>';
-  html += '<th style="padding:9px 12px;text-align:right;">학원 (' + (100 - (salary.teacherRatio||48)) + '%)</th>';
-  html += '<th style="padding:9px 12px;text-align:right;">강사 (' + (salary.teacherRatio||48) + '%)</th>';
+  html += '<th style="padding:9px 12px;text-align:right;">학원 몫</th>';
+  html += '<th style="padding:9px 12px;text-align:right;">강사 몫</th>';
   html += '<th style="padding:9px 12px;text-align:right;">보조T 적용비용</th>';
   html += '</tr></thead><tbody>';
   mainTeachers.forEach(function(t) {
     var tSales = salesData.byTeacher[t.name] || { sales: 0 };
-    var ratio = (t.settlementRate || salary.teacherRatio || 48) / 100;
+    var ratio = ((salary.teacherRatios && salary.teacherRatios[t.id]) || t.settlementRate || 48) / 100;
     var teacherShare = Math.round(tSales.sales * ratio);
     var academyShare = tSales.sales - teacherShare;
     var assistCost = 0;
@@ -13461,7 +13488,10 @@ function renderSalesReportBody() {
       var entry = (salary.assistants || []).find(function(a) { return a.assistantId === ast.id; })
         || { teacherHours: [], hourlyRate: ast.settlementRate || 15000 };
       var th = (entry.teacherHours || []).find(function(x) { return x.teacherId === t.id; });
-      if (th) assistCost += th.hours * (entry.hourlyRate || 0) * (salary.assistantRatio || 50) / 100;
+      if (th) {
+        var _ratio2 = (salary.assistantRatios && salary.assistantRatios[ast.id]) || ast.settlementRate || 50;
+        assistCost += th.hours * (entry.hourlyRate || 0) * _ratio2 / 100;
+      }
     });
     html += '<tr style="border-bottom:1px solid var(--border);">';
     html += '<td style="padding:9px 12px;font-weight:500;">' + escHtml(t.name) + '</td>';
@@ -13475,6 +13505,7 @@ function renderSalesReportBody() {
     html += '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--text3);">등록된 선생님이 없습니다</td></tr>';
   }
   html += '</tbody></table></div></div></div>';
+  html += '</div>';
 
   body.innerHTML = html;
 }
@@ -13555,6 +13586,33 @@ function deleteOperatingCost(id) {
   renderSalesReportBody();
   showToast('삭제되었습니다');
 }
+function copyPaymentsFromPrevLedgerMonth() {
+  var monthYear = currentLedgerMonth;
+  var existing = paymentsData.filter(function(p) { return p.enrollmentMonth === monthYear; });
+  if (existing.length > 0 && !confirm('이미 ' + monthYear + '에 등록된 결제기록이 있습니다. 전월 데이터를 복사하시겠습니까? (기존 기록은 유지됩니다)')) return;
+  var ym = monthYear.split('-');
+  var prevMonth = ym[1] === '01'
+    ? (parseInt(ym[0]) - 1) + '-12'
+    : ym[0] + '-' + String(parseInt(ym[1]) - 1).padStart(2, '0');
+  var prevPayments = paymentsData.filter(function(p) { return p.enrollmentMonth === prevMonth; });
+  if (!prevPayments.length) { showToast('전월 결제기록이 없습니다'); return; }
+  prevPayments.forEach(function(p) {
+    var newP = Object.assign({}, p, {
+      id: uid(),
+      enrollmentMonth: monthYear,
+      isNewStudent: false,
+      paymentDate: '',
+      depositDate: '',
+      paymentMethodId: '',
+      createdAt: today()
+    });
+    paymentsData.push(newP);
+    addEventLog('CREATE', 'payment', newP.id, newP);
+  });
+  renderLedgerMonthData();
+  showToast(prevPayments.length + '건을 전월에서 복사했습니다');
+}
+
 function copyOperatingCostsFromPrev(monthYear) {
   var existing = operatingCostsData.filter(function(c) { return c.monthYear === monthYear; });
   if (existing.length > 0 && !confirm('이미 항목이 있습니다. 전월 데이터를 복사하시겠습니까? (기존 항목은 유지됩니다)')) return;
