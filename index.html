@@ -2475,7 +2475,7 @@ input[type="checkbox"] {
 
 <!-- 선생님 추가/수정 모달 -->
 <div class="modal-backdrop" id="modal-teacher-form">
-  <div class="modal">
+  <div class="modal modal-large">
     <div class="modal-title" id="teacher-form-title">선생님 추가</div>
     <div class="modal-body">
       <form id="teacher-form" onsubmit="saveTeacher(event)">
@@ -2495,9 +2495,54 @@ input[type="checkbox"] {
           <label class="form-label">연락처</label>
           <input type="tel" class="form-input" id="teacher-phone" placeholder="010-0000-0000">
         </div>
-        <div class="form-group teacher-settlement-group">
-          <label class="form-label">정산비율 (%)</label>
-          <input type="number" class="form-input" id="teacher-settlement-rate" placeholder="예: 70" min="0" max="100">
+        <div class="teacher-settlement-group" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px;">
+          <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:12px;">💰 지급 방식 (학원장 전용)</div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label class="form-label">지급 방식</label>
+            <select class="form-input" id="teacher-payment-type" onchange="updateTeacherPaymentFields()">
+              <option value="ratio">비율 정산</option>
+              <option value="base_incentive">기본급 + 인센티브</option>
+              <option value="hourly">시급제</option>
+            </select>
+          </div>
+          <div id="teacher-section-ratio">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">정산 비율</label>
+              <div style="display:flex;gap:10px;">
+                <div style="flex:1;">
+                  <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">선생님 비율 (%)</div>
+                  <input type="number" class="form-input" id="teacher-settlement-rate" placeholder="예: 70" min="0" max="100" oninput="updateAcademyRate()">
+                </div>
+                <div style="flex:1;">
+                  <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">학원 비율 (%)</div>
+                  <input type="number" class="form-input" id="teacher-academy-rate" placeholder="-" readonly style="background:var(--bg-side);color:var(--text2);">
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="teacher-section-base-incentive" style="display:none;">
+            <div class="form-group" style="margin-bottom:10px;">
+              <label class="form-label">기본급 (원)</label>
+              <input type="text" class="form-input" id="teacher-base-salary" placeholder="예: 1,500,000" oninput="fmtCommaInput(this)">
+            </div>
+            <div style="background:var(--bg-side);border-radius:var(--radius-sm);padding:12px;">
+              <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;">인센티브 계산식</div>
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;color:var(--text);">
+                <span>담당학생</span>
+                <input type="text" id="teacher-incentive-threshold" placeholder="0" style="width:55px;padding:5px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:center;" oninput="fmtCommaInput(this)">
+                <span>명 초과 시 1명 당</span>
+                <input type="text" id="teacher-incentive-per-student" placeholder="0" style="width:90px;padding:5px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;" oninput="fmtCommaInput(this)">
+                <span>원</span>
+              </div>
+            </div>
+          </div>
+          <div id="teacher-section-hourly" style="display:none;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">시급 (원)</label>
+              <input type="text" class="form-input" id="teacher-hourly-rate" placeholder="예: 15,000" oninput="fmtCommaInput(this)">
+              <div style="margin-top:6px;font-size:12px;color:var(--text3);">월별 근무시간은 매출 리포트 → 급여 계산에서 입력합니다.</div>
+            </div>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">메모</label>
@@ -5791,9 +5836,12 @@ function loadSampleData() {
   
   // 선생님 샘플 데이터
   teachersData = [
-    { id: '1', name: '김선생', type: '선생님', phone: '010-1234-5678', settlementRate: 70, icon: '✍️' },
-    { id: '2', name: '이선생', type: '선생님', phone: '010-2345-6789', settlementRate: 65, icon: '📝' },
-    { id: '3', name: '박선생', type: '보조선생님', phone: '010-3456-7890', settlementRate: 50, icon: '✏️' }
+    { id: '1', name: '김선생', type: '선생님', phone: '010-1234-5678', paymentType: 'ratio', settlementRate: 70, icon: '✍️' },
+    { id: '2', name: '이선생', type: '선생님', phone: '010-2345-6789', paymentType: 'ratio', settlementRate: 65, icon: '📝' },
+    { id: '3', name: '박선생', type: '보조선생님', phone: '010-3456-7890', paymentType: 'ratio', settlementRate: 50, icon: '✏️' },
+    { id: '4', name: '최선생', type: '선생님', phone: '010-4567-8901', paymentType: 'base_incentive', baseSalary: 2000000, incentiveThreshold: 12, incentivePerStudent: 50000, memo: '기본급+인센티브 예시', icon: '💡' },
+    { id: '5', name: '정선생', type: '선생님', phone: '010-5678-9012', paymentType: 'hourly', hourlyRate: 30000, memo: '시급제 예시', icon: '⏰' },
+    { id: '6', name: '한보조', type: '보조선생님', phone: '010-6789-0123', paymentType: 'hourly', hourlyRate: 14000, memo: '시급제 보조 예시', icon: '🎓' }
   ];
 
   // 수강반 샘플 데이터
@@ -10215,7 +10263,19 @@ function openTeacherDetail(teacherId) {
   html += '<div class="detail-info-item"><span class="detail-info-label">이름</span><span>' + (t.icon || '') + ' ' + (t.name || '-') + '</span></div>';
   html += '<div class="detail-info-item"><span class="detail-info-label">유형</span><span style="background:' + typeBg + ';color:' + typeColor + ';padding:2px 8px;border-radius:12px;font-size:12px;">' + (t.type || '-') + '</span></div>';
   html += '<div class="detail-info-item"><span class="detail-info-label">연락처</span><span>' + (t.phone || '-') + '</span></div>';
-  if (isOwner) html += '<div class="detail-info-item"><span class="detail-info-label">정산비율</span><span>' + (t.settlementRate != null ? t.settlementRate + '%' : '-') + '</span></div>';
+  if (isOwner) {
+    var dpt = t.paymentType || 'ratio';
+    var dptLabel = dpt === 'ratio' ? '비율 정산' : dpt === 'base_incentive' ? '기본급+인센티브' : '시급제';
+    html += '<div class="detail-info-item"><span class="detail-info-label">지급 방식</span><span>' + dptLabel + '</span></div>';
+    if (dpt === 'ratio') {
+      html += '<div class="detail-info-item"><span class="detail-info-label">정산비율</span><span>' + (t.settlementRate != null ? '선생님 ' + t.settlementRate + '% / 학원 ' + (100 - t.settlementRate) + '%' : '-') + '</span></div>';
+    } else if (dpt === 'base_incentive') {
+      html += '<div class="detail-info-item"><span class="detail-info-label">기본급</span><span>' + (t.baseSalary != null ? t.baseSalary.toLocaleString() + '원' : '-') + '</span></div>';
+      html += '<div class="detail-info-item"><span class="detail-info-label">인센티브</span><span>' + (t.incentiveThreshold != null ? t.incentiveThreshold + '명 초과 시 1명당 ' + (t.incentivePerStudent || 0).toLocaleString() + '원' : '-') + '</span></div>';
+    } else if (dpt === 'hourly') {
+      html += '<div class="detail-info-item"><span class="detail-info-label">시급</span><span>' + (t.hourlyRate != null ? t.hourlyRate.toLocaleString() + '원/시간' : '-') + '</span></div>';
+    }
+  }
   if (t.memo) html += '<div class="detail-info-item" style="grid-column:1/-1;"><span class="detail-info-label">메모</span><span>' + t.memo + '</span></div>';
   html += '</div>';
 
@@ -10249,12 +10309,31 @@ function editTeacherFromDetail() {
   setTimeout(() => openTeacherForm(id), 100);
 }
 
+function fmtCommaInput(el) {
+  var raw = el.value.replace(/[^0-9]/g, '');
+  el.value = raw ? parseInt(raw, 10).toLocaleString() : '';
+}
+function parseCommaNumber(str) {
+  return parseInt((str || '').replace(/[^0-9]/g, '') || '0', 10) || 0;
+}
+function updateTeacherPaymentFields() {
+  var type = document.getElementById('teacher-payment-type').value;
+  ['ratio', 'base_incentive', 'hourly'].forEach(function(k) {
+    var el = document.getElementById('teacher-section-' + k.replace('_', '-'));
+    if (el) el.style.display = (k === type) ? '' : 'none';
+  });
+}
+function updateAcademyRate() {
+  var rate = parseInt(document.getElementById('teacher-settlement-rate').value) || 0;
+  var el = document.getElementById('teacher-academy-rate');
+  if (el) el.value = 100 - rate;
+}
+
 function openTeacherForm(teacherId) {
   const title = document.getElementById('teacher-form-title');
   const form = document.getElementById('teacher-form');
   if (!title || !form) return;
 
-  // 정산비율 필드: owner만 표시
   const settlementGroups = document.querySelectorAll('.teacher-settlement-group');
   settlementGroups.forEach(g => { g.style.display = currentUser.role === 'owner' ? '' : 'none'; });
 
@@ -10266,12 +10345,27 @@ function openTeacherForm(teacherId) {
     document.getElementById('teacher-name').value = teacher.name || '';
     document.getElementById('teacher-type').value = teacher.type || '선생님';
     document.getElementById('teacher-phone').value = teacher.phone || '';
-    document.getElementById('teacher-settlement-rate').value = teacher.settlementRate != null ? teacher.settlementRate : '';
     document.getElementById('teacher-memo').value = teacher.memo || '';
+    if (currentUser.role === 'owner') {
+      var pt = teacher.paymentType || 'ratio';
+      document.getElementById('teacher-payment-type').value = pt;
+      document.getElementById('teacher-settlement-rate').value = teacher.settlementRate != null ? teacher.settlementRate : '';
+      document.getElementById('teacher-academy-rate').value = teacher.settlementRate != null ? 100 - teacher.settlementRate : '';
+      document.getElementById('teacher-base-salary').value = teacher.baseSalary ? teacher.baseSalary.toLocaleString() : '';
+      document.getElementById('teacher-incentive-threshold').value = teacher.incentiveThreshold != null ? teacher.incentiveThreshold.toLocaleString() : '';
+      document.getElementById('teacher-incentive-per-student').value = teacher.incentivePerStudent != null ? teacher.incentivePerStudent.toLocaleString() : '';
+      document.getElementById('teacher-hourly-rate').value = teacher.hourlyRate ? teacher.hourlyRate.toLocaleString() : '';
+      updateTeacherPaymentFields();
+    }
   } else {
     title.textContent = '선생님 추가';
     form.reset();
     document.getElementById('teacher-form-id').value = '';
+    if (currentUser.role === 'owner') {
+      document.getElementById('teacher-payment-type').value = 'ratio';
+      document.getElementById('teacher-academy-rate').value = '';
+      updateTeacherPaymentFields();
+    }
   }
   openModal('modal-teacher-form');
 }
@@ -10287,8 +10381,22 @@ function saveTeacher(e) {
     memo: document.getElementById('teacher-memo').value
   };
   if (isOwner) {
-    const rate = document.getElementById('teacher-settlement-rate').value;
-    data.settlementRate = rate !== '' ? parseInt(rate) : null;
+    var pt = document.getElementById('teacher-payment-type').value || 'ratio';
+    data.paymentType = pt;
+    if (pt === 'ratio') {
+      var rate = document.getElementById('teacher-settlement-rate').value;
+      data.settlementRate = rate !== '' ? parseInt(rate) : null;
+      data.baseSalary = null; data.incentiveThreshold = null; data.incentivePerStudent = null; data.hourlyRate = null;
+    } else if (pt === 'base_incentive') {
+      data.settlementRate = null;
+      data.baseSalary = parseCommaNumber(document.getElementById('teacher-base-salary').value);
+      data.incentiveThreshold = parseCommaNumber(document.getElementById('teacher-incentive-threshold').value);
+      data.incentivePerStudent = parseCommaNumber(document.getElementById('teacher-incentive-per-student').value);
+      data.hourlyRate = null;
+    } else if (pt === 'hourly') {
+      data.settlementRate = null; data.baseSalary = null; data.incentiveThreshold = null; data.incentivePerStudent = null;
+      data.hourlyRate = parseCommaNumber(document.getElementById('teacher-hourly-rate').value);
+    }
   }
   if (id) {
     const idx = teachersData.findIndex(tc => tc.id === id);
@@ -10468,83 +10576,238 @@ function renderSalesReportBody() {
   html += '<div style="margin-bottom:24px;">';
   html += '<h3 style="font-size:15px;font-weight:700;margin:0 0 12px;color:var(--text);">💼 급여 계산</h3>';
 
-  // 보조T 근무시간 입력
-  var assistants = teachersData.filter(function(t) { return t.type === '보조선생님'; });
   var mainTeachers = teachersData.filter(function(t) { return t.type === '선생님'; });
+  var assistants = teachersData.filter(function(t) { return t.type === '보조선생님'; });
+  var allT = teachersData;
 
-  html += '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;overflow:hidden;">';
-  html += '<div style="padding:12px 16px;background:var(--bg-side);border-bottom:1px solid var(--border);font-size:13px;font-weight:600;">보조T 근무 입력</div>';
-  html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:500px;">';
-  html += '<thead><tr style="border-bottom:2px solid var(--border);">';
-  html += '<th style="padding:9px 12px;text-align:left;">이름</th>';
-  html += '<th style="padding:9px 12px;text-align:right;">시급</th>';
-  html += '<th style="padding:9px 12px;text-align:right;">총 근무시간</th>';
-  html += '<th style="padding:9px 12px;text-align:right;">급여</th>';
-  mainTeachers.forEach(function(t) {
-    html += '<th style="padding:9px 12px;text-align:right;">' + escHtml(t.name) + ' 담당시간</th>';
-    html += '<th style="padding:9px 12px;text-align:right;">적용비용</th>';
-  });
-  html += '</tr></thead><tbody>';
-
-  assistants.forEach(function(ast) {
-    var entry = (salary.assistants || []).find(function(a) { return a.assistantId === ast.id; })
-      || { assistantId: ast.id, totalHours: 0, hourlyRate: ast.settlementRate || 15000, teacherHours: [] };
-    var pay = (entry.totalHours || 0) * (entry.hourlyRate || 0);
-    html += '<tr style="border-bottom:1px solid var(--border);">';
-    html += '<td style="padding:9px 12px;font-weight:500;">' + escHtml(ast.name) + '</td>';
-    html += '<td style="padding:9px 12px;text-align:right;"><input type="number" value="' + (entry.hourlyRate||0) + '" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;text-align:right;" onchange="updateAssistantEntry(\'' + m + '\',\'' + ast.id + '\',\'hourlyRate\',+this.value)"></td>';
-    html += '<td style="padding:9px 12px;text-align:right;"><input type="number" step="0.25" value="' + (entry.totalHours||0) + '" style="width:70px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;text-align:right;" onchange="updateAssistantEntry(\'' + m + '\',\'' + ast.id + '\',\'totalHours\',+this.value)"></td>';
-    html += '<td style="padding:9px 12px;text-align:right;">' + fmt(pay) + '</td>';
-    mainTeachers.forEach(function(t) {
-      var th = (entry.teacherHours || []).find(function(x) { return x.teacherId === t.id; });
-      var thHours = th ? th.hours : 0;
-      var applied = thHours * (entry.hourlyRate || 0) * getAssistantRatio(ast) / 100;
-      html += '<td style="padding:9px 12px;text-align:right;"><input type="number" step="0.25" value="' + thHours + '" style="width:70px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;text-align:right;" onchange="updateTeacherHours(\'' + m + '\',\'' + ast.id + '\',\'' + t.id + '\',+this.value)"></td>';
-      html += '<td style="padding:9px 12px;text-align:right;">' + fmt(applied) + '</td>';
-    });
-    html += '</tr>';
-  });
-  if (!assistants.length) {
-    html += '<tr><td colspan="10" style="padding:16px;text-align:center;color:var(--text3);">등록된 보조선생님이 없습니다</td></tr>';
+  // 스냅샷 (지난 달: 최초 조회 시 현재 정보 고정)
+  if (!isCurrentMonth) {
+    if (!salary.teacherSnapshots) salary.teacherSnapshots = {};
+    var needSnap = allT.some(function(t) { return !salary.teacherSnapshots[t.id]; });
+    if (needSnap || !salary.teacherRatios || !Object.keys(salary.teacherRatios).length) {
+      allT.forEach(function(t) {
+        if (!salary.teacherSnapshots[t.id]) {
+          salary.teacherSnapshots[t.id] = {
+            paymentType: t.paymentType || 'ratio',
+            settlementRate: t.settlementRate,
+            baseSalary: t.baseSalary,
+            incentiveThreshold: t.incentiveThreshold,
+            incentivePerStudent: t.incentivePerStudent,
+            hourlyRate: t.hourlyRate
+          };
+        }
+      });
+      if (!salary.teacherRatios) salary.teacherRatios = {};
+      mainTeachers.forEach(function(t) { if (!salary.teacherRatios[t.id]) salary.teacherRatios[t.id] = t.settlementRate || 48; });
+      if (!salary.assistantRatios) salary.assistantRatios = {};
+      assistants.forEach(function(t) { if (!salary.assistantRatios[t.id]) salary.assistantRatios[t.id] = t.settlementRate || 50; });
+      addEventLog('UPDATE', 'monthlySalary', salary.id, salary);
+    }
   }
-  html += '</tbody></table></div></div>';
 
-  // 강사별 계산 결과
-  html += '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">';
-  html += '<div style="padding:12px 16px;background:var(--bg-side);border-bottom:1px solid var(--border);font-size:13px;font-weight:600;">강사별 계산 결과</div>';
+  var getParams = function(t) {
+    if (isCurrentMonth) return t;
+    var snap = salary.teacherSnapshots && salary.teacherSnapshots[t.id];
+    return snap ? Object.assign({}, snap, { id: t.id, name: t.name, type: t.type }) : t;
+  };
+  var getHourlyHrs = function(tid) {
+    var e = (salary.hourlyEntries || []).find(function(x) { return x.teacherId === tid; });
+    return e ? (e.hours || 0) : 0;
+  };
+
+  var ratioTeachers = mainTeachers.filter(function(t) { return (getParams(t).paymentType || 'ratio') === 'ratio'; });
+  var ratioAssistants = assistants.filter(function(a) { return (getParams(a).paymentType || 'ratio') === 'ratio'; });
+  var hourlyTeachers = mainTeachers.filter(function(t) { return getParams(t).paymentType === 'hourly'; });
+  var hourlyAssistants = assistants.filter(function(a) { return getParams(a).paymentType === 'hourly'; });
+  var allHourly = hourlyTeachers.concat(hourlyAssistants);
+
+  // ── 시급제 근무 입력 ──────────────────────────────────────────────────
+  if (allHourly.length) {
+    html += '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;overflow:hidden;">';
+    html += '<div style="padding:12px 16px;background:var(--bg-side);border-bottom:1px solid var(--border);font-size:13px;font-weight:600;">⏰ 시급제 근무 입력</div>';
+    html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:400px;">';
+    html += '<thead><tr style="border-bottom:2px solid var(--border);">';
+    html += '<th style="padding:9px 12px;text-align:left;">이름</th>';
+    html += '<th style="padding:9px 12px;text-align:left;">유형</th>';
+    html += '<th style="padding:9px 12px;text-align:right;">시급</th>';
+    html += '<th style="padding:9px 12px;text-align:right;">근무시간 (h)</th>';
+    html += '<th style="padding:9px 12px;text-align:right;">급여</th>';
+    html += '</tr></thead><tbody>';
+    allHourly.forEach(function(t) {
+      var p = getParams(t);
+      var hrs = getHourlyHrs(t.id);
+      var pay = Math.round((p.hourlyRate || 0) * hrs);
+      html += '<tr style="border-bottom:1px solid var(--border);">';
+      html += '<td style="padding:9px 12px;font-weight:500;">' + escHtml(t.name) + '</td>';
+      html += '<td style="padding:9px 12px;color:var(--text2);">' + escHtml(t.type) + '</td>';
+      html += '<td style="padding:9px 12px;text-align:right;">' + fmt(p.hourlyRate || 0) + '원</td>';
+      html += '<td style="padding:9px 12px;text-align:right;"><input type="number" step="0.25" value="' + hrs + '" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;text-align:right;" onchange="updateHourlyEntry(\'' + m + '\',\'' + t.id + '\',+this.value)"></td>';
+      html += '<td style="padding:9px 12px;text-align:right;font-weight:500;">' + fmt(pay) + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div></div>';
+  }
+
+  // ── 비율 정산 보조T 근무 배분 ─────────────────────────────────────────
+  if (ratioAssistants.length) {
+    html += '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;overflow:hidden;">';
+    html += '<div style="padding:12px 16px;background:var(--bg-side);border-bottom:1px solid var(--border);font-size:13px;font-weight:600;">보조T 근무 배분 (비율 정산)</div>';
+    html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:500px;">';
+    html += '<thead><tr style="border-bottom:2px solid var(--border);">';
+    html += '<th style="padding:9px 12px;text-align:left;">이름</th>';
+    html += '<th style="padding:9px 12px;text-align:right;">시급</th>';
+    html += '<th style="padding:9px 12px;text-align:right;">총 근무시간</th>';
+    html += '<th style="padding:9px 12px;text-align:right;">급여</th>';
+    ratioTeachers.forEach(function(t) {
+      html += '<th style="padding:9px 12px;text-align:right;">' + escHtml(t.name) + ' 담당</th>';
+      html += '<th style="padding:9px 12px;text-align:right;">적용비용</th>';
+    });
+    html += '</tr></thead><tbody>';
+    ratioAssistants.forEach(function(ast) {
+      var astP = getParams(ast);
+      var entry = (salary.assistants || []).find(function(a) { return a.assistantId === ast.id; })
+        || { assistantId: ast.id, totalHours: 0, hourlyRate: astP.settlementRate || 15000, teacherHours: [] };
+      var hrRate = entry.hourlyRate || (astP.settlementRate || 15000);
+      var astRatio = isCurrentMonth ? (astP.settlementRate || 50) : ((salary.assistantRatios && salary.assistantRatios[ast.id]) || astP.settlementRate || 50);
+      html += '<tr style="border-bottom:1px solid var(--border);">';
+      html += '<td style="padding:9px 12px;font-weight:500;">' + escHtml(ast.name) + '</td>';
+      html += '<td style="padding:9px 12px;text-align:right;"><input type="number" value="' + hrRate + '" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;text-align:right;" onchange="updateAssistantEntry(\'' + m + '\',\'' + ast.id + '\',\'hourlyRate\',+this.value)"></td>';
+      html += '<td style="padding:9px 12px;text-align:right;"><input type="number" step="0.25" value="' + (entry.totalHours||0) + '" style="width:70px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;text-align:right;" onchange="updateAssistantEntry(\'' + m + '\',\'' + ast.id + '\',\'totalHours\',+this.value)"></td>';
+      html += '<td style="padding:9px 12px;text-align:right;">' + fmt(Math.round((entry.totalHours||0)*hrRate)) + '</td>';
+      ratioTeachers.forEach(function(t) {
+        var th = (entry.teacherHours || []).find(function(x) { return x.teacherId === t.id; });
+        var thHrs = th ? th.hours : 0;
+        var applied = thHrs * hrRate * astRatio / 100;
+        html += '<td style="padding:9px 12px;text-align:right;"><input type="number" step="0.25" value="' + thHrs + '" style="width:70px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;text-align:right;" onchange="updateTeacherHours(\'' + m + '\',\'' + ast.id + '\',\'' + t.id + '\',+this.value)"></td>';
+        html += '<td style="padding:9px 12px;text-align:right;">' + fmt(Math.round(applied)) + '</td>';
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div></div>';
+  }
+
+  // ── 선생님별 급여 계산 ────────────────────────────────────────────────
+  html += '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;overflow:hidden;">';
+  html += '<div style="padding:12px 16px;background:var(--bg-side);border-bottom:1px solid var(--border);font-size:13px;font-weight:600;">선생님별 급여 계산</div>';
   html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">';
   html += '<thead><tr style="border-bottom:2px solid var(--border);">';
-  html += '<th style="padding:9px 12px;text-align:left;">강사</th>';
-  html += '<th style="padding:9px 12px;text-align:right;">총 매출</th>';
-  html += '<th style="padding:9px 12px;text-align:right;">학원 몫</th>';
-  html += '<th style="padding:9px 12px;text-align:right;">강사 몫</th>';
-  html += '<th style="padding:9px 12px;text-align:right;">보조T 적용비용</th>';
+  html += '<th style="padding:9px 12px;text-align:left;">선생님</th>';
+  html += '<th style="padding:9px 12px;text-align:center;">지급방식</th>';
+  html += '<th style="padding:9px 12px;text-align:right;">핵심지표</th>';
+  html += '<th style="padding:9px 12px;text-align:right;">기본금액</th>';
+  html += '<th style="padding:9px 12px;text-align:right;">추가금액</th>';
+  html += '<th style="padding:9px 12px;text-align:right;">총급여</th>';
   html += '</tr></thead><tbody>';
-
   mainTeachers.forEach(function(t) {
-    var tSales = salesData.byTeacher[t.name] || { sales: 0 };
-    var ratio = getTeacherRatio(t) / 100;
-    var teacherShare = Math.round(tSales.sales * ratio);
-    var academyShare = tSales.sales - teacherShare;
+    var p = getParams(t);
+    var pt = p.paymentType || 'ratio';
+    var tSales = salesData.byTeacher[t.name] || { sales: 0, count: 0 };
+    var tBg = pt === 'ratio' ? '#dbeafe' : pt === 'base_incentive' ? '#dcfce7' : '#fef3c7';
+    var tClr = pt === 'ratio' ? '#1e40af' : pt === 'base_incentive' ? '#166534' : '#92400e';
+    var tLbl = pt === 'ratio' ? '비율 정산' : pt === 'base_incentive' ? '기본급+인센티브' : '시급제';
+    var keyMetric = '', baseAmt = 0, addAmt = 0, totalPay = 0;
+    if (pt === 'ratio') {
+      var ratio = p.settlementRate || 48;
+      keyMetric = '총매출 ' + fmt(tSales.sales) + ' · ' + ratio + '%';
+      baseAmt = Math.round(tSales.sales * ratio / 100);
+      totalPay = baseAmt;
+    } else if (pt === 'base_incentive') {
+      var threshold = p.incentiveThreshold || 0;
+      var over = Math.max(0, tSales.count - threshold);
+      keyMetric = '담당 ' + tSales.count + '명 (초과 ' + over + '명)';
+      baseAmt = p.baseSalary || 0;
+      addAmt = over * (p.incentivePerStudent || 0);
+      totalPay = baseAmt + addAmt;
+    } else {
+      var hrs = getHourlyHrs(t.id);
+      keyMetric = '근무 ' + hrs + 'h × ' + fmt(p.hourlyRate || 0) + '원';
+      totalPay = Math.round((p.hourlyRate || 0) * hrs);
+      baseAmt = totalPay;
+    }
     var assistCost = 0;
-    assistants.forEach(function(ast) {
+    ratioAssistants.forEach(function(ast) {
+      var astP = getParams(ast);
       var entry = (salary.assistants || []).find(function(a) { return a.assistantId === ast.id; })
-        || { teacherHours: [], hourlyRate: ast.settlementRate || 15000 };
+        || { teacherHours: [], hourlyRate: astP.settlementRate || 15000 };
       var th = (entry.teacherHours || []).find(function(x) { return x.teacherId === t.id; });
-      if (th) assistCost += th.hours * (entry.hourlyRate || 0) * getAssistantRatio(ast) / 100;
+      if (th) {
+        var astR = isCurrentMonth ? (astP.settlementRate || 50) : ((salary.assistantRatios && salary.assistantRatios[ast.id]) || astP.settlementRate || 50);
+        assistCost += th.hours * (entry.hourlyRate || 0) * astR / 100;
+      }
     });
     html += '<tr style="border-bottom:1px solid var(--border);">';
     html += '<td style="padding:9px 12px;font-weight:500;">' + escHtml(t.name) + '</td>';
-    html += '<td style="padding:9px 12px;text-align:right;">' + fmt(tSales.sales) + '</td>';
-    html += '<td style="padding:9px 12px;text-align:right;">' + fmt(academyShare) + '</td>';
-    html += '<td style="padding:9px 12px;text-align:right;">' + fmt(teacherShare) + '</td>';
-    html += '<td style="padding:9px 12px;text-align:right;">' + fmt(Math.round(assistCost)) + '</td>';
+    html += '<td style="padding:9px 12px;text-align:center;"><span style="background:' + tBg + ';color:' + tClr + ';font-size:11px;padding:2px 7px;border-radius:10px;">' + tLbl + '</span></td>';
+    html += '<td style="padding:9px 12px;text-align:right;font-size:12px;color:var(--text2);">' + keyMetric + '</td>';
+    html += '<td style="padding:9px 12px;text-align:right;">' + fmt(baseAmt) + '</td>';
+    html += '<td style="padding:9px 12px;text-align:right;">' + (addAmt ? fmt(addAmt) : '-') + '</td>';
+    html += '<td style="padding:9px 12px;text-align:right;font-weight:700;color:var(--accent);">' + fmt(totalPay) + '</td>';
     html += '</tr>';
+    if (assistCost > 0) {
+      html += '<tr style="background:#fafafa;">';
+      html += '<td colspan="5" style="padding:3px 12px 5px 24px;font-size:11px;color:var(--text3);">보조T 적용비용 차감</td>';
+      html += '<td style="padding:3px 12px 5px;text-align:right;font-size:11px;color:var(--danger);">-' + fmt(Math.round(assistCost)) + '</td>';
+      html += '</tr>';
+    }
   });
   if (!mainTeachers.length) {
-    html += '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--text3);">등록된 선생님이 없습니다</td></tr>';
+    html += '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text3);">등록된 선생님이 없습니다</td></tr>';
   }
-  html += '</tbody></table></div></div></div>';
+  html += '</tbody></table></div></div>';
+
+  // ── 보조선생님별 급여 계산 ────────────────────────────────────────────
+  if (assistants.length) {
+    html += '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">';
+    html += '<div style="padding:12px 16px;background:var(--bg-side);border-bottom:1px solid var(--border);font-size:13px;font-weight:600;">보조선생님별 급여 계산</div>';
+    html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">';
+    html += '<thead><tr style="border-bottom:2px solid var(--border);">';
+    html += '<th style="padding:9px 12px;text-align:left;">이름</th>';
+    html += '<th style="padding:9px 12px;text-align:center;">지급방식</th>';
+    html += '<th style="padding:9px 12px;text-align:right;">핵심지표</th>';
+    html += '<th style="padding:9px 12px;text-align:right;">기본금액</th>';
+    html += '<th style="padding:9px 12px;text-align:right;">추가금액</th>';
+    html += '<th style="padding:9px 12px;text-align:right;">총급여</th>';
+    html += '</tr></thead><tbody>';
+    assistants.forEach(function(ast) {
+      var p = getParams(ast);
+      var pt = p.paymentType || 'ratio';
+      var tBg = pt === 'ratio' ? '#dbeafe' : pt === 'base_incentive' ? '#dcfce7' : '#fef3c7';
+      var tClr = pt === 'ratio' ? '#1e40af' : pt === 'base_incentive' ? '#166534' : '#92400e';
+      var tLbl = pt === 'ratio' ? '비율 정산' : pt === 'base_incentive' ? '기본급+인센티브' : '시급제';
+      var keyMetric = '', baseAmt = 0, addAmt = 0, totalPay = 0;
+      if (pt === 'ratio') {
+        var entry2 = (salary.assistants || []).find(function(a) { return a.assistantId === ast.id; })
+          || { totalHours: 0, hourlyRate: p.settlementRate || 15000 };
+        var hrRate2 = entry2.hourlyRate || (p.settlementRate || 15000);
+        keyMetric = fmt(entry2.totalHours || 0) + 'h × ' + fmt(hrRate2) + '원';
+        totalPay = Math.round((entry2.totalHours || 0) * hrRate2);
+        baseAmt = totalPay;
+      } else if (pt === 'base_incentive') {
+        var totalStu = studentsData.filter(function(s) { return getStudentStatus(s) !== '퇴원'; }).length;
+        var over2 = Math.max(0, totalStu - (p.incentiveThreshold || 0));
+        keyMetric = '재원 ' + totalStu + '명 (초과 ' + over2 + '명)';
+        baseAmt = p.baseSalary || 0;
+        addAmt = over2 * (p.incentivePerStudent || 0);
+        totalPay = baseAmt + addAmt;
+      } else {
+        var hrs2 = getHourlyHrs(ast.id);
+        keyMetric = '근무 ' + hrs2 + 'h × ' + fmt(p.hourlyRate || 0) + '원';
+        totalPay = Math.round((p.hourlyRate || 0) * hrs2);
+        baseAmt = totalPay;
+      }
+      html += '<tr style="border-bottom:1px solid var(--border);">';
+      html += '<td style="padding:9px 12px;font-weight:500;">' + escHtml(ast.name) + '</td>';
+      html += '<td style="padding:9px 12px;text-align:center;"><span style="background:' + tBg + ';color:' + tClr + ';font-size:11px;padding:2px 7px;border-radius:10px;">' + tLbl + '</span></td>';
+      html += '<td style="padding:9px 12px;text-align:right;font-size:12px;color:var(--text2);">' + keyMetric + '</td>';
+      html += '<td style="padding:9px 12px;text-align:right;">' + fmt(baseAmt) + '</td>';
+      html += '<td style="padding:9px 12px;text-align:right;">' + (addAmt ? fmt(addAmt) : '-') + '</td>';
+      html += '<td style="padding:9px 12px;text-align:right;font-weight:700;color:var(--accent);">' + fmt(totalPay) + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div></div>';
+  }
+
+  html += '</div>';
   html += '</div>';
 
   body.innerHTML = html;
@@ -10690,6 +10953,15 @@ function saveSalary(m) {
 function updateSalaryField(m, field, value) {
   var s = getSalaryForMonth(m);
   s[field] = value;
+  saveSalary(m);
+  renderSalesReportBody();
+}
+function updateHourlyEntry(m, teacherId, hours) {
+  var s = getSalaryForMonth(m);
+  if (!s.hourlyEntries) s.hourlyEntries = [];
+  var e = s.hourlyEntries.find(function(x) { return x.teacherId === teacherId; });
+  if (!e) { e = { teacherId: teacherId, hours: 0 }; s.hourlyEntries.push(e); }
+  e.hours = hours;
   saveSalary(m);
   renderSalesReportBody();
 }
