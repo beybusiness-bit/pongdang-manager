@@ -2638,7 +2638,7 @@ input[type="checkbox"] {
         <input type="hidden" id="school-form-id">
         <div class="form-group">
           <label class="form-label">학교 이름</label>
-          <input type="text" class="form-input" id="school-name" required placeholder="예: 풍당초등학교">
+          <input type="text" class="form-input" id="school-name" required>
         </div>
         <div class="form-group">
           <label class="form-label">학교급</label>
@@ -4198,10 +4198,6 @@ function closeSidebar() {
   if (isMobile) {
     sidebar.classList.remove('open');
     if (overlay) overlay.style.display = 'none';
-  } else {
-    isSidebarCollapsed = true;
-    localStorage.setItem('isSidebarCollapsed', JSON.stringify(isSidebarCollapsed));
-    sidebar.classList.add('collapsed');
   }
 }
 
