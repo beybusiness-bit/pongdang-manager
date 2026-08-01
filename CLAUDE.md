@@ -415,6 +415,21 @@ const today = () => {
 ✅ DB 추가 (11단계):
 - `ExamPreps`: id, title, subject, examStartDate, examEndDate, prepStartDate, lastClassDate, memo, status (진행중/완료), createdAt
 - `ExamPrepStudents`: id, examPrepId, studentId, teacher, boostDays, boostTime, textbooks (배열: id, title), checkBookwork, checkBookCorrection, checkErrorNote, checkTest10, checkTextbookMaterial, checkSchoolMaterial, checkConceptSummary (모두 boolean), result, memo, createdAt
+✅ **교차 작업: Firebase 인증 버그 수정 + 선생님 지급방식 3종** (2026-08-01 세션 완료)
+
+- **설정 탭 계정 역할 버그 수정**: Firestore에 저장된 역할 값이 대문자(`'OWNER'`,`'TEACHER'`,`'ASSISTANT'`)인 반면 `ROLES` 상수는 소문자라 `roleLabel()` 비교 실패 → 항상 "보조선생님"으로 표시되던 문제. `fetchAllowedAccountsFromFirestore`, `saveAccountFromModal`, `handleFirebaseUser` 세 곳에 `.toLowerCase()` 정규화 추가.
+- **로그인 화면 플래시 제거**: CSS에 `.login-screen { display: flex }`라서 페이지 로드 즉시 로그인 화면이 표시됐다가 Firebase Auth 확인 후 앱으로 전환되는 깜빡임 발생. `display: none`으로 변경 + `#loading-overlay` (흰 배경 + 스피너) 추가 → 항상 로딩 오버레이가 먼저 보이고 인증 상태 확인 후 오버레이 숨김 + 적절한 화면(앱/로그인) 표시.
+- **선생님 지급방식 3종 추가** (보조선생님 포함):
+  - 비율 정산: 선생님 비율 입력 시 학원 비율 자동 계산 (readonly 칸에 즉시 표시)
+  - 기본급+인센티브: 기본급 (원화, 1000단위 콤마 자동 포맷) + "담당학생 N명 초과 시 1명당 M원" 문장형 입력
+  - 시급제: 시급 입력. 근무시간은 매출 리포트 급여 계산 섹션에서 월별 입력
+  - `fmtCommaInput(el)` / `parseCommaNumber(str)` 헬퍼 함수 추가
+  - `updateTeacherPaymentFields()` / `updateAcademyRate()` 함수 추가
+  - 매출 리포트 급여 계산 섹션 전면 재설계: 시급제 근무 입력 테이블 → 보조T 근무 배분 → 선생님별 급여(지급방식 배지+계산식) → 보조선생님별 급여 4섹션 구조
+  - `updateHourlyEntry(m, teacherId, hours)` 함수 추가
+  - `getParams(t)` 헬퍼: 현재 월은 live 데이터, 과거 월은 스냅샷 반환
+  - 예시 더미 데이터 3개 추가 (최선생-기본급+인센티브, 정선생-시급제선생님, 한보조-시급제보조선생님)
+
 🔲 **12단계: 매출 리포트**
 🔲 **13단계: 운영비용 관리**
 🔲 **14단계: 급여 관리**
@@ -485,10 +500,34 @@ id, name, feeRate
 
 ### Teachers (선생님)
 ```
-id, name, type (선생님/보조선생님), phone, settlementRate, memo, icon
+id, name, type (선생님/보조선생님), phone,
+paymentType ('ratio'|'base_incentive'|'hourly'),
+settlementRate (비율정산 시 선생님 비율 %),
+baseSalary (기본급+인센티브 시 기본급, 원),
+incentiveThreshold (담당학생 초과 기준 인원),
+incentivePerStudent (초과 1명당 추가금액, 원),
+hourlyRate (시급제 시 시급, 원/시간),
+memo, icon
 ```
-- `settlementRate`: 정산비율 (%). 학원장만 조회·수정 가능. 선생님 역할에는 노출 안 됨.
+- `paymentType`: `'ratio'`(비율정산), `'base_incentive'`(기본급+인센티브), `'hourly'`(시급제). 기본값 `'ratio'`.
+- `settlementRate`: 비율정산 시 선생님 비율(%). 학원장만 조회·수정 가능. 선생님 역할에는 노출 안 됨.
+- `baseSalary`, `incentiveThreshold`, `incentivePerStudent`: base_incentive 타입 전용.
+- `hourlyRate`: hourly 타입 전용. 실제 근무시간은 `monthlySalaryData.hourlyEntries`에 별도 저장.
 - `type` 값: `'선생님'` 또는 `'보조선생님'` (구 `'보조쌤'`에서 변경됨)
+- 보조선생님도 3가지 paymentType 동일하게 적용됨.
+
+### MonthlySalaryData (월별 급여 계산 데이터 — 급여 관련 파생 구조)
+```
+monthlySalaryData[YYYY-MM] = {
+  assistants: [{teacherId, totalHours, rate, amount}],  // 비율정산 보조선생님 근무 배분
+  hourlyEntries: [{teacherId, hours}],                   // 시급제 선생님+보조선생님 근무시간
+  teacherSnapshots: {teacherId: {paymentType, settlementRate, baseSalary,
+                                 incentiveThreshold, incentivePerStudent, hourlyRate}},
+  ...
+}
+```
+- `teacherSnapshots`: 과거 월 급여 계산 시 당시 파라미터 스냅샷. `getParams(t)` 헬퍼가 현재 월이면 live 데이터, 과거 월이면 스냅샷 반환.
+- `hourlyEntries`: 시급제 선생님/보조선생님 월별 근무시간. 매출 리포트 → 급여 계산 섹션에서 입력.
 
 ### Schools (학교)
 ```
@@ -680,6 +719,25 @@ result, memo, createdAt
 - **템플릿 type 필드 없음**: `feedbackTemplatesData` 객체에 `type` 없음. 이름만 표시. 코드에서 `tpl.type` 참조 금지.
 - **동적 모달 생성 (`openFbHistoryDetail`)**: 피드백톡 상세 모달은 정적 HTML 없음. 클릭 시 `document.createElement`로 생성 후 `migrateModalHeaders()` 재호출.
 
+### Firebase 인증 & 계정 관리 (설정 탭)
+- **역할 정규화**: Firestore 문서의 `role` 필드는 과거에 대문자(`'OWNER'`, `'TEACHER'`, `'ASSISTANT'`)로 저장된 것이 있음. `ROLES` 상수는 소문자(`owner`, `teacher`, `assistant`). 모든 읽기 지점에서 `.toLowerCase()` 정규화 필수. 새 저장도 항상 소문자로.
+- **로그인 플래시 방지 패턴**: `.login-screen { display: none }` (기본 숨김) + `#loading-overlay` (기본 표시). `onAuthStateChanged` 콜백에서 오버레이 숨김 후 앱 or 로그인 화면 표시.
+- **`handleFirebaseUser(user)`**: Firestore `allowedAccounts`에서 계정 조회 → `currentUser` 세팅 → 오버레이 숨김 → `#app.active`.
+- **계정 없으면**: 오버레이 숨김 → 로그인 화면 표시.
+
+### 선생님 지급방식 3종 구현 패턴
+- **`paymentType`**: `'ratio'`(비율정산), `'base_incentive'`(기본급+인센티브), `'hourly'`(시급제). 보조선생님도 동일.
+- **선생님 폼 UI**: `#teacher-payment-type` select → `updateTeacherPaymentFields()` → 해당 섹션(`#teacher-section-ratio/base-incentive/hourly`) 표시/숨김.
+- **비율정산 UI**: 선생님 비율 입력(`#teacher-settlement-rate`) + 학원 비율 자동계산(`#teacher-academy-rate`, readonly). `updateAcademyRate()` — 입력할 때마다 `100 - 선생님비율` 실시간 표시.
+- **기본급+인센티브 UI**: `#teacher-base-salary` (1000단위 콤마) + `#teacher-incentive-threshold` + `#teacher-incentive-per-student`. "담당학생 [threshold]명 초과 시 1명당 [perStudent]원" 문장형 표시.
+- **시급제 UI**: `#teacher-hourly-rate` (원/시간). 근무시간은 선생님 폼이 아니라 매출 리포트 → 급여 계산에서 입력.
+- **`fmtCommaInput(el)`**: 입력 중 숫자 외 제거 → `parseInt().toLocaleString()` → el.value 업데이트. 원화 금액 입력 칸 전용.
+- **`parseCommaNumber(str)`**: 콤마 포함 문자열 → 정수 파싱.
+- **스냅샷 패턴**: 과거 월 열람 시 `salary.teacherSnapshots[teacherId]`에 당시 파라미터 저장. `getParams(t)` 헬퍼가 현재 월이면 `t`(live), 과거 월이면 스냅샷 반환.
+- **시급제 근무시간 저장**: `monthlySalaryData[YYYY-MM].hourlyEntries = [{teacherId, hours}]`. `updateHourlyEntry(m, teacherId, hours)` 함수로 업데이트.
+- **급여 계산 섹션 구조**: (1) 시급제 근무 입력 테이블 (시급제 선생님+보조선생님), (2) 보조T 근무 배분 (비율정산 보조선생님만), (3) 선생님별 급여 계산 테이블 (지급방식 배지 표시), (4) 보조선생님별 급여 계산 테이블.
+- **실제 급여 계산 공식**: ratio → `총매출 × 비율%`, base_incentive → `기본급 + max(0, 담당학생수 - threshold) × perStudent`, hourly → `hourlyRate × hours`.
+
 ---
 
 ## 10. 기기 전환 자동화 (중요)
@@ -752,9 +810,11 @@ result, memo, createdAt
 
 ## 11. 다음 세션 시작점
 
-**최종 세션 날짜**: 2026-04-27. 최신 커밋: 시험대비 페이지 네비게이션 버그 수정 + 레이아웃 정상화 (`main` 브랜치, 커밋 `8c8a81d`).
+**최종 세션 날짜**: 2026-08-01. 최신 커밋: Firebase 인증 버그 수정 + 선생님 지급방식 3종 구현 (`main` 브랜치, 커밋 `e43f1a1`).
 
-**배포 상태**: main 브랜치 = GitHub Pages 배포 브랜치. PWA 설치 가능 상태. 회의록 UI 개선 + 캘린더 이벤트 연동 + 11단계 시험대비 기본 구현 모두 배포됨.
+**배포 상태**: main 브랜치 = GitHub Pages 배포 브랜치. PWA 설치 가능 상태. 이번 세션에서 배포된 항목: 계정 역할 버그 수정, 로그인 플래시 제거, 선생님 지급방식 3종(비율정산/기본급+인센티브/시급제) + 급여 계산 섹션 재설계.
+
+**사용자 테스트 대기 항목**: 이번 세션에서 배포된 모든 항목 (역할 수정, 로딩 오버레이, 선생님 지급방식 UI/급여 계산).
 
 ### 다음 세션 시작 시 할 일
 
@@ -897,3 +957,7 @@ result, memo, createdAt
 - **시험대비 `currentExamPrepId`**: null이면 목록 페이지, 값이 있으면 상세 페이지 (`renderExamPrepPage()` 내 분기).
 - **캘린더 이벤트 연동**: `calendarMeetingClick(id)`, `calendarWorklogClick(teacherName)`, `calendarExamPrepClick(epId)` 함수 구현됨. 배지 클릭 이벤트에 `event.stopPropagation()` 포함.
 - **GitHub 푸시 인증**: 세션이 바뀌면 원격 URL이 초기화될 수 있음. `~/.claude/settings.json`의 SessionStart hook이 토큰 기반 URL 복원을 처리함. 토큰은 사용자에게 직접 받을 것 (CLAUDE.md에 기록 금지).
+- **Firebase Auth 역할 정규화**: `ROLES` 상수 = 소문자(`owner/teacher/assistant`). Firestore에 대문자로 저장된 구 문서가 존재할 수 있음. 모든 읽기/쓰기 지점에서 `.toLowerCase()` 필수. `handleFirebaseUser`, `fetchAllowedAccountsFromFirestore`, `saveAccountFromModal` 3곳에 반드시 적용.
+- **`#loading-overlay`**: 기본 `display: flex` (흰 배경 + 스피너). `onAuthStateChanged` 콜백에서 반드시 숨겨야 함. 로그인 화면(`.login-screen`)은 기본 `display: none`. Firebase 콜백 전 UI 깜빡임 방지를 위한 필수 구조.
+- **선생님 지급방식 폼**: `teacher-payment-type` select 변경 시 `updateTeacherPaymentFields()` 호출 → `teacher-section-ratio / teacher-section-base-incentive / teacher-section-hourly` 3개 섹션 표시/숨김 전환. 저장 시 `paymentType`과 해당 타입의 파라미터 필드만 저장.
+- **선생님 상세 모달 지급방식 표시**: `isOwner` 분기로 학원장만 볼 수 있음. `dpt = t.paymentType || 'ratio'` 기준으로 분기 렌더링.
