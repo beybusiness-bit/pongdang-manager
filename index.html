@@ -41,6 +41,7 @@
   --font: 'Noto Sans KR', sans-serif;
   --sh: 0 1px 4px rgba(0,0,0,.07);
   --sh-md: 0 4px 18px rgba(0,0,0,.11);
+  --sidebar-collapsed-w: 60px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -175,121 +176,154 @@ body {
   display: flex;
   flex-direction: column;
   z-index: 99;
-  transition: transform 0.25s ease;
+  transition: width 0.2s ease;
   overflow: hidden;
 }
 .sidebar.collapsed {
-  transform: translateX(-100%);
-  border: none;
+  width: var(--sidebar-collapsed-w);
 }
-/* 접기 버튼 - 사이드바 내부 우측상단 (사이드바가 열려있을 때 표시) */
+/* 접기/펼치기 버튼 — 사이드바 헤더 내 */
 .sidebar-collapse-btn {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  width: 24px;
-  height: 24px;
-  background: transparent;
+  width: 28px;
+  height: 28px;
+  background: rgba(0,0,0,0.06);
   border: none;
+  border-radius: 7px;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 16px;
-  color: var(--text3);
-  z-index: 2;
-  transition: color 0.15s;
+  color: var(--text2);
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
 }
 .sidebar-collapse-btn:hover {
+  background: rgba(0,0,0,0.12);
   color: var(--text);
 }
-
-/* 펼치기 버튼 - 사이드바 외부 좌측상단 고정 (사이드바가 접혀있을 때만 표시, 데스크톱 전용) */
-.sidebar-expand-btn {
-  display: none;
-  position: fixed;
-  left: 12px;
-  top: 12px;
-  width: 40px;
-  height: 40px;
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 20px;
-  color: var(--text);
-  z-index: 101;
-  transition: background 0.15s;
-}
-.sidebar-expand-btn:hover {
-  background: var(--bg-hover);
-}
-.sidebar.collapsed ~ .sidebar-expand-btn {
-  display: flex;
+.sidebar.collapsed .sidebar-collapse-btn {
+  margin: 0 auto;
 }
 .logo-wrap {
-  padding: 20px 20px 20px 24px;
+  padding: 14px 12px 12px;
   border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 56px;
+  gap: 8px;
+}
+.logo-info {
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+}
+.sidebar.collapsed .logo-info {
+  display: none;
 }
 .logo {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 800;
   color: var(--accent);
+  letter-spacing: -0.3px;
+  white-space: nowrap;
 }
 .logo-sub {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text3);
-  margin-top: 4px;
+  margin-top: 2px;
+  white-space: nowrap;
 }
 
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 0;
+  overflow-x: hidden;
+  padding: 8px 0;
 }
 .nav-item {
   display: flex;
   align-items: center;
-  padding: 12px 20px;
+  gap: 10px;
+  padding: 9px 12px 9px 16px;
   color: var(--text2);
-  font-size: 14px;
+  font-size: 13.5px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.12s;
   border-left: 3px solid transparent;
   position: relative;
+  white-space: nowrap;
 }
 .nav-item:hover {
-  background: var(--bg-hover);
+  background: rgba(0,0,0,0.04);
   color: var(--text);
 }
 .nav-item.active {
-  background: var(--bg-hover);
   color: var(--accent);
+  background: rgba(74,144,226,0.08);
   border-left-color: var(--accent);
-  font-weight: 500;
+  font-weight: 600;
 }
 .nav-item-child {
-  padding-left: 52px;
+  padding-left: 32px;
   font-size: 13px;
 }
 .nav-icon {
+  font-size: 16px;
   width: 20px;
-  height: 20px;
-  margin-right: 12px;
-  opacity: 0.7;
+  text-align: center;
+  flex-shrink: 0;
 }
-.nav-item.active .nav-icon { opacity: 1; }
+.nav-label {
+  transition: opacity 0.15s;
+  overflow: hidden;
+}
+
+/* 접힌 사이드바 — 아이콘만 표시 */
+.sidebar.collapsed .nav-label {
+  opacity: 0;
+  width: 0;
+}
+.sidebar.collapsed .nav-item {
+  justify-content: center;
+  padding: 9px 0;
+  border-left-color: transparent !important;
+  gap: 0;
+}
+.sidebar.collapsed .nav-item.active {
+  background: rgba(74,144,226,0.12);
+  border-radius: 6px;
+  margin: 1px 8px;
+}
+
+/* 섹션 레이블 */
+.nav-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 16px 20px 4px;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+.sidebar.collapsed .nav-section-label {
+  opacity: 0;
+  height: 0;
+  padding: 0;
+  overflow: hidden;
+}
 
 /* 즐겨찾기 별 */
 .favorite-star {
   margin-left: auto;
-  font-size: 16px;
+  font-size: 14px;
   color: var(--border-md);
   opacity: 0;
   transition: opacity 0.2s;
+  flex-shrink: 0;
 }
 .nav-item:hover .favorite-star {
   opacity: 1;
@@ -298,68 +332,66 @@ body {
   color: #FFD700;
   opacity: 1;
 }
-
-/* 그룹 헤더 */
-.nav-group {
-  margin-bottom: 8px;
-}
-.nav-group-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px;
-  color: var(--text2);
-  font-size: 14px;
-  font-weight: 400;
-  cursor: pointer;
-  transition: all 0.2s;
-  border-left: 3px solid transparent;
-}
-.nav-group-header:hover {
-  background: var(--bg-hover);
-  color: var(--text);
-}
-.nav-group-toggle {
-  font-size: 10px;
-  color: var(--text3);
-  transition: transform 0.2s;
-}
-.nav-group-children {
-  background: var(--bg-side);
+.sidebar.collapsed .favorite-star {
+  display: none;
 }
 
 .sidebar-footer {
-  padding: 16px 20px;
+  padding: 10px 12px;
   border-top: 1px solid var(--border);
+}
+.sidebar-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.sidebar.collapsed .sidebar-footer-actions {
+  flex-direction: column;
+  gap: 6px;
+}
+.sidebar.collapsed .user-details {
+  display: none;
+}
+.sidebar.collapsed .sync-status {
+  display: none;
 }
 .user-info {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 10px;
+  padding: 6px;
+  border-radius: 8px;
+  cursor: default;
+  overflow: hidden;
 }
 .user-avatar {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: var(--accent);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
+  flex-shrink: 0;
 }
 .user-details { flex: 1; }
 .user-name {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .user-role {
   font-size: 11px;
   color: var(--text3);
-  margin-top: 2px;
+  margin-top: 1px;
+  white-space: nowrap;
 }
 .sync-status {
   display: flex;
@@ -386,8 +418,21 @@ body {
   50% { opacity: 0.5; }
 }
 .btn-logout {
-  padding: 8px 12px;
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid var(--border-md);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text2);
   font-size: 12px;
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+  font-family: var(--font);
+}
+.btn-logout:hover {
+  background: var(--bg-hover);
+  color: var(--text);
 }
 .btn-outline {
   background: transparent;
@@ -462,10 +507,10 @@ body {
 .main {
   margin-left: var(--nav);
   min-height: 100vh;
-  transition: margin-left 0.25s ease;
+  transition: margin-left 0.2s ease;
 }
 .sidebar.collapsed ~ .main {
-  margin-left: 0;
+  margin-left: var(--sidebar-collapsed-w);
 }
 
 .page {
@@ -476,11 +521,6 @@ body {
 
 .page-header {
   margin-bottom: 24px;
-  margin-left: 0;
-}
-/* 사이드바 접혀있을 때만 펼치기 버튼 공간 확보 */
-.sidebar.collapsed ~ .main .page-header {
-  margin-left: 60px;
 }
 .page-title {
   font-size: 24px;
@@ -549,26 +589,29 @@ body {
 .modal {
   background: white;
   border-radius: var(--radius);
-  width: 500px;
+  width: 540px;
   max-width: 100%;
   max-height: 90vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   box-shadow: var(--sh-md);
-  position: relative;
 }
+.modal-sm { max-width: 420px; }
+.modal-md { max-width: 560px; }
+.modal-lg { max-width: 780px; }
+.modal-xl { max-width: 980px; }
 .modal-title {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
   padding: 16px 24px;
   border-bottom: 1px solid var(--border);
   background: white;
-  position: sticky;
-  top: 0;
-  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-shrink: 0;
 }
 .modal-title-text {
   flex: 1;
@@ -585,13 +628,18 @@ body {
 }
 .modal-body {
   padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 .modal-footer {
-  padding: 16px 24px;
+  padding: 14px 24px;
   border-top: 1px solid var(--border);
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+  flex-shrink: 0;
+  background: white;
 }
 .modal-footer.hidden-by-sticky {
   display: none;
@@ -675,11 +723,14 @@ body {
   border-bottom: 2px solid var(--border);
 }
 .student-table th, .data-table th {
-  padding: 14px 12px;
+  padding: 10px 12px;
   text-align: left;
   font-weight: 600;
-  color: var(--text2);
-  font-size: 13px;
+  color: var(--text3);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 .student-table tbody tr {
   border-bottom: 1px solid var(--border);
@@ -743,11 +794,29 @@ tr.clickable-row:hover {
   border-color: var(--border-md);
 }
 .btn-danger {
-  background: var(--danger);
-  color: white;
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid #fecaca;
 }
 .btn-danger:hover {
+  background: #fee2e2;
+}
+.btn-danger-solid {
+  background: var(--danger);
+  color: white;
+  border: none;
+}
+.btn-danger-solid:hover {
   background: #c62828;
+}
+.btn-secondary {
+  background: white;
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-md);
 }
 
 .form-row {
@@ -785,11 +854,40 @@ textarea.form-input {
   margin-bottom: 24px;
 }
 .detail-section-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text2);
+  margin-bottom: 10px;
   padding-bottom: 8px;
-  border-bottom: 2px solid var(--border);
+  border-bottom: 1.5px solid var(--border);
+  letter-spacing: 0.02em;
+}
+.detail-section-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.detail-row {
+  border-bottom: 1px solid var(--bg-hover);
+  padding: 9px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-row-label {
+  min-width: 100px;
+  color: var(--text3);
+  font-size: 12px;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+.detail-row-val {
+  flex: 1;
+  word-break: break-all;
+  color: var(--text);
 }
 .info-grid {
   display: grid;
@@ -1053,23 +1151,38 @@ input[type="checkbox"] {
 
 /* 반응형 */
 @media(max-width: 768px) {
+  /* 모바일: 전체 너비, transform 기반 슬라이드 */
   .sidebar {
+    width: 85% !important;
+    max-width: 280px;
     transform: translateX(-100%);
+    transition: transform 0.25s ease;
   }
   .sidebar.open {
     transform: translateX(0);
   }
+  /* 모바일에서 collapsed 클래스는 width에 영향 주지 않음 */
+  .sidebar.collapsed {
+    width: 85% !important;
+    max-width: 280px;
+  }
+  .sidebar.collapsed .logo-info { display: flex; }
+  .sidebar.collapsed .nav-label { opacity: 1; width: auto; }
+  .sidebar.collapsed .nav-section-label { opacity: 1; height: auto; padding: 16px 20px 4px; }
+  .sidebar.collapsed .nav-item { justify-content: flex-start; padding: 9px 12px 9px 16px; gap: 10px; border-left: 3px solid transparent; }
+  .sidebar.collapsed .nav-item.active { border-radius: 0; margin: 0; }
+  .sidebar.collapsed .favorite-star { display: flex; }
+  .sidebar.collapsed .user-details { display: block; }
+  .sidebar.collapsed .sync-status { display: flex; }
   .main {
     margin-left: 0;
     padding-top: var(--hdr);
   }
+  .sidebar.collapsed ~ .main {
+    margin-left: 0;
+  }
   .mobile-header {
     display: flex;
-  }
-  /* 모바일에서는 mobile-header 햄버거가 사이드바 열기 역할 → 펼치기 버튼 숨김 */
-  .sidebar-expand-btn,
-  .sidebar.collapsed ~ .sidebar-expand-btn {
-    display: none !important;
   }
   .page {
     padding: 20px 16px;
@@ -1149,7 +1262,7 @@ input[type="checkbox"] {
   .page-size-selector {
     font-size: 13px;
   }
-  
+
   /* 결제 페이지 모바일 전용 */
   .payment-table-desktop {
     display: none;
@@ -1157,18 +1270,18 @@ input[type="checkbox"] {
   .payment-cards-mobile {
     display: block;
   }
-  
+
   /* 데스크탑 전용 숨김 */
   .payment-teacher-check-wrapper {
     display: none !important;
   }
-  
+
   /* 결제 모달 폼 - 모바일 레이아웃 */
   #modal-payment-form .modal-body {
     display: flex !important;
     flex-direction: column !important;
   }
-  
+
   /* 1. 신입 여부, 등록월, 학생 */
   #modal-payment-form .payment-row-1 {
     order: 1;
@@ -1179,7 +1292,7 @@ input[type="checkbox"] {
   #modal-payment-form .payment-row-1 > div:nth-child(3) {
     grid-column: 1 / -1 !important;
   }
-  
+
   /* 2. 담당T, 요일 */
   #modal-payment-form .payment-row-2 {
     order: 2;
@@ -1187,7 +1300,7 @@ input[type="checkbox"] {
     grid-template-columns: 1fr 1fr !important;
     gap: 12px !important;
   }
-  
+
   /* 3. 수강반, 횟수 */
   #modal-payment-form .payment-row-3 {
     order: 3;
@@ -1198,7 +1311,7 @@ input[type="checkbox"] {
   #modal-payment-form .payment-row-3 > div:nth-child(3) {
     grid-column: 1 / -1 !important;
   }
-  
+
   /* 4. 결제선생(모바일 표시), 할인, 할인금액 / 최종교습비 */
   #modal-payment-form .payment-row-4 {
     order: 4;
@@ -1212,7 +1325,7 @@ input[type="checkbox"] {
   #modal-payment-form .payment-row-4 .payment-final-wrapper {
     grid-column: 1 / -1 !important;
   }
-  
+
   /* 5. 결제날짜, 입금날짜, 결제수단, 수수료, 입금금액 */
   #modal-payment-form .payment-row-5 {
     order: 5;
@@ -1220,13 +1333,13 @@ input[type="checkbox"] {
   #modal-payment-form .payment-row-5 .payment-teacher-check-desktop {
     display: none !important;
   }
-  
+
   /* 6. 수수료, 입금금액을 5행과 함께 배치 */
   #modal-payment-form .payment-row-6 {
     order: 5; /* 5행과 같은 순서 */
     margin-top: -16px !important; /* 5행의 margin-bottom 상쇄 */
   }
-  
+
   /* 5행과 6행을 하나의 그리드처럼 동작하도록 */
   #modal-payment-form .payment-row-5,
   #modal-payment-form .payment-row-6 {
@@ -1235,7 +1348,7 @@ input[type="checkbox"] {
     gap: 12px !important;
     margin-bottom: 16px !important;
   }
-  
+
   /* 5행: 결제날짜, 입금날짜, 결제수단 */
   #modal-payment-form .payment-row-5 > div:nth-child(2) {
     grid-column: 1;
@@ -1246,7 +1359,7 @@ input[type="checkbox"] {
   #modal-payment-form .payment-row-5 > div:nth-child(4) {
     grid-column: 1;
   }
-  
+
   /* 6행: 수수료(결제수단 옆), 입금금액(별도 줄) */
   #modal-payment-form .payment-row-6 > div:nth-child(1) {
     grid-column: 2;
@@ -1255,15 +1368,15 @@ input[type="checkbox"] {
   #modal-payment-form .payment-row-6 > div:nth-child(2) {
     grid-column: 1 / -1;
   }
-  
+
   #modal-payment-form .payment-row {
     margin-bottom: 16px !important;
   }
-  
+
   #modal-payment-form .form-group {
     margin-bottom: 0 !important;
   }
-  
+
   /* 요일 체크박스 감싸기 */
   #modal-payment-form .form-group div[style*="flex"] {
     flex-wrap: wrap;
@@ -1412,14 +1525,12 @@ input[type="checkbox"] {
 
   /* 모바일 사이드바: 기본은 숨김, .open 클래스일 때만 오버레이로 표시 */
   .sidebar {
-    width: 85%;
-    max-width: 320px;
     z-index: 200;
   }
   .main {
     margin-left: 0;
   }
-  
+
   /* 결제 모바일 전용 */
   .payment-buttons-desktop {
     display: none !important;
@@ -1530,6 +1641,73 @@ input[type="checkbox"] {
 .ep-check-on  { display:inline-block; color: var(--success); font-size: 18px; line-height:1; font-weight:700; }
 .ep-check-off { display:inline-block; color: var(--border); font-size: 18px; line-height:1; }
 .ep-detail-table tr.ep-table-row:hover td { background: var(--bg-hover); cursor: pointer; }
+
+/* ── 배지 (GMBS 패턴) ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badge-blue { background: #dbeafe; color: #1d4ed8; }
+.badge-green { background: #dcfce7; color: #15803d; }
+.badge-gray { background: var(--bg-side); color: var(--text2); }
+.badge-yellow { background: #fef9c3; color: #854d0e; }
+.badge-red { background: #fee2e2; color: #b91c1c; }
+.badge-orange { background: #fff7ed; color: #c2410c; }
+.badge-accent { background: rgba(74,144,226,0.12); color: var(--accent); }
+
+/* ── 스피너 ── */
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto;
+}
+.spinner-sm {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── 목록 페이지 결과 카운트 ── */
+.results-count {
+  font-size: 13px;
+  color: var(--text3);
+  margin-bottom: 12px;
+}
+.results-count strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ── 사이드바 설정 아이콘 버튼 ── */
+.sidebar-settings-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-md);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text3);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.12s;
+  flex-shrink: 0;
+}
+.sidebar-settings-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
 </style>
 </head>
 <body>
@@ -1554,20 +1732,27 @@ input[type="checkbox"] {
 <!-- 메인 앱 -->
 <div class="app" id="app">
   <!-- 사이드바 오버레이 (모바일) -->
-  
+
   <!-- 사이드바 -->
   <nav class="sidebar" id="sidebar">
-    <!-- 사이드바 내부 접기 버튼 (우측상단) -->
-    <button class="sidebar-collapse-btn" onclick="toggleSidebar()" title="사이드바 접기">✕</button>
     <div class="logo-wrap">
-      <div class="logo">🎓 퐁당수학</div>
-      <div class="logo-sub">학원 관리 시스템</div>
+      <div class="logo-info">
+        <div class="logo">🎓 퐁당수학</div>
+        <div class="logo-sub">학원 관리 시스템</div>
+      </div>
+      <button class="sidebar-collapse-btn" onclick="toggleSidebar()" title="사이드바 접기/펼치기">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect y="2" width="15" height="1.5" rx="0.75" fill="currentColor"/>
+          <rect y="6.75" width="15" height="1.5" rx="0.75" fill="currentColor"/>
+          <rect y="11.5" width="15" height="1.5" rx="0.75" fill="currentColor"/>
+        </svg>
+      </button>
     </div>
-    
+
     <div class="sidebar-nav" id="sidebar-nav">
       <!-- 메뉴 항목은 JS로 동적 생성 -->
     </div>
-    
+
     <div class="sidebar-footer">
       <div class="user-info">
         <div class="user-avatar" id="user-avatar">원</div>
@@ -1580,13 +1765,13 @@ input[type="checkbox"] {
         <div class="sync-dot" id="sync-dot"></div>
         <span id="sync-text">연결 전</span>
       </div>
-      <button class="btn btn-outline btn-logout btn-full" onclick="handleLogout()">로그아웃</button>
-      <button class="btn btn-outline btn-full" style="margin-top:6px;font-size:11px;color:var(--text3);border-color:var(--border);" onclick="resetToSampleData()">🔄 샘플 데이터 초기화</button>
+      <div class="sidebar-footer-actions">
+        <button class="btn-logout" onclick="handleLogout()">로그아웃</button>
+        <button class="sidebar-settings-btn" onclick="navigateTo('settings')" title="설정">⚙️</button>
+      </div>
     </div>
   </nav>
 
-  <!-- 사이드바 펼치기 버튼 (접혀있을 때만 표시, 데스크톱 전용) -->
-  <button class="sidebar-expand-btn" onclick="toggleSidebar()" title="사이드바 펼치기">☰</button>
   <div id="sidebar-overlay" onclick="closeSidebar()"></div>
 
   <!-- 모바일 헤더 -->
@@ -1598,7 +1783,7 @@ input[type="checkbox"] {
     </svg>
     <div class="mobile-title" id="mobile-title">대시보드</div>
   </div>
-  
+
   <!-- 메인 콘텐츠 -->
   <main class="main" id="main">
     <!-- 페이지들은 JS로 동적 생성 -->
@@ -1627,11 +1812,11 @@ input[type="checkbox"] {
       <form id="student-form" onsubmit="saveStudent(event)">
         <input type="hidden" id="student-form-id">
         <input type="hidden" id="student-number">
-        
+
         <!-- 학생 정보 섹션 -->
         <div style="margin-bottom: 24px;">
           <div class="form-section-title">학생 정보</div>
-          
+
           <!-- 프로필 사진 -->
           <div class="form-row-single">
             <div class="form-group">
@@ -1645,7 +1830,7 @@ input[type="checkbox"] {
               </div>
             </div>
           </div>
-          
+
           <!-- 이름, 생년월일 -->
           <div class="form-row">
             <div class="form-group">
@@ -1657,7 +1842,7 @@ input[type="checkbox"] {
               <input type="date" class="form-input" id="student-birthdate">
             </div>
           </div>
-          
+
           <!-- 학교, 학년 -->
           <div class="form-row">
             <div class="form-group">
@@ -1684,7 +1869,7 @@ input[type="checkbox"] {
               </div>
             </div>
           </div>
-          
+
           <!-- 연락처, 주소 -->
           <div class="form-row">
             <div class="form-group">
@@ -1696,7 +1881,7 @@ input[type="checkbox"] {
               <input type="text" class="form-input" id="student-address">
             </div>
           </div>
-          
+
           <!-- 보호자 관계, 보호자 연락처 -->
           <div class="form-row">
             <div class="form-group">
@@ -1716,11 +1901,11 @@ input[type="checkbox"] {
             </div>
           </div>
         </div>
-        
+
         <!-- 수업 정보 섹션 -->
         <div>
           <div class="form-section-title">수업 정보</div>
-          
+
           <!-- 담당선생님, 수업요일 -->
           <div class="form-row">
             <div class="form-group">
@@ -1756,7 +1941,7 @@ input[type="checkbox"] {
               </div>
             </div>
           </div>
-          
+
           <!-- 수강반 -->
           <div class="form-row-single">
             <div class="form-group">
@@ -1766,7 +1951,7 @@ input[type="checkbox"] {
               </select>
             </div>
           </div>
-          
+
           <!-- 메모 -->
           <div class="form-row-single">
             <div class="form-group">
@@ -1901,7 +2086,7 @@ input[type="checkbox"] {
         <div style="flex-shrink: 0;">
           <img id="detail-textbook-cover" src="" alt="교재 표지" style="width: 150px; height: 200px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-side);">
         </div>
-        
+
         <!-- 교재 정보 -->
         <div style="flex: 1;">
           <div class="detail-section">
@@ -1941,12 +2126,12 @@ input[type="checkbox"] {
               </div>
             </div>
           </div>
-          
+
           <div class="detail-section">
             <div class="detail-section-title">메모</div>
             <div class="info-value" id="detail-textbook-info-memo" style="white-space: pre-wrap;">-</div>
           </div>
-          
+
           <div class="detail-section">
             <div class="detail-section-title">사용 중인 학생</div>
             <div id="detail-textbook-students">
@@ -1980,7 +2165,7 @@ input[type="checkbox"] {
         <button class="tab-btn" onclick="switchStudentDetailTab('textbooks', this)">교재</button>
         <button class="tab-btn" onclick="switchStudentDetailTab('enrollment', this)">등록 정보</button>
       </div>
-      
+
       <!-- 기본 정보 탭 -->
       <div id="student-detail-tab-info" class="tab-content active">
         <!-- 학생 정보 -->
@@ -1995,7 +2180,7 @@ input[type="checkbox"] {
                 <div class="info-value" id="detail-info-status" style="text-align: center;">-</div>
               </div>
             </div>
-            
+
             <!-- 정보 필드들 -->
             <div style="flex: 1;">
               <div class="info-grid" style="grid-template-columns: repeat(2, 1fr);">
@@ -2035,7 +2220,7 @@ input[type="checkbox"] {
             </div>
           </div>
         </div>
-        
+
         <!-- 수업 정보 -->
         <div class="detail-section">
           <div class="detail-section-title">수업 정보</div>
@@ -2059,7 +2244,7 @@ input[type="checkbox"] {
           </div>
         </div>
       </div>
-      
+
       <!-- 교재 탭 -->
       <div id="student-detail-tab-textbooks" class="tab-content" style="display: none;">
         <div class="bulk-actions-bar" id="student-textbook-bulk-bar" style="display: none;">
@@ -2073,7 +2258,7 @@ input[type="checkbox"] {
         </div>
         <div id="detail-student-textbooks-list"></div>
       </div>
-      
+
       <!-- 등록 정보 탭 -->
       <div id="student-detail-tab-enrollment" class="tab-content" style="display: none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -2095,16 +2280,16 @@ input[type="checkbox"] {
       <div class="form-group">
         <input type="text" class="form-input" id="assign-textbook-search" placeholder="교재명 또는 저자 검색..." oninput="filterAssignTextbooks()">
       </div>
-      
+
       <!-- 선택된 개수 -->
       <div style="margin-bottom: 12px; font-size: 13px; color: var(--text2);">
         <span id="assign-selected-count">0개 선택됨</span>
       </div>
-      
+
       <!-- 교재 목록 -->
       <div id="assign-textbook-list" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px;">
       </div>
-      
+
       <!-- 페이저 -->
       <div id="assign-textbook-pagination" style="margin-top: 12px;"></div>
     </div>
@@ -2123,7 +2308,7 @@ input[type="checkbox"] {
       <div style="margin-bottom: 16px;">
         <button class="btn btn-primary btn-sm" onclick="addNewEnrollmentRecord()">+ 새 기록 추가</button>
       </div>
-      
+
       <div style="overflow-x: auto;">
         <table class="data-table">
           <thead>
@@ -2175,7 +2360,7 @@ input[type="checkbox"] {
     <div class="modal-title" id="payment-form-title">결제 추가</div>
     <div class="modal-body">
       <input type="hidden" id="payment-id">
-      
+
       <!-- 1행: 신입여부 토글, 등록월, 학생 선택 -->
       <div class="payment-row payment-row-1" style="display: grid; grid-template-columns: 120px 150px 1fr; gap: 12px; margin-bottom: 16px;">
         <div class="form-group" style="margin-bottom: 0;">
@@ -2185,12 +2370,12 @@ input[type="checkbox"] {
             <span class="toggle-slider"></span>
           </label>
         </div>
-        
+
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">등록월 *</label>
           <input type="month" class="form-input" id="payment-enrollment-month">
         </div>
-        
+
         <!-- 학생 선택 (신입/기존 무관하게 학생DB에서 선택) -->
         <div class="form-group" id="student-name-section" style="margin-bottom: 0;">
           <label class="form-label">학생 선택 *</label>
@@ -2200,7 +2385,7 @@ input[type="checkbox"] {
           </div>
         </div>
       </div>
-      
+
       <!-- 2행: 담당T(35%), 요일(65%) -->
       <div class="payment-row payment-row-2" style="display: grid; grid-template-columns: 35% 65%; gap: 12px; margin-bottom: 16px;">
         <div class="form-group" style="margin-bottom: 0;">
@@ -2209,7 +2394,7 @@ input[type="checkbox"] {
             <option value="">선택</option>
           </select>
         </div>
-        
+
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">요일</label>
           <div style="display: flex; gap: 6px; flex-wrap: wrap; padding-top: 4px;">
@@ -2240,7 +2425,7 @@ input[type="checkbox"] {
           </div>
         </div>
       </div>
-      
+
       <!-- 3행: 수강반, 횟수, 기본교습비 -->
       <div class="payment-row payment-row-3" style="display: grid; grid-template-columns: 4fr 1fr 3fr; gap: 12px; margin-bottom: 16px;">
         <div class="form-group" style="margin-bottom: 0;">
@@ -2249,18 +2434,18 @@ input[type="checkbox"] {
             <option value="">수강반 선택</option>
           </select>
         </div>
-        
+
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">횟수</label>
           <input type="number" class="form-input" id="payment-count" placeholder="0">
         </div>
-        
+
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">기본교습비</label>
           <input type="text" class="form-input" id="payment-base-tuition" readonly style="background: var(--bg-side);">
         </div>
       </div>
-      
+
       <!-- 4행: 데스크탑(할인, 할인금액, 최종교습비) / 모바일(결제선생, 할인, 할인금액 → 최종교습비) -->
       <div class="payment-row payment-row-4" style="display: grid; grid-template-columns: 1fr 2fr 2fr; gap: 12px; margin-bottom: 16px;">
         <!-- 데스크탑에서는 숨김, 모바일에서 첫번째 -->
@@ -2270,24 +2455,24 @@ input[type="checkbox"] {
             <input type="checkbox" id="payment-teacher-payment-mobile">
           </label>
         </div>
-        
+
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">할인</label>
           <select class="form-input" id="payment-discount-type" onchange="calculateFinalAmount()">
           </select>
         </div>
-        
+
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">할인 금액</label>
           <input type="text" class="form-input" id="payment-discount-amount" readonly style="background: var(--bg-side);">
         </div>
-        
+
         <div class="form-group payment-final-wrapper" style="margin-bottom: 0;">
           <label class="form-label">최종교습비</label>
           <input type="text" class="form-input" id="payment-final-tuition" readonly style="background: var(--bg-side);">
         </div>
       </div>
-      
+
       <!-- 5행: 결제선생, 결제날짜, 입금날짜, 결제수단 -->
       <div class="payment-row payment-row-5" style="display: grid; grid-template-columns: 80px 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;">
         <!-- 데스크탑 전용: 결제선생 -->
@@ -2297,31 +2482,31 @@ input[type="checkbox"] {
             <input type="checkbox" id="payment-teacher-payment">
           </label>
         </div>
-        
+
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">결제날짜 *</label>
           <input type="date" class="form-input" id="payment-date">
         </div>
-        
+
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">입금날짜 *</label>
           <input type="date" class="form-input" id="payment-deposit-date">
         </div>
-        
+
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">결제수단 *</label>
           <select class="form-input" id="payment-method" onchange="calculateFinalAmount()">
           </select>
         </div>
       </div>
-      
+
       <!-- 6행: 수수료, 입금금액 -->
       <div class="payment-row payment-row-6" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">수수료</label>
           <input type="text" class="form-input" id="payment-fee" readonly style="background: var(--bg-side);">
         </div>
-        
+
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">입금금액</label>
           <input type="text" class="form-input" id="payment-deposit" readonly style="background: var(--bg-side); font-size: 16px; font-weight: 600; color: var(--accent);">
@@ -3072,7 +3257,7 @@ const MENUS = [
   // 단독 메뉴 (클릭 가능)
   { id: 'dashboard', name: '홈', icon: '🏠', type: 'page' },
   { id: 'calendar', name: '학원 캘린더', icon: '📅', type: 'page' },
-  
+
   // 업무 (대분류)
   { 
     id: 'work-group', 
@@ -3086,7 +3271,7 @@ const MENUS = [
       { id: 'exam-prep', name: '시험대비', icon: '✏️', type: 'page' }
     ]
   },
-  
+
   // 관리 (대분류)
   {
     id: 'manage-group',
@@ -3103,7 +3288,7 @@ const MENUS = [
       { id: 'teachers', name: '선생님', icon: '👩‍🏫', type: 'page' }
     ]
   },
-  
+
   // 리포트 (대분류)
   {
     id: 'report-group',
@@ -3115,7 +3300,7 @@ const MENUS = [
       { id: 'reports', name: '학생 리포트', icon: '📊', type: 'page' }
     ]
   },
-  
+
   // 단독 메뉴
   { id: 'settings', name: '설정', icon: '⚙️', type: 'page' },
   { id: 'guide', name: '이용 가이드', icon: '❓', type: 'page' }
@@ -3399,19 +3584,19 @@ function initDefaultPermissions() {
       });
     }
   });
-  
+
   // 권한 초기화
   allPageIds.forEach(pageId => {
     permissions.owner[pageId] = { read: true, write: true, ownOnly: false };
     permissions.teacher[pageId] = { read: true, write: true, ownOnly: false };
     permissions.assistant[pageId] = { read: false, write: false, ownOnly: false };
   });
-  
+
   // 보조쌤 기본 권한 (읽기만)
   ['dashboard', 'calendar', 'worklog', 'guide'].forEach(menuId => {
     permissions.assistant[menuId] = { read: true, write: false, ownOnly: false };
   });
-  
+
   // 급여 관리는 기본적으로 본인 데이터만
   permissions.teacher.salary = { read: true, write: false, ownOnly: true };
   permissions.assistant.salary = { read: true, write: false, ownOnly: true };
@@ -3447,13 +3632,13 @@ function openModal(id) {
   console.log('openModal 호출:', id);
   const m = document.getElementById(id);
   console.log('모달 엘리먼트:', m);
-  
+
   if (!m) {
     console.error('모달을 찾을 수 없음:', id);
     showToast('모달을 열 수 없습니다. 페이지를 새로고침해주세요.');
     return;
   }
-  
+
   // 현재 열린 모달들 중 최대 z-index 찾기
   const openModals = document.querySelectorAll('.modal-backdrop.open');
   let maxZ = 1000;
@@ -3461,7 +3646,7 @@ function openModal(id) {
     const z = parseInt(window.getComputedStyle(modal).zIndex) || 1000;
     if (z > maxZ) maxZ = z;
   });
-  
+
   // 모든 스타일을 강제로 설정
   m.style.zIndex = maxZ + 10;
   m.style.display = 'flex';
@@ -3834,17 +4019,17 @@ function initApp() {
   updateUserInfo();
   renderSidebar();
   renderPages();
-  
+
   // 사이드바 초기 상태 설정
   if (isSidebarCollapsed) {
     document.getElementById('sidebar').classList.add('collapsed');
   }
-  
+
   // localStorage에서 마지막 페이지 복원 또는 URL 해시 확인
   const hash = window.location.hash.substring(1);
   const savedPage = hash || localStorage.getItem('currentPage') || 'dashboard';
   navigateTo(savedPage);
-  
+
   // URL 해시 변경 감지 (뒤로가기/앞으로가기)
   window.addEventListener('hashchange', () => {
     const newHash = window.location.hash.substring(1);
@@ -3852,7 +4037,7 @@ function initApp() {
       // URL 해시와 저장된 페이지 동기화
       currentPage = newHash;
       localStorage.setItem('currentPage', newHash);
-      
+
       // 페이지 UI 업데이트
       document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.toggle('active', item.dataset.page === newHash);
@@ -3860,7 +4045,7 @@ function initApp() {
       document.querySelectorAll('.page').forEach(page => {
         page.classList.toggle('active', page.id === 'page-' + newHash);
       });
-      
+
       // 페이지별 렌더링
       if (newHash === 'dashboard') updateDashboard();
       if (newHash === 'students') renderStudentsPage();
@@ -3877,11 +4062,11 @@ function initApp() {
 
 function updateUserInfo() {
   if (!currentUser) return;
-  
+
   const avatar = document.getElementById('user-avatar');
   const name = document.getElementById('user-name');
   const role = document.getElementById('user-role');
-  
+
   if (avatar) avatar.textContent = currentUser.avatar;
   if (name) name.textContent = currentUser.name;
   if (role) role.textContent = ROLE_NAMES[currentUser.role];
@@ -3890,105 +4075,76 @@ function updateUserInfo() {
 function renderSidebar() {
   const nav = document.getElementById('sidebar-nav');
   if (!nav) return;
-  
+
   let html = '';
-  
+
   // 즐겨찾기 섹션 (하나라도 있을 때만 표시)
   if (favoritePages.length > 0) {
-    html += '<div style="margin-bottom: 24px;">';
-    html += '  <div style="font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 16px; margin-bottom: 4px;">⭐ 즐겨찾기</div>';
-    
-    // 모든 페이지 목록 생성 (즐겨찾기에서 사용)
     const allPages = [];
     MENUS.forEach(menu => {
-      if (menu.type === 'page') {
-        allPages.push(menu);
-      } else if (menu.type === 'group' && menu.children) {
-        menu.children.forEach(child => {
-          if (child.type === 'page') {
-            allPages.push(child);
-          }
-        });
+      if (menu.type === 'page') allPages.push(menu);
+      else if (menu.type === 'group' && menu.children) {
+        menu.children.forEach(child => { if (child.type === 'page') allPages.push(child); });
       }
     });
-    
-    favoritePages.forEach(pageId => {
+
+    const accessibleFavs = favoritePages.filter(pageId => {
       const page = allPages.find(p => p.id === pageId);
-      if (!page) return;
-      
+      if (!page) return false;
       const perm = permissions[currentUser.role][page.id];
-      if (!perm || !perm.read) return;
-      
-      html += '<div class="nav-item" data-page="' + page.id + '" onclick="navigateTo(\'' + page.id + '\')">';
-      html += '  <span class="nav-icon">' + page.icon + '</span>';
-      html += '  <span>' + page.name + '</span>';
-      html += '  <span class="favorite-star active" onclick="event.stopPropagation(); toggleFavorite(\'' + page.id + '\')">★</span>';
-      html += '</div>';
+      return perm && perm.read;
     });
-    
-    html += '</div>';
+
+    if (accessibleFavs.length > 0) {
+      html += '<div class="nav-section-label">즐겨찾기</div>';
+      accessibleFavs.forEach(pageId => {
+        const page = allPages.find(p => p.id === pageId);
+        if (!page) return;
+        html += '<div class="nav-item" data-page="' + page.id + '" onclick="navigateTo(\'' + page.id + '\')">';
+        html += '<span class="nav-icon">' + page.icon + '</span>';
+        html += '<span class="nav-label">' + page.name + '</span>';
+        html += '<span class="favorite-star active" onclick="event.stopPropagation();toggleFavorite(\'' + page.id + '\')">★</span>';
+        html += '</div>';
+      });
+    }
   }
-  
+
   // 일반 메뉴
   MENUS.forEach(menu => {
     if (menu.type === 'page') {
-      // 단독 페이지
       const perm = permissions[currentUser.role][menu.id];
       if (!perm || !perm.read) return;
-      
-      const isFavorite = favoritePages.includes(menu.id);
-      
+      const isFav = favoritePages.includes(menu.id);
       html += '<div class="nav-item" data-page="' + menu.id + '" onclick="navigateTo(\'' + menu.id + '\')">';
-      html += '  <span class="nav-icon">' + menu.icon + '</span>';
-      html += '  <span>' + menu.name + '</span>';
-      html += '  <span class="favorite-star ' + (isFavorite ? 'active' : '') + '" onclick="event.stopPropagation(); toggleFavorite(\'' + menu.id + '\')">' + (isFavorite ? '★' : '☆') + '</span>';
+      html += '<span class="nav-icon">' + menu.icon + '</span>';
+      html += '<span class="nav-label">' + menu.name + '</span>';
+      html += '<span class="favorite-star ' + (isFav ? 'active' : '') + '" onclick="event.stopPropagation();toggleFavorite(\'' + menu.id + '\')">' + (isFav ? '★' : '☆') + '</span>';
       html += '</div>';
-      
+
     } else if (menu.type === 'group') {
-      // 대분류 그룹 - 자식 메뉴 중 하나라도 접근 가능한지 확인
-      const hasAccessibleChild = menu.children && menu.children.some(child => {
+      // 접근 가능한 자식이 있는지 확인
+      const accessibleChildren = (menu.children || []).filter(child => {
         const perm = permissions[currentUser.role][child.id];
         return perm && perm.read;
       });
-      
-      if (!hasAccessibleChild) return;
-      
-      const isExpanded = expandedGroups.includes(menu.id);
-      
-      html += '<div class="nav-group">';
-      html += '  <div class="nav-group-header" onclick="toggleGroup(\'' + menu.id + '\')">';
-      html += '    <div style="display: flex; align-items: center; gap: 8px;">';
-      html += '      <span class="nav-icon">' + menu.icon + '</span>';
-      html += '      <span>' + menu.name + '</span>';
-      html += '    </div>';
-      html += '    <span class="nav-group-toggle">' + (isExpanded ? '▼' : '▶') + '</span>';
-      html += '  </div>';
-      
-      if (isExpanded && menu.children) {
-        html += '  <div class="nav-group-children">';
-        menu.children.forEach(child => {
-          if (child.type === 'page') {
-            const perm = permissions[currentUser.role][child.id];
-            if (!perm || !perm.read) return;
-            
-            const isFavorite = favoritePages.includes(child.id);
-            
-            html += '    <div class="nav-item nav-item-child" data-page="' + child.id + '" onclick="navigateTo(\'' + child.id + '\')">';
-            html += '      <span class="nav-icon">' + child.icon + '</span>';
-            html += '      <span>' + child.name + '</span>';
-            html += '      <span class="favorite-star ' + (isFavorite ? 'active' : '') + '" onclick="event.stopPropagation(); toggleFavorite(\'' + child.id + '\')">' + (isFavorite ? '★' : '☆') + '</span>';
-            html += '    </div>';
-          }
-        });
-        html += '  </div>';
-      }
-      
-      html += '</div>';
+      if (accessibleChildren.length === 0) return;
+
+      // 섹션 레이블 (아코디언 없음 — 항상 펼쳐진 상태)
+      html += '<div class="nav-section-label">' + menu.name + '</div>';
+      accessibleChildren.forEach(child => {
+        if (child.type !== 'page') return;
+        const isFav = favoritePages.includes(child.id);
+        html += '<div class="nav-item" data-page="' + child.id + '" onclick="navigateTo(\'' + child.id + '\')">';
+        html += '<span class="nav-icon">' + child.icon + '</span>';
+        html += '<span class="nav-label">' + child.name + '</span>';
+        html += '<span class="favorite-star ' + (isFav ? 'active' : '') + '" onclick="event.stopPropagation();toggleFavorite(\'' + child.id + '\')">' + (isFav ? '★' : '☆') + '</span>';
+        html += '</div>';
+      });
     }
   });
-  
+
   nav.innerHTML = html;
-  
+
   // 현재 페이지 활성화
   document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.toggle('active', item.dataset.page === currentPage);
@@ -4029,10 +4185,8 @@ function toggleSidebar() {
     localStorage.setItem('isSidebarCollapsed', JSON.stringify(isSidebarCollapsed));
     if (isSidebarCollapsed) {
       sidebar.classList.add('collapsed');
-      if (overlay) overlay.style.display = 'none';
     } else {
       sidebar.classList.remove('collapsed');
-      if (overlay) overlay.style.display = 'block';
     }
   }
 }
@@ -4043,20 +4197,20 @@ function closeSidebar() {
   const isMobile = window.innerWidth <= 768;
   if (isMobile) {
     sidebar.classList.remove('open');
+    if (overlay) overlay.style.display = 'none';
   } else {
     isSidebarCollapsed = true;
     localStorage.setItem('isSidebarCollapsed', JSON.stringify(isSidebarCollapsed));
     sidebar.classList.add('collapsed');
   }
-  if (overlay) overlay.style.display = 'none';
 }
 
 function renderPages() {
   const main = document.getElementById('main');
   if (!main) return;
-  
+
   main.innerHTML = '';
-  
+
   // 모든 페이지 ID 수집
   const allPages = [];
   MENUS.forEach(menu => {
@@ -4070,15 +4224,15 @@ function renderPages() {
       });
     }
   });
-  
+
   allPages.forEach(menu => {
     const perm = permissions[currentUser.role][menu.id];
     if (!perm || !perm.read) return;
-    
+
     const page = document.createElement('div');
     page.className = 'page';
     page.id = 'page-' + menu.id;
-    
+
     page.innerHTML = `
       <div class="page-header">
         <div class="page-title">${menu.name}</div>
@@ -4088,7 +4242,7 @@ function renderPages() {
         ${getPageContent(menu.id)}
       </div>
     `;
-    
+
     main.appendChild(page);
   });
 }
@@ -4136,7 +4290,7 @@ function getPageContent(pageId) {
             </div>
           </div>
         </div>
-        
+
         <!-- 통계 카드 -->
         <div class="dashboard-stats-grid">
           <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--sh);">
@@ -4156,7 +4310,7 @@ function getPageContent(pageId) {
             <div style="font-size: 28px; font-weight: 700; color: var(--text2);" id="stat-feedback">0</div>
           </div>
         </div>
-        
+
         <!-- 최근 활동 -->
         <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--sh);">
           <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text);">
@@ -4169,7 +4323,7 @@ function getPageContent(pageId) {
       </div>
     `;
   }
-  
+
   // 캘린더 페이지
   if (pageId === 'calendar') {
     return `
@@ -4184,11 +4338,11 @@ function getPageContent(pageId) {
               다음 →
             </button>
           </div>
-          
+
           <h2 id="calendar-title" style="font-size: 18px; font-weight: 700; color: var(--text);">
             2026년 4월
           </h2>
-          
+
           <div style="display: flex; gap: 8px;">
             <button class="btn btn-outline btn-sm" onclick="goToToday()">
               📅 오늘
@@ -4201,7 +4355,7 @@ function getPageContent(pageId) {
             </button>
           </div>
         </div>
-        
+
         <!-- 캘린더 그리드 -->
         <div id="calendar-grid" style="
           display: grid;
@@ -4220,10 +4374,10 @@ function getPageContent(pageId) {
           <div style="background: var(--bg-side); padding: 12px; text-align: center; font-weight: 600; font-size: 13px; color: var(--text2);">금</div>
           <div style="background: var(--bg-side); padding: 12px; text-align: center; font-weight: 600; font-size: 13px; color: var(--text2);">토</div>
           <div style="background: var(--bg-side); padding: 12px; text-align: center; font-weight: 600; font-size: 13px; color: var(--text2);">일</div>
-          
+
           <!-- 날짜 셀은 JavaScript로 동적 생성 -->
         </div>
-        
+
         <!-- 범례 -->
         <div style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px;">
           <div style="display: flex; align-items: center; gap: 6px;">
@@ -4242,23 +4396,23 @@ function getPageContent(pageId) {
       </div>
     `;
   }
-  
+
   // 학생 관리 페이지
   if (pageId === 'students') {
     const canWrite = permissions[currentUser.role].students?.write;
     return '<div id="students-page-content"></div>';
   }
-  
+
   // 교재 관리 페이지
   if (pageId === 'textbooks') {
     return '<div id="textbooks-page-content"></div>';
   }
-  
+
   // 결제 관리 페이지
   if (pageId === 'payments') {
     return '<div id="payments-page-content"></div>';
   }
-  
+
   // 월별등록대장 페이지
   if (pageId === 'monthly-register') {
     return '<div id="page-monthly-register-content"></div>';
@@ -4311,7 +4465,7 @@ function getPageContent(pageId) {
           </p>
           <button class="btn btn-primary btn-sm" onclick="openPermissionsModal()">권한 설정</button>
         </div>
-        
+
         <div style="padding: 20px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <h3 style="font-size: 16px; font-weight: 600; margin:0;">로그인 허용 계정</h3>
@@ -4322,7 +4476,7 @@ function getPageContent(pageId) {
           </p>
           <div id="allowed-accounts-list"></div>
         </div>
-        
+
         <div style="padding: 20px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
           <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">학원 기본 정보</h3>
           <p style="font-size: 14px; color: var(--text2); margin-bottom: 16px;">
@@ -4333,7 +4487,7 @@ function getPageContent(pageId) {
       </div>
     `;
   }
-  
+
   // 기본 빈 상태
   return `
     <div class="empty-state">
@@ -4463,23 +4617,23 @@ async function deleteAllowedAccount(id) {
 
 function navigateTo(pageId) {
   currentPage = pageId;
-  
+
   // localStorage에 현재 페이지 저장
   localStorage.setItem('currentPage', pageId);
-  
+
   // URL 해시 업데이트
   window.location.hash = pageId;
-  
+
   // 사이드바 활성화
   document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.toggle('active', item.dataset.page === pageId);
   });
-  
+
   // 페이지 활성화
   document.querySelectorAll('.page').forEach(page => {
     page.classList.toggle('active', page.id === 'page-' + pageId);
   });
-  
+
   // 모바일 제목 업데이트
   let menuItem = null;
   for (const menu of MENUS) {
@@ -4494,31 +4648,31 @@ function navigateTo(pageId) {
       }
     }
   }
-  
+
   const mobileTitle = document.getElementById('mobile-title');
   if (menuItem && mobileTitle) {
     mobileTitle.textContent = menuItem.name;
   }
-  
+
   // 대시보드로 이동 시 통계 업데이트
   if (pageId === 'dashboard') {
     updateDashboard();
   }
-  
+
   // 캘린더로 이동 시 캘린더 렌더링
   if (pageId === 'calendar') {
     setTimeout(() => renderCalendar(), 50);
   }
-  
+
   // 페이지별 렌더링
   if (pageId === 'students') {
     renderStudentsPage();
   }
-  
+
   if (pageId === 'textbooks') {
     renderTextbooksPage();
   }
-  
+
   if (pageId === 'payments') {
     renderPaymentsPage();
   }
@@ -4546,7 +4700,7 @@ function openPermissionsModal() {
 function renderPermissionsTable() {
   const container = document.getElementById('permissions-content');
   if (!container) return;
-  
+
   let html = '<div style="overflow-x: auto;">';
   html += '<table style="width: 100%; border-collapse: collapse; font-size: 13px;">';
   html += '<thead>';
@@ -4557,7 +4711,7 @@ function renderPermissionsTable() {
   html += '</tr>';
   html += '</thead>';
   html += '<tbody>';
-  
+
   MENUS.forEach(menu => {
     html += '<tr style="border-bottom: 1px solid var(--border);">';
     html += `<td style="padding: 12px; font-weight: 500;">${menu.icon} ${menu.name}</td>`;
@@ -4565,11 +4719,11 @@ function renderPermissionsTable() {
     html += `<td style="padding: 12px; text-align: center;">${renderPermissionCheckboxes('assistant', menu.id)}</td>`;
     html += '</tr>';
   });
-  
+
   html += '</tbody>';
   html += '</table>';
   html += '</div>';
-  
+
   container.innerHTML = html;
 }
 
@@ -4578,11 +4732,11 @@ function renderPermissionCheckboxes(role, menuId) {
   const readChecked = perm && perm.read ? 'checked' : '';
   const writeChecked = perm && perm.write ? 'checked' : '';
   const ownOnlyChecked = perm && perm.ownOnly ? 'checked' : '';
-  
+
   // 본인만 옵션이 의미있는 메뉴들
   const ownOnlyMenus = ['salary', 'worklog', 'feedback'];
   const showOwnOnly = ownOnlyMenus.includes(menuId);
-  
+
   let html = '<div style="display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap;">';
   html += '<label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">';
   html += '  <input type="checkbox" ';
@@ -4602,7 +4756,7 @@ function renderPermissionCheckboxes(role, menuId) {
   html += '    onchange="updatePermissionCheckbox(this)">';
   html += '  <span style="font-size: 12px;">쓰기</span>';
   html += '</label>';
-  
+
   if (showOwnOnly) {
     html += '<label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">';
     html += '  <input type="checkbox" ';
@@ -4614,9 +4768,9 @@ function renderPermissionCheckboxes(role, menuId) {
     html += '  <span style="font-size: 12px;">본인만</span>';
     html += '</label>';
   }
-  
+
   html += '</div>';
-  
+
   return html;
 }
 
@@ -4624,13 +4778,13 @@ function updatePermissionCheckbox(checkbox) {
   const role = checkbox.dataset.role;
   const menuId = checkbox.dataset.menu;
   const permType = checkbox.dataset.perm;
-  
+
   if (!permissions[role][menuId]) {
     permissions[role][menuId] = { read: false, write: false, ownOnly: false };
   }
-  
+
   permissions[role][menuId][permType] = checkbox.checked;
-  
+
   // 쓰기 권한이 있으면 읽기도 자동 체크
   if (permType === 'write' && checkbox.checked) {
     permissions[role][menuId].read = true;
@@ -4639,7 +4793,7 @@ function updatePermissionCheckbox(checkbox) {
     );
     if (readCheckbox) readCheckbox.checked = true;
   }
-  
+
   // 읽기 권한이 없으면 쓰기도 자동 해제
   if (permType === 'read' && !checkbox.checked) {
     permissions[role][menuId].write = false;
@@ -4648,7 +4802,7 @@ function updatePermissionCheckbox(checkbox) {
     );
     if (writeCheckbox) writeCheckbox.checked = false;
   }
-  
+
   // 본인만 옵션이 켜지면 읽기 권한도 자동 체크
   if (permType === 'ownOnly' && checkbox.checked) {
     permissions[role][menuId].read = true;
@@ -4663,7 +4817,7 @@ function savePermissions() {
   // TODO: 실제로는 Sheets에 저장
   closeModal('modal-permissions');
   showToast('권한 설정이 저장되었습니다');
-  
+
   // 사이드바와 페이지 재렌더링
   renderSidebar();
   renderPages();
@@ -4682,17 +4836,17 @@ function setSyncStatus(state, msg) {
 function renderStudentsPage() {
   const container = document.getElementById('students-page-content');
   if (!container) return;
-  
+
   const canWrite = permissions[currentUser.role].students?.write;
-  
+
   let html = '';
-  
+
   // 뷰 전환 탭 (결제 관리와 동일한 탭 스타일)
   html += '<div style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--border);">';
   html += '  <button class="tab-btn ' + (currentStudentView === 'list' ? 'active' : '') + '" onclick="changeStudentView(\'list\')">일반 뷰</button>';
   html += '  <button class="tab-btn ' + (currentStudentView === 'textbooks' ? 'active' : '') + '" onclick="changeStudentView(\'textbooks\')">교재 사용 현황</button>';
   html += '</div>';
-  
+
   // 교재 사용 현황 뷰
   if (currentStudentView === 'textbooks') {
     container.innerHTML = html;
@@ -4973,11 +5127,11 @@ function renderPageSizeHtml(currentSize, options, onChangeFn) {
 function renderStudentPagination() {
   const totalPages = Math.ceil(studentPagination.totalItems / studentPagination.pageSize) || 1;
   const currentPage = studentPagination.currentPage;
-  
+
   let html = '<div class="pagination-container">';
   html += '  <div class="pagination">';
   html += '    <button class="page-btn" onclick="changePage(' + (currentPage - 1) + ')" ' + (currentPage === 1 ? 'disabled' : '') + '>이전</button>';
-  
+
   // 페이지 번호 (모바일에서는 현재 페이지만)
   const isMobile = window.innerWidth <= 768;
   if (isMobile) {
@@ -4985,22 +5139,22 @@ function renderStudentPagination() {
   } else {
     const startPage = Math.max(1, currentPage - 2);
     const endPage = Math.min(totalPages, currentPage + 2);
-    
+
     if (startPage > 1) {
       html += '    <button class="page-btn" onclick="changePage(1)">1</button>';
       if (startPage > 2) html += '    <span class="page-btn" disabled>...</span>';
     }
-    
+
     for (let i = startPage; i <= endPage; i++) {
       html += '    <button class="page-btn' + (i === currentPage ? ' active' : '') + '" onclick="changePage(' + i + ')">' + i + '</button>';
     }
-    
+
     if (endPage < totalPages) {
       if (endPage < totalPages - 1) html += '    <span class="page-btn" disabled>...</span>';
       html += '    <button class="page-btn" onclick="changePage(' + totalPages + ')">' + totalPages + '</button>';
     }
   }
-  
+
   html += '    <button class="page-btn" onclick="changePage(' + (currentPage + 1) + ')" ' + (currentPage === totalPages ? 'disabled' : '') + '>다음</button>';
   html += '  </div>';
   html += '  <div class="page-size-selector">';
@@ -5014,7 +5168,7 @@ function renderStudentPagination() {
   html += '    </select>';
   html += '  </div>';
   html += '</div>';
-  
+
   return html;
 }
 
@@ -5040,10 +5194,10 @@ function getStudentStatus(student) {
   if (!student.enrollmentRecords || student.enrollmentRecords.length === 0) {
     return '재원';
   }
-  
+
   const sorted = student.enrollmentRecords.sort((a, b) => b.date.localeCompare(a.date));
   const latestRecord = sorted[0];
-  
+
   if (latestRecord.type === '퇴원') {
     if (latestRecord.date <= today()) {
       return '퇴원';
@@ -5051,13 +5205,13 @@ function getStudentStatus(student) {
       return '재원';
     }
   }
-  
+
   return '재원';
 }
 
 function getFilteredStudents() {
   let filtered = studentsData;
-  
+
   if (currentStudentFilter.search) {
     const search = currentStudentFilter.search.toLowerCase();
     filtered = filtered.filter(s => 
@@ -5066,11 +5220,11 @@ function getFilteredStudents() {
       (s.number && s.number.toString().includes(search))
     );
   }
-  
+
   if (currentStudentFilter.grade) {
     filtered = filtered.filter(s => s.grade && s.grade.startsWith(currentStudentFilter.grade));
   }
-  
+
   // 정렬
   filtered = filtered.sort((a, b) => {
     if (currentStudentSort === 'name-asc') {
@@ -5084,7 +5238,7 @@ function getFilteredStudents() {
     }
     return 0;
   });
-  
+
   return filtered;
 }
 
@@ -5178,27 +5332,27 @@ function clearSelection() {
 
 function openBulkEditModal() {
   if (selectedStudentIds.length === 0) return;
-  
+
   const count = document.getElementById('bulk-edit-count');
   if (count) count.textContent = selectedStudentIds.length;
-  
+
   loadTeacherOptionsFor('bulk-teacher');
   loadClassOptionsFor('bulk-class');
-  
+
   openModal('modal-bulk-edit');
 }
 
 function saveBulkEdit(e) {
   e.preventDefault();
-  
+
   const teacher = document.getElementById('bulk-teacher').value;
   const classValue = document.getElementById('bulk-class').value;
-  
+
   let updateCount = 0;
   selectedStudentIds.forEach(id => {
     const student = studentsData.find(s => s.id === id);
     if (!student) return;
-    
+
     if (teacher) {
       student.teacher = teacher;
       updateCount++;
@@ -5208,11 +5362,11 @@ function saveBulkEdit(e) {
       updateCount++;
     }
   });
-  
+
   if (updateCount > 0) {
     showToast(selectedStudentIds.length + '명의 학생 정보가 수정되었습니다');
   }
-  
+
   closeModal('modal-bulk-edit');
   clearSelection();
   renderStudentsPage();
@@ -5220,12 +5374,12 @@ function saveBulkEdit(e) {
 
 function bulkDeleteStudents() {
   if (selectedStudentIds.length === 0) return;
-  
+
   if (!confirm(selectedStudentIds.length + '명의 학생을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
-  
+
   studentsData = studentsData.filter(s => !selectedStudentIds.includes(s.id));
   showToast(selectedStudentIds.length + '명의 학생이 삭제되었습니다');
-  
+
   closeModal('modal-bulk-edit');
   clearSelection();
   renderStudentsPage();
@@ -5238,31 +5392,31 @@ function openStudentForm(studentId, options) {
   const modal = document.getElementById('modal-student-form');
   const title = document.getElementById('student-form-title');
   const form = document.getElementById('student-form');
-  
+
   if (!modal || !title || !form) return;
-  
+
   // 옵션 저장 (saveStudent에서 읽어서 사용)
   window.studentFormOptions = options || null;
-  
+
   // 옵션 로드
   loadTeacherOptionsFor('student-teacher');
   loadClassOptionsFor('student-class');
   loadSchoolOptions();
   loadParentTypeOptions();
-  
+
   if (studentId) {
     // 수정 모드
     const student = studentsData.find(s => s.id === studentId);
     if (!student) return;
-    
+
     title.textContent = '학생 수정';
     document.getElementById('student-form-id').value = student.id;
     document.getElementById('student-name').value = student.name || '';
     document.getElementById('student-school').value = student.school || '';
-    
+
     // 학교급 자동 채우기
     autoFillSchoolLevel();
-    
+
     // 학년 설정
     if (student.grade) {
       const gradeNum = student.grade.substring(1);
@@ -5270,11 +5424,11 @@ function openStudentForm(studentId, options) {
         document.getElementById('student-grade-num').value = gradeNum;
       }, 50);
     }
-    
+
     document.getElementById('student-birthdate').value = student.birthdate || '';
     document.getElementById('student-teacher').value = student.teacher || '';
     document.getElementById('student-class').value = student.class || '';
-    
+
     // 요일 체크박스
     document.querySelectorAll('.day-checkbox').forEach(cb => cb.checked = false);
     if (student.days) {
@@ -5283,7 +5437,7 @@ function openStudentForm(studentId, options) {
         if (days.includes(cb.value)) cb.checked = true;
       });
     }
-    
+
     document.getElementById('student-phone').value = student.phone || '';
     document.getElementById('student-parent-phone').value = student.parentPhone || '';
     document.getElementById('student-parent-type').value = student.parentType || '';
@@ -5295,23 +5449,23 @@ function openStudentForm(studentId, options) {
     title.textContent = '학생 추가';
     form.reset();
     document.getElementById('student-form-id').value = '';
-    
+
     // 새 학생 번호 자동 생성
     const maxNumber = Math.max(0, ...studentsData.map(s => parseInt(s.number) || 0));
     document.getElementById('student-number').value = maxNumber + 1;
-    
+
     updateGradeOptions();
   }
-  
+
   openModal('modal-student-form');
 }
 
 function updateGradeOptions() {
   const level = document.getElementById('student-school-level').value;
   const gradeSelect = document.getElementById('student-grade-num');
-  
+
   if (!gradeSelect) return;
-  
+
   let html = '';
   if (!level) {
     html = '<option value="">학교 선택 후</option>';
@@ -5326,7 +5480,7 @@ function updateGradeOptions() {
       html += '<option value="' + i + '">' + i + '학년</option>';
     }
   }
-  
+
   gradeSelect.innerHTML = html;
 }
 
@@ -5368,7 +5522,7 @@ function autoFillSchoolLevel() {
 function loadSchoolOptions() {
   const select = document.getElementById('student-school');
   if (!select) return;
-  
+
   let html = '<option value="">선택</option>';
   schoolsData.forEach(school => {
     html += '<option value="' + school.name + '">' + school.name + '</option>';
@@ -5379,7 +5533,7 @@ function loadSchoolOptions() {
 function loadParentTypeOptions() {
   const select = document.getElementById('student-parent-type');
   if (!select) return;
-  
+
   let html = '<option value="">선택</option>';
   parentTypesData.forEach(type => {
     html += '<option value="' + type + '">' + type + '</option>';
@@ -5390,7 +5544,7 @@ function loadParentTypeOptions() {
 function loadTeacherOptionsFor(selectId) {
   const select = document.getElementById(selectId);
   if (!select) return;
-  
+
   const currentValue = select.value;
   let html = '<option value="">선택</option>';
   teachersData.forEach(teacher => {
@@ -5403,7 +5557,7 @@ function loadTeacherOptionsFor(selectId) {
 function loadClassOptionsFor(selectId) {
   const select = document.getElementById(selectId);
   if (!select) return;
-  
+
   const currentValue = select.value;
   let html = '<option value="">선택</option>';
   classesData.forEach(cls => {
@@ -5415,22 +5569,22 @@ function loadClassOptionsFor(selectId) {
 
 function saveStudent(e) {
   e.preventDefault();
-  
+
   const id = document.getElementById('student-form-id').value;
   let savedStudentId = null; // 추가 모드에서 새로 생성된 학생 ID 저장용
-  
+
   // 학년 조합
   const schoolLevel = document.getElementById('student-school-level').value;
   const gradeNum = document.getElementById('student-grade-num').value;
   const grade = schoolLevel && gradeNum ? schoolLevel + gradeNum : '';
-  
+
   // 요일 조합
   const selectedDays = [];
   document.querySelectorAll('.day-checkbox:checked').forEach(cb => {
     selectedDays.push(cb.value);
   });
   const days = selectedDays.join(', ');
-  
+
   const studentData = {
     name: document.getElementById('student-name').value,
     school: document.getElementById('student-school').value,
@@ -5447,7 +5601,7 @@ function saveStudent(e) {
     memo: document.getElementById('student-memo').value,
     profileImage: window.tempStudentProfileImage || ''
   };
-  
+
   if (id) {
     const index = studentsData.findIndex(s => s.id === id);
     if (index !== -1) {
@@ -5488,9 +5642,9 @@ function deleteStudentFromDetail() {
 function deleteStudent(studentId) {
   const student = studentsData.find(s => s.id === studentId);
   if (!student) return;
-  
+
   if (!confirm(student.name + ' 학생을 삭제하시겠습니까?')) return;
-  
+
   addEventLog('DELETE', 'student', studentId, { id: studentId });
   studentsData = studentsData.filter(s => s.id !== studentId);
   showToast('학생이 삭제되었습니다');
@@ -5500,53 +5654,53 @@ function deleteStudent(studentId) {
 function openStudentDetail(studentId) {
   const student = studentsData.find(s => s.id === studentId);
   if (!student) return;
-  
+
   currentDetailStudent = student;
-  
+
   // 이름 표시
   const nameEl = document.getElementById('detail-student-name');
   if (nameEl) nameEl.textContent = student.name || '학생 상세';
-  
+
   // 모든 탭 비활성화
   document.querySelectorAll('#modal-student-detail .tab-content').forEach(tab => {
     tab.classList.remove('active');
     tab.style.display = 'none';
   });
-  
+
   // 기본 정보 탭만 활성화
   const infoTab = document.getElementById('student-detail-tab-info');
   if (infoTab) {
     infoTab.classList.add('active');
     infoTab.style.display = 'block';
   }
-  
+
   // 탭 버튼도 첫 번째만 활성화
   document.querySelectorAll('#modal-student-detail .tab-btn').forEach((btn, i) => {
     btn.classList.toggle('active', i === 0);
   });
-  
+
   // 기본 정보 탭 렌더링
   renderStudentDetailInfo(student);
-  
+
   openModal('modal-student-detail');
 }
 
 function renderStudentDetailInfo(student) {
   const status = getStudentStatus(student);
-  
+
   // 프로필 이미지 표시
   const profileEl = document.getElementById('detail-profile-image');
   if (profileEl) {
     profileEl.innerHTML = getProfileImageHTML(student, 120);
   }
-  
+
   // 학년 표시 (학교급 제외, 숫자만)
   let gradeDisplay = student.grade || '-';
   if (student.grade && student.grade.length >= 2) {
     const gradeNum = student.grade.slice(-1);
     gradeDisplay = gradeNum + '학년';
   }
-  
+
   const fields = {
     'detail-info-name': student.name,
     'detail-info-birthdate': student.birthdate,
@@ -5562,29 +5716,29 @@ function renderStudentDetailInfo(student) {
     'detail-info-address': student.address,
     'detail-info-memo': student.memo
   };
-  
+
   Object.keys(fields).forEach(key => {
     const el = document.getElementById(key);
     if (el) el.textContent = fields[key] || '-';
   });
-  
+
   renderEnrollmentRecords(student);
 }
 
 function renderEnrollmentRecords(student) {
   const tabContainer = document.getElementById('detail-enrollment-records-tab');
   if (!tabContainer) return;
-  
+
   const records = student.enrollmentRecords || [];
-  
+
   if (records.length === 0) {
     tabContainer.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">등록/퇴원 기록이 없습니다</div></div>';
     return;
   }
-  
+
   // 날짜순 정렬
   const sorted = records.sort((a, b) => b.date.localeCompare(a.date));
-  
+
   let html = '<div class="timeline">';
   sorted.forEach(record => {
     html += '<div class="timeline-item">';
@@ -5598,7 +5752,7 @@ function renderEnrollmentRecords(student) {
     html += '</div>';
   });
   html += '</div>';
-  
+
   tabContainer.innerHTML = html;
 }
 
@@ -5609,13 +5763,13 @@ function openEnrollmentRecordsEditor() {
     showToast('학생 정보를 찾을 수 없습니다');
     return;
   }
-  
+
   const student = studentsData.find(s => s.id === currentDetailStudent.id);
   if (!student) return;
-  
+
   // 현재 기록 복사
   tempEnrollmentRecords = JSON.parse(JSON.stringify(student.enrollmentRecords || []));
-  
+
   renderEnrollmentRecordsTable();
   openModal('modal-enrollment-record');
 }
@@ -5623,12 +5777,12 @@ function openEnrollmentRecordsEditor() {
 function renderEnrollmentRecordsTable() {
   const tbody = document.getElementById('enrollment-records-table');
   if (!tbody) return;
-  
+
   if (tempEnrollmentRecords.length === 0) {
     tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: var(--text3);">기록이 없습니다</td></tr>';
     return;
   }
-  
+
   let html = '';
   tempEnrollmentRecords.forEach((record, index) => {
     html += '<tr class="enrollment-record-row">';
@@ -5649,7 +5803,7 @@ function renderEnrollmentRecordsTable() {
     html += '  </td>';
     html += '</tr>';
   });
-  
+
   tbody.innerHTML = html;
 }
 
@@ -5677,13 +5831,13 @@ function deleteTempRecord(index) {
 
 function saveAllEnrollmentRecords() {
   if (!currentDetailStudent) return;
-  
+
   const student = studentsData.find(s => s.id === currentDetailStudent.id);
   if (!student) return;
-  
+
   student.enrollmentRecords = tempEnrollmentRecords;
   currentDetailStudent = student;
-  
+
   showToast('등록/퇴원 기록이 저장되었습니다');
   closeModal('modal-enrollment-record');
   renderEnrollmentRecords(student);
@@ -5695,18 +5849,18 @@ function switchDetailTab(tabName) {
     btn.classList.remove('active');
   });
   event.target.classList.add('active');
-  
+
   // 탭 콘텐츠 활성화
   document.querySelectorAll('.tab-content').forEach(content => {
     content.classList.remove('active');
   });
-  
+
   const targetTab = document.getElementById('detail-tab-' + tabName);
   if (targetTab) targetTab.classList.add('active');
-  
+
   // 탭별 데이터 로드
   if (!currentDetailStudent) return;
-  
+
   if (tabName === 'textbooks') {
     renderStudentTextbooks();
   } else if (tabName === 'payments') {
@@ -5722,18 +5876,18 @@ function switchDetailTab(tabName) {
 function renderStudentPayments(student) {
   const container = document.getElementById('detail-payments-list');
   if (!container) return;
-  
+
   const studentPayments = paymentsData.filter(p => p.studentId === student.id);
-  
+
   if (studentPayments.length === 0) {
     container.innerHTML = '<div class="empty-state"><div class="empty-icon">💳</div><div class="empty-text">결제 이력이 없습니다</div></div>';
     return;
   }
-  
+
   let html = '<table class="student-table">';
   html += '<thead><tr><th>등록월</th><th>교습비</th><th>입금금액</th><th>결제수단</th><th>결제날짜</th></tr></thead>';
   html += '<tbody>';
-  
+
   studentPayments.forEach(payment => {
     html += '<tr>';
     html += '<td>' + (payment.month || '-') + '</td>';
@@ -5743,7 +5897,7 @@ function renderStudentPayments(student) {
     html += '<td>' + (payment.paymentDate || '-') + '</td>';
     html += '</tr>';
   });
-  
+
   html += '</tbody></table>';
   container.innerHTML = html;
 }
@@ -5751,16 +5905,16 @@ function renderStudentPayments(student) {
 function renderStudentFeedback(student) {
   const container = document.getElementById('detail-feedback-list');
   if (!container) return;
-  
+
   const studentFeedback = feedbackData.filter(f => f.studentId === student.id);
-  
+
   if (studentFeedback.length === 0) {
     container.innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><div class="empty-text">피드백 이력이 없습니다</div></div>';
     return;
   }
-  
+
   let html = '<div class="timeline">';
-  
+
   studentFeedback.forEach(fb => {
     html += '<div class="timeline-item">';
     html += '  <div class="timeline-date">' + (fb.date || '-') + '</div>';
@@ -5770,7 +5924,7 @@ function renderStudentFeedback(student) {
     html += '  </div>';
     html += '</div>';
   });
-  
+
   html += '</div>';
   container.innerHTML = html;
 }
@@ -5778,16 +5932,16 @@ function renderStudentFeedback(student) {
 function renderStudentHistory(student) {
   const container = document.getElementById('detail-history-list');
   if (!container) return;
-  
+
   const history = statusHistoryData.filter(h => h.studentId === student.id);
-  
+
   if (history.length === 0) {
     container.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">상태 이력이 없습니다</div></div>';
     return;
   }
-  
+
   let html = '';
-  
+
   history.forEach(item => {
     html += '<div class="timeline-item">';
     html += '  <div class="timeline-date">' + (item.date || '-') + '</div>';
@@ -5799,7 +5953,7 @@ function renderStudentHistory(student) {
     html += '  </div>';
     html += '</div>';
   });
-  
+
   container.innerHTML = html;
 }
 
@@ -5830,10 +5984,10 @@ function loadSampleData() {
     { id: '3', name: '명문고등학교', type: '고' },
     { id: '4', name: '양운중학교', type: '중' }
   ];
-  
+
   // 보호자 구분 샘플 데이터
   parentTypesData = ['부', '모', '조부', '조모', '외조부', '외조모', '기타'];
-  
+
   // 선생님 샘플 데이터
   teachersData = [
     { id: '1', name: '김선생', type: '선생님', phone: '010-1234-5678', paymentType: 'ratio', settlementRate: 70, icon: '✍️' },
@@ -5850,7 +6004,7 @@ function loadSampleData() {
     { id: '2', name: '중등반B', teacher: '이선생', tuition: 300000, days: '화, 목', time: '16:00 ~ 18:00' },
     { id: '3', name: '고등반C', teacher: '박선생', tuition: 350000, days: '월, 수, 금', time: '19:00 ~ 21:00' }
   ];
-  
+
   // 학생 샘플 데이터
   studentsData = [
     {
@@ -5950,10 +6104,10 @@ function loadSampleData() {
       { id: 'ds031', number: '130', name: '조진우', school: '풍당고등학교', grade: '고2', teacher: '특강', class: '고등 기본반', days: '월, 수', phone: '', parentPhone: '', parentType: '', address: '', memo: '', enrollmentRecords: [{ id: uid(), type: '등록', date: '2025-09-01', memo: '최초 등록' }], createdAt: '2025-09-01' }
 
   ];
-  
+
   // 결제 관리 샘플 데이터 로드
   loadPaymentSampleData();
-  
+
   // 피드백 샘플 데이터
   feedbackData = [
     {
@@ -5965,7 +6119,7 @@ function loadSampleData() {
       sent: true
     }
   ];
-  
+
   // 교재 샘플 데이터
   textbooksData = [
     {
@@ -6011,7 +6165,7 @@ function loadSampleData() {
       createdAt: '2026-02-10'
     }
   ];
-  
+
   // 학생-교재 연결 샘플 데이터
   studentTextbooksData = [
     { id: '1', studentId: '1', textbookId: '1', assignedDate: '2026-03-15' },
@@ -6019,11 +6173,11 @@ function loadSampleData() {
     { id: '3', studentId: '3', textbookId: '1', assignedDate: '2026-02-20' },
     { id: '4', studentId: '3', textbookId: '3', assignedDate: '2026-02-20' }
   ];
-  
+
   // 월별등록대장 초기 탭
   monthlyRegisterTabs = ['2026-04', '2026-03', '2026-05'];
   currentMonthTab = '2026-04';
-  
+
   // 피드백톡 템플릿 기본 데이터
   feedbackTemplatesData = [
     {
@@ -6329,7 +6483,7 @@ function renderTextbookPagination(opts) {
 
 function getFilteredTextbooks() {
   let filtered = textbooksData;
-  
+
   if (currentTextbookFilter.search) {
     const search = currentTextbookFilter.search.toLowerCase();
     filtered = filtered.filter(t => 
@@ -6339,15 +6493,15 @@ function getFilteredTextbooks() {
       (t.publisher && t.publisher.toLowerCase().includes(search))
     );
   }
-  
+
   if (currentTextbookFilter.subject) {
     filtered = filtered.filter(t => t.subject === currentTextbookFilter.subject);
   }
-  
+
   if (currentTextbookFilter.publisher) {
     filtered = filtered.filter(t => t.publisher === currentTextbookFilter.publisher);
   }
-  
+
   // 정렬
   filtered = filtered.sort((a, b) => {
     if (currentTextbookSort === 'title-asc') {
@@ -6365,7 +6519,7 @@ function getFilteredTextbooks() {
     }
     return 0;
   });
-  
+
   return filtered;
 }
 
@@ -6452,10 +6606,10 @@ function toggleAllTextbooksSelection(checked) {
 function updateSelectAllCheckbox() {
   const checkbox = document.getElementById('select-all-textbooks');
   if (!checkbox) return;
-  
+
   const checkboxes = document.querySelectorAll('.textbook-checkbox');
   const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-  
+
   checkbox.checked = checkboxes.length > 0 && checkedCount === checkboxes.length;
   checkbox.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
 }
@@ -6466,9 +6620,9 @@ function toggleAllTextbooks() {
   const startIdx = (textbookPagination.currentPage - 1) * textbookPagination.pageSize;
   const endIdx = startIdx + textbookPagination.pageSize;
   const pageTextbooks = filteredTextbooks.slice(startIdx, endIdx);
-  
+
   const allSelected = pageTextbooks.every(t => selectedTextbookIds.includes(t.id));
-  
+
   if (allSelected) {
     // 전체 해제
     pageTextbooks.forEach(t => {
@@ -6483,7 +6637,7 @@ function toggleAllTextbooks() {
       }
     });
   }
-  
+
   renderTextbooksPage();
 }
 
@@ -6491,14 +6645,14 @@ function openTextbookForm(textbookId) {
   const modal = document.getElementById('modal-textbook-form');
   const title = document.getElementById('textbook-form-title');
   const form = document.getElementById('textbook-form');
-  
+
   if (!modal || !title || !form) return;
-  
+
   if (textbookId) {
     // 수정 모드
     const textbook = textbooksData.find(t => t.id === textbookId);
     if (!textbook) return;
-    
+
     title.textContent = '교재 수정';
     document.getElementById('textbook-form-id').value = textbook.id;
     document.getElementById('textbook-title').value = textbook.title || '';
@@ -6518,15 +6672,15 @@ function openTextbookForm(textbookId) {
     document.getElementById('textbook-form-id').value = '';
     document.getElementById('textbook-stock').value = '0';
   }
-  
+
   openModal('modal-textbook-form');
 }
 
 function saveTextbook(e) {
   e.preventDefault();
-  
+
   const id = document.getElementById('textbook-form-id').value;
-  
+
   const textbookData = {
     title: document.getElementById('textbook-title').value,
     author: document.getElementById('textbook-author').value,
@@ -6539,7 +6693,7 @@ function saveTextbook(e) {
     coverUrl: document.getElementById('textbook-cover-url').value,
     memo: document.getElementById('textbook-memo').value
   };
-  
+
   if (id) {
     // 수정
     const index = textbooksData.findIndex(t => t.id === id);
@@ -6560,7 +6714,7 @@ function saveTextbook(e) {
     addEventLog('CREATE', 'textbook', newTextbook.id, newTextbook);
     showToast('교재가 추가되었습니다');
   }
-  
+
   closeModal('modal-textbook-form');
   renderTextbooksPage();
 }
@@ -6581,13 +6735,13 @@ function deleteTextbookFromDetail() {
 function openTextbookDetail(textbookId) {
   const textbook = textbooksData.find(t => t.id === textbookId);
   if (!textbook) return;
-  
+
   currentDetailTextbook = textbook;
-  
+
   // 제목 표시
   const nameEl = document.getElementById('detail-textbook-title');
   if (nameEl) nameEl.textContent = textbook.title || '교재 상세';
-  
+
   // 표지 이미지
   const coverEl = document.getElementById('detail-textbook-cover');
   if (coverEl) {
@@ -6598,7 +6752,7 @@ function openTextbookDetail(textbookId) {
       coverEl.style.display = 'none';
     }
   }
-  
+
   // 기본 정보
   const fields = {
     'detail-textbook-info-title': textbook.title,
@@ -6611,33 +6765,33 @@ function openTextbookDetail(textbookId) {
     'detail-textbook-info-stock': textbook.stock,
     'detail-textbook-info-memo': textbook.memo
   };
-  
+
   Object.keys(fields).forEach(key => {
     const el = document.getElementById(key);
     if (el) el.textContent = fields[key] || '-';
   });
-  
+
   // 사용 중인 학생 목록
   renderTextbookStudents(textbook);
-  
+
   openModal('modal-textbook-detail');
 }
 
 function renderTextbookStudents(textbook) {
   const container = document.getElementById('detail-textbook-students');
   if (!container) return;
-  
+
   const studentIds = studentTextbooksData
     .filter(st => st.textbookId === textbook.id)
     .map(st => st.studentId);
-  
+
   if (studentIds.length === 0) {
     container.innerHTML = '<div class="empty-state"><div class="empty-icon">👨‍🎓</div><div class="empty-text">사용 중인 학생이 없습니다</div></div>';
     return;
   }
-  
+
   const students = studentsData.filter(s => studentIds.includes(s.id));
-  
+
   let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
   students.forEach(student => {
     html += '<div style="padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center;">';
@@ -6649,7 +6803,7 @@ function renderTextbookStudents(textbook) {
     html += '</div>';
   });
   html += '</div>';
-  
+
   container.innerHTML = html;
 }
 
@@ -6713,13 +6867,13 @@ function updateCoverPreview() {
   const url = document.getElementById('textbook-cover-url').value.trim();
   const preview = document.getElementById('textbook-cover-preview');
   const img = document.getElementById('textbook-cover-img');
-  
+
   if (!preview || !img) return;
-  
+
   if (url) {
     img.src = url;
     preview.style.display = 'block';
-    
+
     // 이미지 로드 실패 처리
     img.onerror = function() {
       preview.style.display = 'none';
@@ -6736,11 +6890,11 @@ function updateCoverPreview() {
 function switchStudentDetailTab(tab, btn) {
   document.querySelectorAll('#modal-student-detail .tab-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  
+
   document.querySelectorAll('#modal-student-detail .tab-content').forEach(t => t.style.display = 'none');
   const tabEl = document.getElementById('student-detail-tab-' + tab);
   if (tabEl) tabEl.style.display = 'block';
-  
+
   if (tab === 'textbooks') {
     renderStudentTextbooks();
   } else if (tab === 'enrollment') {
@@ -6753,7 +6907,7 @@ function switchStudentDetailTab(tab, btn) {
 function renderStudentTextbooks() {
   const container = document.getElementById('detail-student-textbooks-list');
   if (!container || !currentDetailStudent) return;
-  
+
   const assignedTextbooks = studentTextbooksData
     .filter(st => st.studentId === currentDetailStudent.id)
     .map(st => {
@@ -6761,7 +6915,7 @@ function renderStudentTextbooks() {
       return { ...st, textbook };
     })
     .filter(st => st.textbook);
-  
+
   // 일괄 작업 바 표시/숨김
   const bulkBar = document.getElementById('student-textbook-bulk-bar');
   const bulkCount = document.getElementById('student-textbook-bulk-count');
@@ -6773,12 +6927,12 @@ function renderStudentTextbooks() {
       bulkBar.style.display = 'none';
     }
   }
-  
+
   if (assignedTextbooks.length === 0) {
     container.innerHTML = '<div class="empty-state"><div class="empty-icon">📚</div><div class="empty-text">사용 중 교재가 없습니다</div></div>';
     return;
   }
-  
+
   let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
   assignedTextbooks.forEach(st => {
     const isSelected = selectedStudentTextbookIds.includes(st.id);
@@ -6799,43 +6953,43 @@ function renderStudentTextbooks() {
 
 function openAssignTextbookModal() {
   if (!currentDetailStudent) return;
-  
+
   const select = document.getElementById('assign-textbook-select');
   if (!select) return;
-  
+
   select.innerHTML = '<option value="">선택하세요</option>';
   textbooksData.forEach(t => {
     select.innerHTML += '<option value="' + t.id + '">' + t.title + '</option>';
   });
-  
+
   openModal('modal-assign-textbook');
 }
 
 function saveAssignTextbook() {
   if (!currentDetailStudent) return;
-  
+
   const textbookId = document.getElementById('assign-textbook-select').value;
   if (!textbookId) {
     showToast('교재를 선택해주세요');
     return;
   }
-  
+
   const exists = studentTextbooksData.find(st => 
     st.studentId === currentDetailStudent.id && st.textbookId === textbookId
   );
-  
+
   if (exists) {
     showToast('이미 사용 중 교재입니다');
     return;
   }
-  
+
   studentTextbooksData.push({
     id: uid(),
     studentId: currentDetailStudent.id,
     textbookId: textbookId,
     assignedDate: today()
   });
-  
+
   showToast('교재가 배정되었습니다');
   closeModal('modal-assign-textbook');
   renderStudentTextbooks();
@@ -6844,7 +6998,7 @@ function saveAssignTextbook() {
 
 function unassignTextbook(assignmentId) {
   if (!confirm('교재 배정을 해제하시겠습니까?')) return;
-  
+
   const index = studentTextbooksData.findIndex(st => st.id === assignmentId);
   if (index > -1) {
     studentTextbooksData.splice(index, 1);
@@ -6874,16 +7028,16 @@ function bulkUnassignTextbooks() {
     showToast('해제할 교재를 선택해주세요');
     return;
   }
-  
+
   if (!confirm(selectedStudentTextbookIds.length + '개 교재를 해제하시겠습니까?')) return;
-  
+
   selectedStudentTextbookIds.forEach(id => {
     const idx = studentTextbooksData.findIndex(st => st.id === id);
     if (idx > -1) {
       studentTextbooksData.splice(idx, 1);
     }
   });
-  
+
   selectedStudentTextbookIds = [];
   showToast('교재가 해제되었습니다');
   renderStudentTextbooks();
@@ -6897,11 +7051,11 @@ let selectedAssignTextbookIds = [];
 
 function openBulkAssignTextbookModal() {
   if (!currentDetailStudent) return;
-  
+
   assignTextbookSearch = '';
   assignTextbookPage = 1;
   selectedAssignTextbookIds = [];
-  
+
   document.getElementById('assign-textbook-search').value = '';
   renderAssignTextbookList();
   openModal('modal-assign-textbook');
@@ -6916,7 +7070,7 @@ function filterAssignTextbooks() {
 function renderAssignTextbookList() {
   const container = document.getElementById('assign-textbook-list');
   if (!container) return;
-  
+
   // 필터링
   let filtered = textbooksData.filter(tb => {
     if (assignTextbookSearch) {
@@ -6926,23 +7080,23 @@ function renderAssignTextbookList() {
     }
     return true;
   });
-  
+
   const totalPages = Math.ceil(filtered.length / assignTextbookPageSize);
   if (assignTextbookPage > totalPages && totalPages > 0) {
     assignTextbookPage = totalPages;
   }
-  
+
   const startIdx = (assignTextbookPage - 1) * assignTextbookPageSize;
   const endIdx = startIdx + assignTextbookPageSize;
   const pageTextbooks = filtered.slice(startIdx, endIdx);
-  
+
   let html = '';
   pageTextbooks.forEach(tb => {
     const alreadyAssigned = studentTextbooksData.find(st => 
       st.studentId === currentDetailStudent.id && st.textbookId === tb.id
     );
     const isSelected = selectedAssignTextbookIds.includes(tb.id);
-    
+
     html += '<div style="padding: 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px;">';
     html += '  <input type="checkbox" id="assign-cb-' + tb.id + '" ' + (alreadyAssigned ? 'disabled' : (isSelected ? 'checked' : '')) + ' onchange="toggleAssignTextbook(\'' + tb.id + '\')">';
     html += '  <label for="assign-cb-' + tb.id + '" style="flex: 1; cursor: pointer; ' + (alreadyAssigned ? 'color: var(--text3); text-decoration: line-through;' : '') + '">';
@@ -6953,16 +7107,16 @@ function renderAssignTextbookList() {
     html += '  </label>';
     html += '</div>';
   });
-  
+
   if (pageTextbooks.length === 0) {
     html = '<div style="text-align: center; padding: 20px; color: var(--text3);">검색 결과가 없습니다</div>';
   }
-  
+
   container.innerHTML = html;
-  
+
   // 선택 개수 업데이트
   document.getElementById('assign-selected-count').textContent = selectedAssignTextbookIds.length + '개 선택됨';
-  
+
   // 페이저
   const paginationContainer = document.getElementById('assign-textbook-pagination');
   if (paginationContainer) {
@@ -6992,12 +7146,12 @@ function changeAssignTextbookPage(page) {
 
 function saveBulkAssignTextbooks() {
   if (!currentDetailStudent) return;
-  
+
   if (selectedAssignTextbookIds.length === 0) {
     showToast('배정할 교재를 선택해주세요');
     return;
   }
-  
+
   selectedAssignTextbookIds.forEach(textbookId => {
     studentTextbooksData.push({
       id: uid(),
@@ -7006,7 +7160,7 @@ function saveBulkAssignTextbooks() {
       assignedDate: today()
     });
   });
-  
+
   showToast(selectedAssignTextbookIds.length + '개 교재가 배정되었습니다');
   selectedAssignTextbookIds = [];
   closeModal('modal-assign-textbook');
@@ -7023,13 +7177,13 @@ function changeStudentView(view) {
 function renderStudentsTextbookUsageViewContent() {
   const container = document.getElementById('students-page-content');
   if (!container) return;
-  
+
   const filtered = getFilteredStudents();
-  
+
   let html = container.innerHTML;
-  
+
   html += '<div class="student-textbook-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 20px;">';
-  
+
   filtered.forEach(student => {
     const assignedTextbooks = studentTextbooksData
       .filter(st => st.studentId === student.id)
@@ -7038,7 +7192,7 @@ function renderStudentsTextbookUsageViewContent() {
         return { ...st, textbook: tb };
       })
       .filter(st => st.textbook);
-    
+
     html += '<div class="card" style="padding: 20px;">';
     html += '  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">';
     html += '    ' + getProfileImageHTML(student, 48);
@@ -7047,7 +7201,7 @@ function renderStudentsTextbookUsageViewContent() {
     html += '      <div style="font-size: 13px; color: var(--text2);">' + (student.school || '-') + ' ' + (student.grade || '') + '</div>';
     html += '    </div>';
     html += '  </div>';
-    
+
     if (assignedTextbooks.length === 0) {
       html += '  <div style="text-align: center; padding: 20px; color: var(--text3); background: var(--bg-side); border-radius: var(--radius-sm); cursor: pointer;" onclick="quickOpenStudentTextbooks(\'' + student.id + '\')">';
       html += '    <div style="font-size: 32px; margin-bottom: 8px;">+</div>';
@@ -7065,33 +7219,33 @@ function renderStudentsTextbookUsageViewContent() {
         }
         html += '    </div>';
       });
-      
+
       html += '    <div style="padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm); border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text3);" onclick="quickOpenStudentTextbooks(\'' + student.id + '\')">';
       html += '      <div style="font-size: 24px;">+</div>';
       html += '    </div>';
-      
+
       html += '  </div>';
     }
-    
+
     html += '</div>';
   });
-  
+
   html += '</div>';
-  
+
   html += '<style>';
   html += '  .textbook-card:hover .textbook-remove { display: flex !important; }';
   html += '  @media (max-width: 768px) {';
   html += '    .student-textbook-grid { grid-template-columns: 1fr !important; }';
   html += '  }';
   html += '</style>';
-  
+
   container.innerHTML = html;
 }
 
 function unassignTextbookQuick(assignmentId, studentName, textbookTitle) {
   event.stopPropagation();
   if (!confirm(studentName + ' 학생의 "' + textbookTitle + '" 교재를 해제하시겠습니까?')) return;
-  
+
   const idx = studentTextbooksData.findIndex(st => st.id === assignmentId);
   if (idx > -1) {
     studentTextbooksData.splice(idx, 1);
@@ -7107,7 +7261,7 @@ function quickOpenStudentTextbooks(studentId) {
     document.querySelectorAll('#modal-student-detail .tab-btn').forEach((btn, i) => {
       btn.classList.toggle('active', i === 1);
     });
-    
+
     // 교재 배정 모달까지 열기
     setTimeout(() => {
       openBulkAssignTextbookModal();
@@ -7121,18 +7275,18 @@ let csvPreviewData = [];
 function openCSVUploadModal(dataType) {
   csvDataType = dataType;
   csvPreviewData = [];
-  
+
   const titleEl = document.getElementById('csv-modal-title');
   const guideEl = document.getElementById('csv-format-guide');
   const previewEl = document.getElementById('csv-preview');
   const confirmBtn = document.getElementById('csv-confirm-btn');
-  
+
   if (titleEl) titleEl.textContent = (dataType === 'students' ? '학생' : '교재') + ' CSV 업로드';
   if (confirmBtn) confirmBtn.style.display = 'none';
   if (previewEl) previewEl.innerHTML = '';
-  
+
   document.getElementById('csv-file-input').value = '';
-  
+
   if (guideEl) {
     if (dataType === 'students') {
       guideEl.innerHTML = '<strong>CSV 형식:</strong> 번호,이름,생년월일,학교,학년,연락처,담당선생님,수업요일,수업반,주소,메모';
@@ -7140,7 +7294,7 @@ function openCSVUploadModal(dataType) {
       guideEl.innerHTML = '<strong>CSV 형식:</strong> 교재명,저자,출판사,과목,학년,가격,ISBN,재고';
     }
   }
-  
+
   openModal('modal-csv-upload');
 }
 
@@ -7153,7 +7307,7 @@ function downloadCSVTemplate() {
     csv = '교재명,저자,출판사,과목,학년,가격,ISBN,재고\n';
     csv += '수학의 정석,홍성대,성지출판,수학,고1,15000,9788936456789,10\n';
   }
-  
+
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
@@ -7166,26 +7320,26 @@ function previewCSV() {
   const fileInput = document.getElementById('csv-file-input');
   const previewEl = document.getElementById('csv-preview');
   const confirmBtn = document.getElementById('csv-confirm-btn');
-  
+
   if (!fileInput.files || !fileInput.files[0]) return;
-  
+
   const file = fileInput.files[0];
   const reader = new FileReader();
-  
+
   reader.onload = function(e) {
     try {
       const csv = e.target.result;
       const lines = csv.split('\n').filter(line => line.trim());
-      
+
       if (lines.length < 2) {
         previewEl.innerHTML = '<div style="color: var(--danger); padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm);">CSV 파일에 데이터가 없습니다</div>';
         confirmBtn.style.display = 'none';
         return;
       }
-      
+
       csvPreviewData = [];
       const dataLines = lines.slice(1);
-      
+
       if (csvDataType === 'students') {
         dataLines.forEach(line => {
           const cols = line.split(',').map(c => c.trim());
@@ -7222,17 +7376,17 @@ function previewCSV() {
           }
         });
       }
-      
+
       if (csvPreviewData.length === 0) {
         previewEl.innerHTML = '<div style="color: var(--danger); padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm);">유효한 데이터가 없습니다</div>';
         confirmBtn.style.display = 'none';
         return;
       }
-      
+
       let html = '<div style="padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm);">';
       html += '  <div style="font-weight: 600; margin-bottom: 8px;">미리보기: ' + csvPreviewData.length + '개 항목</div>';
       html += '  <div style="max-height: 200px; overflow-y: auto; font-size: 12px;">';
-      
+
       csvPreviewData.slice(0, 5).forEach((item, idx) => {
         html += '<div style="padding: 4px 0; border-bottom: 1px solid var(--border);">';
         if (csvDataType === 'students') {
@@ -7242,29 +7396,29 @@ function previewCSV() {
         }
         html += '</div>';
       });
-      
+
       if (csvPreviewData.length > 5) {
         html += '<div style="padding: 4px 0; color: var(--text3);">외 ' + (csvPreviewData.length - 5) + '개...</div>';
       }
-      
+
       html += '  </div>';
       html += '</div>';
-      
+
       previewEl.innerHTML = html;
       confirmBtn.style.display = 'inline-block';
-      
+
     } catch (error) {
       console.error('CSV 파싱 오류:', error);
       previewEl.innerHTML = '<div style="color: var(--danger); padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm);">CSV 파일 형식이 올바르지 않습니다</div>';
       confirmBtn.style.display = 'none';
     }
   };
-  
+
   reader.onerror = function() {
     previewEl.innerHTML = '<div style="color: var(--danger); padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm);">파일을 읽을 수 없습니다</div>';
     confirmBtn.style.display = 'none';
   };
-  
+
   reader.readAsText(file, 'UTF-8');
 }
 
@@ -7273,7 +7427,7 @@ function confirmCSVUpload() {
     showToast('업로드할 데이터가 없습니다');
     return;
   }
-  
+
   if (csvDataType === 'students') {
     csvPreviewData.forEach(item => {
       studentsData.push({
@@ -7293,7 +7447,7 @@ function confirmCSVUpload() {
     });
     renderTextbooksPage();
   }
-  
+
   showToast(csvPreviewData.length + '개 항목이 등록되었습니다');
   closeModal('modal-csv-upload');
   csvPreviewData = [];
@@ -7344,7 +7498,7 @@ function updateDashboard() {
   const totalStudents = studentsData.filter(s => getStudentStatus(s) === '재원').length;
   const statStudents = document.getElementById('stat-students');
   if (statStudents) statStudents.textContent = totalStudents;
-  
+
   // 진행 중 시험대비
   const todayStr = today();
   const ongoingExams = appState.examPreps.filter(e => 
@@ -7352,12 +7506,12 @@ function updateDashboard() {
   ).length;
   const statExams = document.getElementById('stat-exams');
   if (statExams) statExams.textContent = ongoingExams;
-  
+
   // 미발송 피드백톡
   const unsentFeedback = feedbackData.filter(f => !f.sent).length;
   const statFeedback = document.getElementById('stat-feedback');
   if (statFeedback) statFeedback.textContent = unsentFeedback;
-  
+
   // 공지사항 렌더링
   renderNotices();
 }
@@ -7365,12 +7519,12 @@ function updateDashboard() {
 function renderNotices() {
   const container = document.getElementById('notice-list');
   if (!container) return;
-  
+
   if (noticesData.length === 0) {
     container.innerHTML = '<div style="color: var(--text3); text-align: center; padding: 20px;">등록된 공지사항이 없습니다.</div>';
     return;
   }
-  
+
   let html = '';
   noticesData.forEach(notice => {
     html += '<div style="padding: 12px; background: var(--bg-side); border-radius: var(--radius-sm); margin-bottom: 12px; position: relative;">';
@@ -7387,7 +7541,7 @@ function renderNotices() {
     html += '  <div style="font-size: 11px; color: var(--text3); margin-top: 8px;">' + notice.createdAt + '</div>';
     html += '</div>';
   });
-  
+
   container.innerHTML = html;
 }
 
@@ -7402,7 +7556,7 @@ function openNoticeModal() {
 function editNotice(id) {
   const notice = noticesData.find(n => n.id === id);
   if (!notice) return;
-  
+
   document.getElementById('notice-modal-title').textContent = '공지사항 수정';
   document.getElementById('notice-id').value = notice.id;
   document.getElementById('notice-title').value = notice.title;
@@ -7414,17 +7568,17 @@ function saveNotice() {
   const id = document.getElementById('notice-id').value;
   const title = document.getElementById('notice-title').value.trim();
   const content = document.getElementById('notice-content').value.trim();
-  
+
   if (!title) {
     showToast('제목을 입력하세요');
     return;
   }
-  
+
   if (!content) {
     showToast('내용을 입력하세요');
     return;
   }
-  
+
   if (id) {
     // 수정
     const idx = noticesData.findIndex(n => n.id === id);
@@ -7447,7 +7601,7 @@ function saveNotice() {
     });
     showToast('공지사항이 추가되었습니다');
   }
-  
+
   localStorage.setItem('noticesData', JSON.stringify(noticesData));
   closeModal('modal-notice');
   renderNotices();
@@ -7455,7 +7609,7 @@ function saveNotice() {
 
 function deleteNotice(id) {
   if (!confirm('이 공지사항을 삭제하시겠습니까?')) return;
-  
+
   noticesData = noticesData.filter(n => n.id !== id);
   localStorage.setItem('noticesData', JSON.stringify(noticesData));
   showToast('공지사항이 삭제되었습니다');
@@ -7476,29 +7630,29 @@ function renderMonthCalendar() {
   if (title) {
     title.textContent = currentCalendarYear + '년 ' + currentCalendarMonth + '월';
   }
-  
+
   const grid = document.getElementById('calendar-grid');
   if (!grid) return;
-  
+
   const headers = grid.querySelectorAll('div');
   for (let i = 7; i < headers.length; i++) {
     headers[i].remove();
   }
-  
+
   const firstDay = new Date(currentCalendarYear, currentCalendarMonth - 1, 1);
   const lastDay = new Date(currentCalendarYear, currentCalendarMonth, 0);
-  
+
   let firstDayOfWeek = firstDay.getDay();
   firstDayOfWeek = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
-  
+
   const lastDate = lastDay.getDate();
-  
+
   for (let i = 0; i < firstDayOfWeek; i++) {
     const emptyCell = document.createElement('div');
     emptyCell.style.cssText = 'background: var(--bg-side); padding: 12px; min-height: 80px;';
     grid.appendChild(emptyCell);
   }
-  
+
   for (let day = 1; day <= lastDate; day++) {
     const dateStr = currentCalendarYear + '-' + String(currentCalendarMonth).padStart(2, '0') + '-' + String(day).padStart(2, '0');
     const cell = createDateCell(day, dateStr);
@@ -7515,25 +7669,25 @@ function renderWeekCalendar() {
     monday.setDate(todayDate.getDate() + mondayOffset);
     currentWeekStartDate = monday;
   }
-  
+
   const title = document.getElementById('calendar-title');
   const weekEnd = new Date(currentWeekStartDate);
   weekEnd.setDate(currentWeekStartDate.getDate() + 6);
-  
+
   if (title) {
     const startStr = (currentWeekStartDate.getMonth() + 1) + '월 ' + currentWeekStartDate.getDate() + '일';
     const endStr = (weekEnd.getMonth() + 1) + '월 ' + weekEnd.getDate() + '일';
     title.textContent = currentWeekStartDate.getFullYear() + '년 ' + startStr + ' ~ ' + endStr;
   }
-  
+
   const grid = document.getElementById('calendar-grid');
   if (!grid) return;
-  
+
   const headers = grid.querySelectorAll('div');
   for (let i = 7; i < headers.length; i++) {
     headers[i].remove();
   }
-  
+
   for (let i = 0; i < 7; i++) {
     const date = new Date(currentWeekStartDate);
     date.setDate(currentWeekStartDate.getDate() + i);
@@ -7547,11 +7701,11 @@ function createDateCell(day, dateStr) {
   const cell = document.createElement('div');
   const isToday = dateStr === today();
   const isWeekend = new Date(dateStr).getDay() === 0 || new Date(dateStr).getDay() === 6;
-  
+
   const holidayKey = dateStr.substring(5);
   const holidayName = HOLIDAYS_2026[holidayKey];
   const isHoliday = !!holidayName;
-  
+
   const worklogsByTeacher = {};
   appState.workLogs.filter(w => w.date === dateStr).forEach(w => {
     const student = studentsData.find(s => s.id === w.studentId);
@@ -7566,31 +7720,31 @@ function createDateCell(day, dateStr) {
   const hasExamPrep = appState.examPreps.some(e => 
     e.startDate <= dateStr && e.endDate >= dateStr
   );
-  
+
   let bgColor = 'white';
   if (isToday) bgColor = '#e0f2fe';
-  
+
   let textColor = 'var(--text)';
   if (isWeekend) textColor = 'var(--text3)';
   if (isHoliday) textColor = 'var(--danger)';
-  
+
   cell.style.cssText = 'background: ' + bgColor + '; padding: 8px; min-height: ' + (calendarView === 'week' ? '120px' : '80px') + '; cursor: pointer; transition: all 0.2s; position: relative;';
-  
+
   cell.onmouseenter = () => {
     if (!isToday) cell.style.background = 'var(--bg-hover)';
   };
   cell.onmouseleave = () => {
     if (!isToday) cell.style.background = bgColor;
   };
-  
+
   let dateHTML = '<div style="font-weight: ' + (isToday ? '700' : '500') + '; color: ' + textColor + '; margin-bottom: 4px; font-size: 14px;">' + day + '</div>';
-  
+
   if (isHoliday) {
     dateHTML += '<div style="font-size: 11px; color: var(--danger); font-weight: 500; margin-bottom: 4px;">' + holidayName + '</div>';
   }
-  
+
   const events = [];
-  
+
   Object.entries(worklogsByTeacher).forEach(([teacher, count]) => {
     const teacherInfo = appState.teachers.find(t => t.name === teacher);
     const icon = teacherInfo?.icon || '✍️';
@@ -7607,9 +7761,9 @@ function createDateCell(day, dateStr) {
     const safeId = e.id.replace(/'/g, "\\'");
     events.push('<div style="font-size: 10px; background: var(--accent3); color: white; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; cursor:pointer;" onclick="calendarExamPrepClick(\'' + safeId + '\');event.stopPropagation();">📚 ' + escHtml(e.name) + '</div>');
   });
-  
+
   cell.innerHTML = dateHTML + events.join('');
-  
+
   return cell;
 }
 
@@ -7633,7 +7787,7 @@ function calendarWorklogClick(teacherName) {
 function changeMonth(delta) {
   if (calendarView === 'month') {
     currentCalendarMonth += delta;
-    
+
     if (currentCalendarMonth > 12) {
       currentCalendarMonth = 1;
       currentCalendarYear += 1;
@@ -7646,7 +7800,7 @@ function changeMonth(delta) {
     newDate.setDate(currentWeekStartDate.getDate() + (delta * 7));
     currentWeekStartDate = newDate;
   }
-  
+
   renderCalendar();
 }
 
@@ -7654,7 +7808,7 @@ function goToToday() {
   const todayStr = today();
   currentCalendarYear = parseInt(todayStr.substring(0, 4));
   currentCalendarMonth = parseInt(todayStr.substring(5, 7));
-  
+
   if (calendarView === 'week') {
     const todayDate = new Date(todayStr);
     const dayOfWeek = todayDate.getDay();
@@ -7663,16 +7817,16 @@ function goToToday() {
     monday.setDate(todayDate.getDate() + mondayOffset);
     currentWeekStartDate = monday;
   }
-  
+
   renderCalendar();
 }
 
 function setCalendarView(view) {
   calendarView = view;
-  
+
   const monthBtn = document.getElementById('btn-view-month');
   const weekBtn = document.getElementById('btn-view-week');
-  
+
   if (monthBtn && weekBtn) {
     if (view === 'month') {
       monthBtn.className = 'btn btn-primary btn-sm';
@@ -7682,7 +7836,7 @@ function setCalendarView(view) {
       weekBtn.className = 'btn btn-primary btn-sm';
     }
   }
-  
+
   renderCalendar();
 }
 
@@ -7697,7 +7851,7 @@ function loadPaymentSampleData() {
     { id: 'pm3', name: '카드', feeRate: 2.5, type: 'card' },
     { id: 'pm4', name: '네이버페이', feeRate: 3.0, type: 'naverpay' }
   ];
-  
+
   // Classes (수강반)
   if (!classesData || classesData.length === 0) {
     classesData = [
@@ -7707,7 +7861,7 @@ function loadPaymentSampleData() {
       { id: 'c4', name: '중등 심화반', teacher: '이선생', days: '화목금', time: '19:00', tuition: 450000 }
     ];
   }
-  
+
   // DiscountTypes (할인 종류)
   discountTypesData = [
     { id: 'dt1', name: '형제자매 할인', discountRate: 10, fixedAmount: 0, memo: '두 번째 자녀부터 10% 할인' },
@@ -7715,7 +7869,7 @@ function loadPaymentSampleData() {
     { id: 'dt3', name: '장기수강 할인', discountRate: 0, fixedAmount: 50000, memo: '6개월 이상 등록 시 5만원 할인' },
     { id: 'dt4', name: '할인없음', discountRate: 0, fixedAmount: 0, memo: '' }
   ];
-  
+
   // CostCategories (비용 항목 카테고리)
   costCategoriesData = [
     { id: 'cc1', name: '월세', defaultValue: 2000000, sortOrder: 1 },
@@ -7727,7 +7881,7 @@ function loadPaymentSampleData() {
     { id: 'cc7', name: '문구/소모품', defaultValue: 100000, sortOrder: 7 },
     { id: 'cc8', name: '기타', defaultValue: 0, sortOrder: 99 }
   ];
-  
+
   // OperatingCosts (운영비용) 샘플
   var _sm = today().substring(0, 7);
   operatingCostsData = [
@@ -7745,31 +7899,31 @@ function loadPaymentSampleData() {
     { id: uid(), monthYear: _sm, teacherRatio: 48, assistantRatio: 50,
       assistants: [] }
   ];
-  
+
   // Payments (결제기록) - 샘플 데이터 추가
   if (!paymentsData || paymentsData.length === 0) {
     paymentsData = [
       // 초등 3학년
       { id: uid(), studentId: 'ds001', studentName: '김소예', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 240000, finalTuition: 240000, discountTypeId: 'dt1', discountAmount: 0, depositAmount: 240000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-02', depositDate: '2026-04-06', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       { id: uid(), studentId: 'ds002', studentName: '박세연', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 250000, finalTuition: 250000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 249000, fee: 1000, paymentMethodId: 'pm3', paymentDate: '2026-04-01', depositDate: '2026-04-02', teacherName: '은지T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      
+
       // 초등 4학년
       { id: uid(), studentId: 'ds003', studentName: '김현준', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 290000, finalTuition: 290000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 288840, fee: 1160, paymentMethodId: 'pm3', paymentDate: '2026-03-19', depositDate: '2026-03-23', teacherName: '찬혁T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       { id: uid(), studentId: 'ds004', studentName: '이도하', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 300000, finalTuition: 300000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 300000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-16', depositDate: '', teacherName: '찬혁T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      
+
       // 초등 5학년
       { id: uid(), studentId: 'ds005', studentName: '김소율', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 290000, finalTuition: 290000, discountTypeId: 'dt1', discountAmount: 0, depositAmount: 290000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-01', depositDate: '2026-04-02', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       { id: uid(), studentId: 'ds006', studentName: '윤서은', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 300000, finalTuition: 300000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 298800, fee: 1200, paymentMethodId: 'pm3', paymentDate: '2026-04-01', depositDate: '2026-04-03', teacherName: '은지T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       { id: uid(), studentId: 'ds007', studentName: '이채윤', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 300000, finalTuition: 300000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 298800, fee: 1200, paymentMethodId: 'pm3', paymentDate: '2026-04-01', depositDate: '2026-04-03', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: true, createdAt: today() },
       { id: uid(), studentId: 'ds008', studentName: '진세훈', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 290000, finalTuition: 290000, discountTypeId: 'dt3', discountAmount: 0, depositAmount: 290000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-03-25', depositDate: '2026-03-26', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       { id: uid(), studentId: 'ds009', studentName: '하시윤', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 300000, finalTuition: 300000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 300000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-05', depositDate: '2026-04-06', teacherName: '은지T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      
+
       // 초등 6학년
       { id: uid(), studentId: 'ds010', studentName: '강민', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 300000, finalTuition: 300000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 300000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-01', depositDate: '2026-04-01', teacherName: '찬혁T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       { id: uid(), studentId: 'ds011', studentName: '민성현', enrollmentMonth: '2026-04', classId: 'c1', baseTuition: 300000, finalTuition: 300000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 299550, fee: 450, paymentMethodId: 'pm3', paymentDate: '2026-04-01', depositDate: '2026-04-03', teacherName: '찬혁T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: true, createdAt: today() },
       { id: uid(), studentId: 'ds012', studentName: '오서원', enrollmentMonth: '2026-04', classId: 'c2', baseTuition: 340000, finalTuition: 340000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 339490, fee: 510, paymentMethodId: 'pm3', paymentDate: '2026-04-06', depositDate: '2026-04-07', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       { id: uid(), studentId: 'ds013', studentName: '최지아', enrollmentMonth: '2026-04', classId: 'c2', baseTuition: 330000, finalTuition: 330000, discountTypeId: 'dt2', discountAmount: 0, depositAmount: 328680, fee: 1320, paymentMethodId: 'pm3', paymentDate: '2026-03-19', depositDate: '2026-03-23', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      
+
       // 중등 1학년
       { id: uid(), studentId: 'ds014', studentName: '김연하', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 370000, finalTuition: 370000, discountTypeId: 'dt1', discountAmount: 0, depositAmount: 370000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-01', depositDate: '2026-04-01', teacherName: '은지T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       { id: uid(), studentId: 'ds015', studentName: '김은채', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 380000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-01', depositDate: '2026-04-02', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
@@ -7780,21 +7934,21 @@ function loadPaymentSampleData() {
       { id: uid(), studentId: 'ds019', studentName: '이준우', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 70000, finalTuition: 70000, discountTypeId: 'dt5', discountAmount: 0, depositAmount: 69720, fee: 280, paymentMethodId: 'pm3', paymentDate: '2026-04-06', depositDate: '2026-04-08', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       { id: uid(), studentId: 'ds020', studentName: '정수현', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 380000, fee: 0, paymentMethodId: 'pm2', paymentDate: '2026-04-01', depositDate: '2026-04-02', teacherName: '은지T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       { id: uid(), studentId: 'ds021', studentName: '최서연', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 370000, finalTuition: 370000, discountTypeId: 'dt1', discountAmount: 0, depositAmount: 368520, fee: 1480, paymentMethodId: 'pm3', paymentDate: '2026-04-09', depositDate: '2026-04-10', teacherName: '은지T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      
+
       // 중등 2학년
       { id: uid(), studentId: 'ds022', studentName: '김태민', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 0, fee: 0, paymentMethodId: 'pm1', paymentDate: '', depositDate: '', teacherName: '찬혁T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       { id: uid(), studentId: 'ds023', studentName: '김예은', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 379430, fee: 570, paymentMethodId: 'pm3', paymentDate: '2026-04-02', depositDate: '2026-04-06', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       { id: uid(), studentId: 'ds024', studentName: '최서빈', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 378480, fee: 1520, paymentMethodId: 'pm3', paymentDate: '2026-04-02', depositDate: '2026-04-06', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: true, createdAt: today() },
       { id: uid(), studentId: 'ds025', studentName: '조서은', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 378480, fee: 1520, paymentMethodId: 'pm3', paymentDate: '2026-04-02', depositDate: '2026-04-06', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: true, createdAt: today() },
-      
+
       // 중등 3학년
       { id: uid(), studentId: 'ds026', studentName: '김동엽', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 378480, fee: 1520, paymentMethodId: 'pm3', paymentDate: '2026-04-01', depositDate: '2026-04-03', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: true, createdAt: today() },
       { id: uid(), studentId: 'ds027', studentName: '최윤석', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 370000, finalTuition: 370000, discountTypeId: 'dt3', discountAmount: 0, depositAmount: 368520, fee: 1480, paymentMethodId: 'pm3', paymentDate: '2026-04-04', depositDate: '2026-04-07', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       { id: uid(), studentId: 'ds028', studentName: '최서은', enrollmentMonth: '2026-04', classId: 'c3', baseTuition: 370000, finalTuition: 370000, discountTypeId: 'dt1', discountAmount: 0, depositAmount: 368520, fee: 1480, paymentMethodId: 'pm3', paymentDate: '2026-04-09', depositDate: '2026-04-13', teacherName: '은지T', days: '화, 목', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      
+
       // 고등 1학년
       { id: uid(), studentId: 'ds029', studentName: '조서인', enrollmentMonth: '2026-04', classId: 'c4', baseTuition: 480000, finalTuition: 480000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 478080, fee: 1920, paymentMethodId: 'pm3', paymentDate: '2026-04-02', depositDate: '2026-04-06', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
-      
+
       // 고등 2학년
       { id: uid(), studentId: 'ds030', studentName: '김지안', enrollmentMonth: '2026-04', classId: 'c4', baseTuition: 380000, finalTuition: 380000, discountTypeId: 'dt4', discountAmount: 0, depositAmount: 378480, fee: 1520, paymentMethodId: 'pm3', paymentDate: '2026-04-01', depositDate: '2026-04-03', teacherName: '찬혁T', days: '월, 수', count: 0, isNewStudent: false, isTeacherPayment: false, createdAt: today() },
       { id: uid(), studentId: 'ds031', studentName: '조진우', enrollmentMonth: '2026-04', classId: 'c5', baseTuition: 220000, finalTuition: 220000, discountTypeId: 'dt6', discountAmount: 0, depositAmount: 219120, fee: 880, paymentMethodId: 'pm3', paymentDate: '2026-04-03', depositDate: '2026-04-05', teacherName: '특강', days: '월, 수', count: 4, isNewStudent: false, isTeacherPayment: false, createdAt: today() }
@@ -8399,7 +8553,7 @@ function renderPaymentRecordsListBody() {
 
 function renderPaymentMobileCards(pagePayments, canWrite) {
   let html = '<div class="payment-cards-mobile">';
-  
+
   pagePayments.forEach(p => {
     const student = studentsData.find(s => s.id === p.studentId);
     const studentName = p.isNewStudent ? p.studentName : (student ? student.name : '(삭제)');
@@ -8415,20 +8569,20 @@ function renderPaymentMobileCards(pagePayments, canWrite) {
     const discount = discountTypesData.find(dt => dt.id === p.discountTypeId);
     const discountName = discount ? discount.name : '';
     const isSelected = selectedPaymentIds.includes(p.id);
-    
+
     // 등록월 포맷 (yyyy년 m월)
     const enrollmentMonth = p.enrollmentMonth ? p.enrollmentMonth.split('-')[0] + '년 ' + parseInt(p.enrollmentMonth.split('-')[1]) + '월' : '';
-    
+
     html += '<div class="payment-card" style="position: relative; cursor: pointer; ' + (isSelected ? 'border-color: var(--accent); background: var(--bg-hover);' : '') + '" onclick="openEditPaymentModal(\'' + p.id + '\')">';
-    
+
     // 체크박스 - 좌상단
     if (canWrite) {
       html += '<input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onchange="event.stopPropagation(); togglePaymentSelection(\'' + p.id + '\', this.checked)" style="position: absolute; top: 12px; left: 12px;">';
     }
-    
+
     // 카드 내용 (체크박스 여백 고려)
     html += '<div style="' + (canWrite ? 'margin-left: 32px;' : '') + '">';
-    
+
     // 등록월, 결제날짜 (여백 넓게)
     if (enrollmentMonth || p.paymentDate) {
       html += '<div style="font-size: 12px; color: var(--text2); margin-bottom: 8px;">';
@@ -8442,7 +8596,7 @@ function renderPaymentMobileCards(pagePayments, canWrite) {
       }
       html += '</div>';
     }
-    
+
     // 학생 이름 + 신입/결제선생 태그
     html += '<div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">';
     html += '  <span style="font-weight: 600; font-size: 16px;">' + studentName + '</span>';
@@ -8453,33 +8607,33 @@ function renderPaymentMobileCards(pagePayments, canWrite) {
       html += '  <span style="font-size: 10px; background: var(--accent); color: white; padding: 2px 6px; border-radius: 3px;">결제선생</span>';
     }
     html += '</div>';
-    
+
     // 학교급, 학년, 담당T, 요일 (있는 것만)
     const infoItems = [];
     if (schoolType) infoItems.push(schoolType);
     if (studentGrade) infoItems.push(studentGrade);
     if (p.teacherName) infoItems.push(p.teacherName);
     if (p.days) infoItems.push(p.days);
-    
+
     if (infoItems.length > 0) {
       html += '<div style="font-size: 13px; color: var(--text2); margin-bottom: 6px;">';
       html += infoItems.join(' · ');
       html += '</div>';
     }
-    
+
     // 수강반(횟수) - 있을 때만 표시
     if (className) {
       html += '<div style="font-size: 13px; margin-bottom: 8px;">';
       html += className + (p.count ? '(' + p.count + ')' : '');
       html += '</div>';
     }
-    
+
     // 구분선 (항상 표시)
     html += '<div style="border-top: 1px solid var(--border); margin: 8px 0;"></div>';
-    
+
     // 토글 가능한 상세 정보
     const detailId = 'payment-detail-' + p.id;
-    
+
     // 입금금액, 수수료 (항상 표시) - 삼각형 토글 버튼
     html += '<div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">';
     html += '  <div style="display: flex; justify-content: space-between; width: 48%;">';
@@ -8488,28 +8642,28 @@ function renderPaymentMobileCards(pagePayments, canWrite) {
     html += '  </div>';
     html += '  <div style="display: flex; justify-content: space-between; width: 48%;"><span style="color: var(--text2);">수수료:</span> <span style="color: var(--accent);">' + (p.fee || 0).toLocaleString() + '원</span></div>';
     html += '</div>';
-    
+
     // 상세 정보 (기본 숨김)
     html += '<div id="' + detailId + '" style="display: none; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);">';
-    
+
     // 기본교습비, 할인
     html += '  <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">';
     html += '    <div style="display: flex; justify-content: space-between; width: 48%;"><span style="color: var(--text2);">기본교습비:</span> <span style="color: var(--accent);">' + (p.baseTuition || 0).toLocaleString() + '원</span></div>';
     html += '    <div style="display: flex; justify-content: space-between; width: 48%;"><span style="color: var(--text2);">할인:</span> <span style="text-align: right;">' + (discountName || '없음') + '</span></div>';
     html += '  </div>';
-    
+
     // 최종교습비, 결제수단
     html += '  <div style="display: flex; justify-content: space-between; font-size: 13px;">';
     html += '    <div style="display: flex; justify-content: space-between; width: 48%;"><span style="color: var(--text2);">최종교습비:</span> <span style="color: var(--accent);">' + (p.finalTuition || 0).toLocaleString() + '원</span></div>';
     html += '    <div style="display: flex; justify-content: space-between; width: 48%;"><span style="color: var(--text2);">결제수단:</span> <span style="text-align: right;">' + (paymentMethodName || '미정') + '</span></div>';
     html += '  </div>';
-    
+
     html += '</div>'; // 상세 정보 끝
-    
+
     html += '</div>'; // 내용 끝
     html += '</div>'; // 카드 끝
   });
-  
+
   html += '</div>';
   return html;
 }
@@ -8517,7 +8671,7 @@ function renderPaymentMobileCards(pagePayments, canWrite) {
 function togglePaymentDetail(detailId) {
   const detail = document.getElementById(detailId);
   const icon = document.getElementById(detailId + '-icon');
-  
+
   if (detail.style.display === 'none') {
     detail.style.display = 'block';
     icon.textContent = '▼';
@@ -8567,26 +8721,26 @@ function getFilteredAndSortedPayments() {
       const studentName = p.isNewStudent ? p.studentName : (student ? student.name : '');
       if (!studentName.includes(currentPaymentFilter.search)) return false;
     }
-    
+
     // 등록월 필터
     if (currentPaymentFilter.month && p.enrollmentMonth !== currentPaymentFilter.month) {
       return false;
     }
-    
+
     // 학교급 필터
     if (currentPaymentFilter.schoolType) {
       const student = studentsData.find(s => s.id === p.studentId);
       if (!student || student.schoolType !== currentPaymentFilter.schoolType) return false;
     }
-    
+
     // 수강반 필터
     if (currentPaymentFilter.classId && p.classId !== currentPaymentFilter.classId) {
       return false;
     }
-    
+
     return true;
   });
-  
+
   // 정렬
   filtered.sort((a, b) => {
     if (currentPaymentSort === 'date-desc') {
@@ -8600,7 +8754,7 @@ function getFilteredAndSortedPayments() {
     }
     return 0;
   });
-  
+
   return filtered;
 }
 
@@ -8614,7 +8768,7 @@ function openAddPaymentModal() {
     'payment-method', 'payment-fee', 'payment-deposit', 'payment-date',
     'payment-deposit-date', 'payment-teacher-payment'
   ];
-  
+
   // 하나라도 없으면 에러 로그 출력하고 중단
   for (const id of requiredElements) {
     if (!document.getElementById(id)) {
@@ -8623,7 +8777,7 @@ function openAddPaymentModal() {
       return;
     }
   }
-  
+
   // 폼 초기화
   document.getElementById('payment-form-title').textContent = '결제 추가';
   document.getElementById('payment-id').value = '';
@@ -8646,7 +8800,7 @@ function openAddPaymentModal() {
   document.getElementById('payment-teacher-payment').checked = false;
   const mobileCheck = document.getElementById('payment-teacher-payment-mobile');
   if (mobileCheck) mobileCheck.checked = false;
-  
+
   // 학생 선택 옵션 렌더링
   renderPaymentStudentOptions();
   renderPaymentClassOptions();
@@ -8656,10 +8810,10 @@ function openAddPaymentModal() {
 
   // 초기 상태: 기존 학생 선택 모드
   toggleNewStudentMode(false);
-  
+
   // 결제선생 체크박스 동기화
   syncTeacherPaymentCheckboxes();
-  
+
   openModal('modal-payment-form');
 }
 
@@ -8667,13 +8821,13 @@ function openAddPaymentModal() {
 function openAddPaymentModalForMonth(month, isNewStudent) {
   // 먼저 일반 결제 추가 모달 오픈
   openAddPaymentModal();
-  
+
   // 등록월을 해당 월로 고정
   const monthEl = document.getElementById('payment-enrollment-month');
   if (monthEl && month) {
     monthEl.value = month;
   }
-  
+
   // 신입 여부 토글 설정
   if (isNewStudent) {
     const isNewEl = document.getElementById('payment-is-new');
@@ -8714,7 +8868,7 @@ function openStudentFormFromPayment() {
 function renderPaymentStudentOptions() {
   const select = document.getElementById('payment-student-id');
   if (!select) return;
-  
+
   let html = '<option value="">학생 선택</option>';
   studentsData.forEach(s => {
     // 학교명에서 학교급 추출 (초등학교 → 초등, 중학교 → 중등 등)
@@ -8722,7 +8876,7 @@ function renderPaymentStudentOptions() {
     if (s.school.includes('초등')) schoolType = '초등';
     else if (s.school.includes('중')) schoolType = '중등';
     else if (s.school.includes('고')) schoolType = '고등';
-    
+
     const grade = s.grade ? s.grade.replace(/[^0-9]/g, '') : '';
     html += '<option value="' + s.id + '">' + s.name + ' (' + schoolType + ' ' + grade + '학년)</option>';
   });
@@ -8732,7 +8886,7 @@ function renderPaymentStudentOptions() {
 function renderPaymentClassOptions() {
   const select = document.getElementById('payment-class');
   if (!select) return;
-  
+
   let html = '<option value="">수강반 선택</option>';
   classesData.forEach(c => {
     html += '<option value="' + c.id + '" data-tuition="' + c.tuition + '">' + c.name + '</option>';
@@ -8743,7 +8897,7 @@ function renderPaymentClassOptions() {
 function renderPaymentDiscountOptions() {
   const select = document.getElementById('payment-discount-type');
   if (!select) return;
-  
+
   let html = '';
   discountTypesData.forEach(dt => {
     html += '<option value="' + dt.id + '">' + dt.name + '</option>';
@@ -8754,7 +8908,7 @@ function renderPaymentDiscountOptions() {
 function renderPaymentMethodOptions() {
   const select = document.getElementById('payment-method');
   if (!select) return;
-  
+
   let html = '';
   paymentMethodsData.forEach(pm => {
     html += '<option value="' + pm.id + '" data-fee-rate="' + pm.feeRate + '">' + pm.name + '</option>';
@@ -8776,17 +8930,17 @@ function loadStudentInfo() {
     originalStudentDays = '';
     return;
   }
-  
+
   const student = studentsData.find(s => s.id === studentId);
   if (!student) return;
-  
+
   // 담당선생 자동 입력
   document.getElementById('payment-teacher').value = student.teacher || '';
-  
+
   // 요일 체크박스 설정
   const checkboxes = document.querySelectorAll('.payment-day-check');
   checkboxes.forEach(cb => cb.checked = false);
-  
+
   if (student.days) {
     const days = student.days.split(',').map(d => d.trim());
     checkboxes.forEach(cb => {
@@ -8798,7 +8952,7 @@ function loadStudentInfo() {
   } else {
     originalStudentDays = '';
   }
-  
+
   // 안내 문구 숨김
   const notice = document.getElementById('days-change-notice');
   if (notice) notice.style.display = 'none';
@@ -8814,23 +8968,23 @@ function getSelectedDays() {
 function onDaysChanged() {
   const currentDays = getSelectedDays();
   const notice = document.getElementById('days-change-notice');
-  
+
   if (!notice) return;
-  
+
   // 신입 모드면 안내 숨김
   const isNew = document.getElementById('payment-is-new').checked;
   if (isNew) {
     notice.style.display = 'none';
     return;
   }
-  
+
   // 학생 선택 안 되어있으면 안내 숨김
   const studentId = document.getElementById('payment-student-id').value;
   if (!studentId) {
     notice.style.display = 'none';
     return;
   }
-  
+
   // 원래 요일과 다르면 안내 표시
   if (currentDays !== originalStudentDays) {
     notice.style.display = 'block';
@@ -8843,20 +8997,20 @@ function onDaysChanged() {
 function syncTeacherPaymentCheckboxes() {
   const desktop = document.getElementById('payment-teacher-payment');
   const mobile = document.getElementById('payment-teacher-payment-mobile');
-  
+
   if (!desktop || !mobile) return;
-  
+
   // 기존 리스너 제거 방지를 위해 복제 후 교체
   const newDesktop = desktop.cloneNode(true);
   const newMobile = mobile.cloneNode(true);
   desktop.parentNode.replaceChild(newDesktop, desktop);
   mobile.parentNode.replaceChild(newMobile, mobile);
-  
+
   // 이벤트 리스너 추가
   newDesktop.addEventListener('change', function() {
     newMobile.checked = this.checked;
   });
-  
+
   newMobile.addEventListener('change', function() {
     newDesktop.checked = this.checked;
   });
@@ -8865,13 +9019,13 @@ function syncTeacherPaymentCheckboxes() {
 function loadClassTuition() {
   const select = document.getElementById('payment-class');
   const selectedOption = select.options[select.selectedIndex];
-  
+
   if (!selectedOption || !selectedOption.value) {
     document.getElementById('payment-base-tuition').value = '';
     calculateFinalAmount();
     return;
   }
-  
+
   const tuition = selectedOption.dataset.tuition;
   document.getElementById('payment-base-tuition').value = parseInt(tuition || 0).toLocaleString();
   calculateFinalAmount();
@@ -8882,7 +9036,7 @@ function calculateFinalAmount() {
   const baseTuition = parseInt(baseTuitionStr) || 0;
   const discountTypeId = document.getElementById('payment-discount-type').value;
   const paymentMethodId = document.getElementById('payment-method').value;
-  
+
   if (baseTuition === 0) {
     document.getElementById('payment-discount-amount').value = '';
     document.getElementById('payment-final-tuition').value = '';
@@ -8890,11 +9044,11 @@ function calculateFinalAmount() {
     document.getElementById('payment-deposit').value = '';
     return;
   }
-  
+
   // 할인 계산
   let discountAmount = 0;
   let finalTuition = baseTuition;
-  
+
   if (discountTypeId) {
     const discount = discountTypesData.find(dt => dt.id === discountTypeId);
     if (discount) {
@@ -8906,12 +9060,12 @@ function calculateFinalAmount() {
       }
     }
   }
-  
+
   finalTuition = Math.max(0, baseTuition - discountAmount);
-  
+
   document.getElementById('payment-discount-amount').value = discountAmount.toLocaleString();
   document.getElementById('payment-final-tuition').value = finalTuition.toLocaleString();
-  
+
   // 수수료 계산
   let fee = 0;
   if (paymentMethodId) {
@@ -8920,7 +9074,7 @@ function calculateFinalAmount() {
       fee = Math.round(finalTuition * paymentMethod.feeRate / 100);
     }
   }
-  
+
   document.getElementById('payment-fee').value = fee.toLocaleString();
   document.getElementById('payment-deposit').value = (finalTuition - fee).toLocaleString();
 }
@@ -8932,7 +9086,7 @@ function openEditPaymentModal(id) {
     showToast('결제를 찾을 수 없습니다');
     return;
   }
-  
+
   // DOM 요소들이 존재하는지 먼저 확인
   const requiredElements = [
     'payment-form-title', 'payment-id', 'payment-is-new', 'payment-student-id',
@@ -8942,7 +9096,7 @@ function openEditPaymentModal(id) {
     'payment-method', 'payment-fee', 'payment-deposit', 'payment-date',
     'payment-deposit-date', 'payment-teacher-payment'
   ];
-  
+
   for (const elemId of requiredElements) {
     if (!document.getElementById(elemId)) {
       console.error('Missing element:', elemId);
@@ -8950,7 +9104,7 @@ function openEditPaymentModal(id) {
       return;
     }
   }
-  
+
   // 폼 초기화
   renderPaymentStudentOptions();
   renderPaymentClassOptions();
@@ -8961,16 +9115,16 @@ function openEditPaymentModal(id) {
   document.getElementById('payment-form-title').textContent = '결제 수정';
   document.getElementById('payment-id').value = payment.id;
   document.getElementById('payment-is-new').checked = payment.isNewStudent || false;
-  
+
   // 신입 모드 설정 (UI 조작용)
   toggleNewStudentMode(payment.isNewStudent || false);
-  
+
   // 학생 선택 (신입/기존 모두 studentId로 세팅)
   document.getElementById('payment-student-id').value = payment.studentId || '';
   if (payment.studentId) {
     loadStudentInfo();
   }
-  
+
   document.getElementById('payment-enrollment-month').value = payment.enrollmentMonth || '';
   document.getElementById('payment-class').value = payment.classId || '';
   document.getElementById('payment-base-tuition').value = (payment.baseTuition || 0).toLocaleString();
@@ -8978,13 +9132,13 @@ function openEditPaymentModal(id) {
   document.getElementById('payment-discount-amount').value = (payment.discountAmount || 0).toLocaleString();
   document.getElementById('payment-final-tuition').value = (payment.finalTuition || 0).toLocaleString();
   document.getElementById('payment-teacher').value = payment.teacherName || '';
-  
+
   // 요일 체크박스 설정
   const daysArr = payment.days ? payment.days.split(',').map(d => d.trim()) : [];
   document.querySelectorAll('.payment-day-check').forEach(cb => {
     cb.checked = daysArr.includes(cb.value);
   });
-  
+
   document.getElementById('payment-count').value = payment.count || '';
   document.getElementById('payment-method').value = payment.paymentMethodId || '';
   document.getElementById('payment-fee').value = (payment.fee || 0).toLocaleString();
@@ -8994,10 +9148,10 @@ function openEditPaymentModal(id) {
   document.getElementById('payment-teacher-payment').checked = payment.isTeacherPayment || false;
   const mobileCheck = document.getElementById('payment-teacher-payment-mobile');
   if (mobileCheck) mobileCheck.checked = payment.isTeacherPayment || false;
-  
+
   // 결제선생 체크박스 동기화
   syncTeacherPaymentCheckboxes();
-  
+
   openModal('modal-payment-form');
 }
 
@@ -9020,37 +9174,37 @@ function savePayment() {
   const paymentDate = document.getElementById('payment-date').value;
   const depositDate = document.getElementById('payment-deposit-date').value;
   const isTeacherPayment = document.getElementById('payment-teacher-payment').checked;
-  
+
   // 유효성 검사 (신입/기존 무관하게 학생 선택 필수)
   if (!studentId) {
     showToast('학생을 선택해주세요');
     return;
   }
-  
+
   if (!classId) {
     showToast('수강반을 선택해주세요');
     return;
   }
-  
+
   if (!paymentMethodId) {
     showToast('결제수단을 선택해주세요');
     return;
   }
-  
+
   if (!paymentDate) {
     showToast('결제날짜를 입력해주세요');
     return;
   }
-  
+
   if (!depositDate) {
     showToast('입금날짜를 입력해주세요');
     return;
   }
-  
+
   // studentName은 학생 DB에서 가져옴 (신입/기존 무관)
   const selectedStudent = studentsData.find(s => s.id === studentId);
   const studentName = selectedStudent ? selectedStudent.name : '';
-  
+
   if (id) {
     // 수정
     const idx = paymentsData.findIndex(p => p.id === id);
@@ -9079,7 +9233,7 @@ function savePayment() {
       };
       addEventLog('UPDATE', 'payment', id, paymentsData[idx], prevP);
       showToast('결제가 수정되었습니다');
-      
+
       // 요일이 변경되었으면 학생 정보도 업데이트
       if (studentId && days !== originalStudentDays) {
         const studentIdx = studentsData.findIndex(s => s.id === studentId);
@@ -9115,7 +9269,7 @@ function savePayment() {
     paymentsData.push(newPayment);
     addEventLog('CREATE', 'payment', newPayment.id, newPayment);
     showToast('결제가 추가되었습니다');
-    
+
     // 요일이 학생 원래 요일과 다르면 학생 정보도 업데이트
     if (studentId && days !== originalStudentDays) {
       const studentIdx = studentsData.findIndex(s => s.id === studentId);
@@ -9124,7 +9278,7 @@ function savePayment() {
       }
     }
   }
-  
+
   closeModal('modal-payment-form');
   renderPaymentsPage();
 }
@@ -9265,28 +9419,28 @@ let pendingPaymentCsvData = [];
 function previewPaymentCSV() {
   const fileInput = document.getElementById('payment-csv-file');
   if (!fileInput.files || fileInput.files.length === 0) return;
-  
+
   const file = fileInput.files[0];
   const reader = new FileReader();
-  
+
   reader.onload = function(e) {
     const text = e.target.result;
     const rows = text.split('\n').filter(r => r.trim());
-    
+
     if (rows.length < 2) {
       showToast('CSV 파일에 데이터가 없습니다');
       return;
     }
-    
+
     pendingPaymentCsvData = [];
     const preview = document.getElementById('payment-csv-preview');
     let html = '<div style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px;">';
     html += '<div style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text2);">미리보기 (' + (rows.length - 1) + '건)</div>';
-    
+
     for (let i = 1; i < rows.length; i++) {
       const cols = rows[i].split(',');
       if (cols.length < 9) continue;
-      
+
       const studentName = cols[0].trim();
       const enrollmentMonth = cols[1].trim();
       const className = cols[2].trim();
@@ -9296,27 +9450,27 @@ function previewPaymentCSV() {
       const depositDate = cols[6].trim();
       const teacherName = cols[7].trim();
       const isNew = cols[8] && cols[8].trim() === '신입';
-      
+
       const student = studentsData.find(s => s.name === studentName);
       const classObj = classesData.find(c => c.name === className);
       const discount = discountTypesData.find(dt => dt.name === discountName);
       const paymentMethod = paymentMethodsData.find(pm => pm.name === paymentMethodName);
-      
+
       if (!isNew && !student) {
         html += '<div style="padding: 8px; background: #FEE; border-radius: 4px; margin-bottom: 4px; font-size: 12px;">❌ ' + i + '번째 행: 학생 "' + studentName + '"을 찾을 수 없습니다</div>';
         continue;
       }
-      
+
       if (!classObj) {
         html += '<div style="padding: 8px; background: #FEE; border-radius: 4px; margin-bottom: 4px; font-size: 12px;">❌ ' + i + '번째 행: 수강반 "' + className + '"을 찾을 수 없습니다</div>';
         continue;
       }
-      
+
       if (!paymentMethod) {
         html += '<div style="padding: 8px; background: #FEE; border-radius: 4px; margin-bottom: 4px; font-size: 12px;">❌ ' + i + '번째 행: 결제수단 "' + paymentMethodName + '"을 찾을 수 없습니다</div>';
         continue;
       }
-      
+
       const baseTuition = classObj.tuition || 0;
       let discountAmount = 0;
       if (discount) {
@@ -9330,7 +9484,7 @@ function previewPaymentCSV() {
       const finalTuition = Math.max(0, baseTuition - discountAmount);
       const fee = Math.round(finalTuition * (paymentMethod.feeRate || 0) / 100);
       const depositAmount = finalTuition - fee;
-      
+
       pendingPaymentCsvData.push({
         studentId: isNew ? '' : student.id,
         studentName: isNew ? studentName : '',
@@ -9348,18 +9502,18 @@ function previewPaymentCSV() {
         teacherName,
         isNewStudent: isNew
       });
-      
+
       html += '<div style="padding: 8px; background: var(--bg-side); border-radius: 4px; margin-bottom: 4px; font-size: 12px;">✅ ' + studentName + ' (' + enrollmentMonth + ') - ' + finalTuition.toLocaleString() + '원</div>';
     }
-    
+
     html += '</div>';
     preview.innerHTML = html;
-    
+
     if (pendingPaymentCsvData.length > 0) {
       document.getElementById('payment-csv-confirm-btn').style.display = 'block';
     }
   };
-  
+
   reader.readAsText(file);
 }
 
@@ -9368,7 +9522,7 @@ function confirmPaymentCSVUpload() {
     showToast('등록할 결제 데이터가 없습니다');
     return;
   }
-  
+
   pendingPaymentCsvData.forEach(data => {
     paymentsData.push({
       id: uid(),
@@ -9379,7 +9533,7 @@ function confirmPaymentCSVUpload() {
       createdAt: today()
     });
   });
-  
+
   closeModal('modal-payment-csv-upload');
   showToast(pendingPaymentCsvData.length + '건의 결제가 등록되었습니다');
   pendingPaymentCsvData = [];
@@ -9391,9 +9545,9 @@ function downloadPaymentsCsv() {
     showToast('다운로드할 결제 내역이 없습니다');
     return;
   }
-  
+
   let csv = '학생명,등록월,기본교습비,할인종류,횟수,최종교습비,입금금액,수수료,결제수단,결제날짜,입금날짜,담당선생,신입여부\n';
-  
+
   paymentsData.forEach(p => {
     const student = studentsData.find(s => s.id === p.studentId);
     const studentName = student ? student.name : '';
@@ -9401,7 +9555,7 @@ function downloadPaymentsCsv() {
     const discountName = discount ? discount.name : '';
     const paymentMethod = paymentMethodsData.find(pm => pm.id === p.paymentMethodId);
     const paymentMethodName = paymentMethod ? paymentMethod.name : '';
-    
+
     csv += studentName + ',';
     csv += p.enrollmentMonth + ',';
     csv += p.baseTuition + ',';
@@ -9416,13 +9570,13 @@ function downloadPaymentsCsv() {
     csv += p.teacherName + ',';
     csv += (p.isNewStudent ? '신입' : '') + '\n';
   });
-  
+
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = '결제내역_' + today() + '.csv';
   link.click();
-  
+
   showToast('CSV 파일이 다운로드되었습니다');
 }
 
