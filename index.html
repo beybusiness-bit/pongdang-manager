@@ -51,9 +51,21 @@ body {
   overflow-x: hidden;
 }
 
+/* 로딩 오버레이 */
+#loading-overlay {
+  position: fixed; inset: 0; background: #fff; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+}
+#loading-overlay .ld-spinner {
+  width: 36px; height: 36px;
+  border: 3px solid #e0e0e0; border-top-color: #667eea;
+  border-radius: 50%; animation: ld-spin 0.7s linear infinite;
+}
+@keyframes ld-spin { to { transform: rotate(360deg); } }
+
 /* 로그인 화면 */
 .login-screen {
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
@@ -1521,6 +1533,9 @@ input[type="checkbox"] {
 </style>
 </head>
 <body>
+
+<!-- 로딩 오버레이 -->
+<div id="loading-overlay"><div class="ld-spinner"></div></div>
 
 <!-- 로그인 화면 -->
 <div class="login-screen" id="login-screen">
@@ -3507,6 +3522,7 @@ function initFirebase() {
     if (user) {
       handleFirebaseUser(user);
     } else {
+      document.getElementById('loading-overlay').style.display = 'none';
       document.getElementById('login-screen').style.display = 'flex';
       document.getElementById('app').classList.remove('active');
     }
@@ -3548,10 +3564,11 @@ async function handleFirebaseUser(user) {
   currentUser = {
     email: email,
     name: user.displayName || email,
-    role: userAccount.role,
+    role: (userAccount.role || ROLES.TEACHER).toLowerCase(),
     avatar: (user.displayName || email).charAt(0),
     uid: user.uid
   };
+  document.getElementById('loading-overlay').style.display = 'none';
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').classList.add('active');
   initApp();
@@ -3564,7 +3581,7 @@ async function fetchAllowedAccountsFromFirestore() {
     var snap = await _db.collection('allowedAccounts').get();
     return snap.docs.map(function(doc) {
       var d = doc.data();
-      return { id: doc.id, email: (d.email||'').toLowerCase().trim(), name: d.name||'', role: d.role||ROLES.TEACHER, isActive: d.isActive !== false, createdAt: d.createdAt||today() };
+      return { id: doc.id, email: (d.email||'').toLowerCase().trim(), name: d.name||'', role: (d.role||ROLES.TEACHER).toLowerCase(), isActive: d.isActive !== false, createdAt: d.createdAt||today() };
     });
   } catch(e) { return []; }
 }
@@ -4355,7 +4372,7 @@ async function saveAccountFromModal() {
   var id = document.getElementById('add-account-id').value.trim();
   var email = (document.getElementById('add-account-email').value || '').toLowerCase().trim();
   var name = (document.getElementById('add-account-name').value || '').trim();
-  var role = document.getElementById('add-account-role').value;
+  var role = (document.getElementById('add-account-role').value || ROLES.TEACHER).toLowerCase();
   if (!email) { showToast('이메일을 입력하세요'); return; }
   if (!name) { showToast('이름을 입력하세요'); return; }
   try {
