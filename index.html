@@ -1057,6 +1057,15 @@ input[type="checkbox"] {
 .bulk-actions-bar.show {
   display: flex;
 }
+.bulk-inline-bar {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+.bulk-inline-bar.show {
+  display: flex;
+}
 .bulk-count {
   font-size: 14px;
   color: var(--text2);
@@ -3968,6 +3977,8 @@ async function initDataSources() {
       var loaded = await loadDataFromFirestore();
       if (loaded) {
         startRealtimeSync();
+        if (currentPage === 'dashboard') updateDashboard();
+        else if (currentPage) navigateTo(currentPage);
         return;
       }
     } catch(e) { console.warn('Firestore 로드 실패:', e); }
@@ -4852,7 +4863,7 @@ function renderStudentsPage() {
 
   // 검색/필터/정렬 영역 (shell에 고정 — 한글 IME 깨짐 방지: 검색 입력창은 리스트 변경 시 재생성하지 않음)
   html += '<div class="page-actions">';
-  html += '  <div class="search-filter-group">';
+  html += '  <div class="search-filter-group" id="students-filter-group">';
   html += '    <div class="search-box">';
   html += '      <span class="search-icon">🔍</span>';
   html += '      <input type="text" id="student-search-input" class="search-input" placeholder="이름, 학생번호 검색" ';
@@ -4876,6 +4887,7 @@ function renderStudentsPage() {
   html += '      </div>';
   html += '    </div>';
   html += '  </div>';
+  html += '  <div class="bulk-inline-bar" id="students-bulk-bar"></div>';
 
   if (canWrite) {
     html += '  <div class="page-action-buttons">';
@@ -4910,14 +4922,6 @@ function renderStudentsListBody() {
   const pageStudents = filteredStudents.slice(startIdx, endIdx);
 
   let html = '';
-
-  // 일괄 작업 바 (선택 시만 노출)
-  html += '<div class="bulk-actions-bar' + (selectedStudentIds.length > 0 ? ' show' : '') + '">';
-  html += '  <span class="bulk-count">' + selectedStudentIds.length + '명 선택됨</span>';
-  html += '  <button class="btn btn-primary btn-sm" onclick="openBulkEditModal()">일괄 수정</button>';
-  html += '  <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="bulkDeleteStudents()">선택 삭제</button>';
-  html += '  <button class="btn btn-outline btn-sm" onclick="clearSelection()">선택 해제</button>';
-  html += '</div>';
 
   // 페이저 (상단) — 뷰토글 + 페이지 + 페이지당개수
   html += renderPagination(studentPagination.currentPage, Math.ceil(studentPagination.totalItems / studentPagination.pageSize), 'changePage(PAGE)', {
@@ -5057,6 +5061,7 @@ function renderStudentsListBody() {
   }
 
   mount.innerHTML = html;
+  syncStudentsBulkBar();
 }
 
 function renderPagination(currentPage, totalPages, onClickTemplate, opts) {
@@ -6280,7 +6285,7 @@ function renderTextbooksPage() {
 
   // 검색/필터/정렬/뷰 전환 영역 (shell 고정 — 검색 입력창 재렌더 방지)
   html += '<div class="page-actions">';
-  html += '  <div class="search-filter-group">';
+  html += '  <div class="search-filter-group" id="textbooks-filter-group">';
   html += '    <div class="search-box">';
   html += '      <span class="search-icon">🔍</span>';
   html += '      <input type="text" id="textbook-search-input" class="search-input" placeholder="교재명, 저자, ISBN 검색" ';
@@ -6314,6 +6319,7 @@ function renderTextbooksPage() {
   html += '      </select>';
   html += '    </div>';
   html += '  </div>';
+  html += '  <div class="bulk-inline-bar" id="textbooks-bulk-bar"></div>';
 
   if (canWrite) {
     html += '  <button class="btn btn-outline btn-sm" onclick="openCSVUploadModal(\'textbooks\')" style="margin-right: 8px;">CSV 업로드</button>';
@@ -6344,13 +6350,6 @@ function renderTextbooksListBody() {
   const pageTextbooks = filteredTextbooks.slice(startIdx, endIdx);
 
   let html = '';
-
-  // 일괄 작업 바
-  html += '<div class="bulk-actions-bar' + (selectedTextbookIds.length > 0 ? ' show' : '') + '">';
-  html += '  <span class="bulk-count">' + selectedTextbookIds.length + '개 선택됨</span>';
-  html += '  <button class="btn btn-danger btn-sm" onclick="bulkDeleteTextbooks()">선택 삭제</button>';
-  html += '  <button class="btn btn-outline btn-sm" onclick="clearTextbookSelection()">선택 해제</button>';
-  html += '</div>';
 
   // 페이저 (상단)
   html += renderTextbookPagination({
@@ -6470,6 +6469,7 @@ function renderTextbooksListBody() {
 
   mount.innerHTML = html;
   updateSelectAllCheckbox();
+  syncTextbooksBulkBar();
 }
 
 function renderTextbookPagination(opts) {
@@ -8323,7 +8323,7 @@ function renderPaymentRecords(canWrite) {
   let html = '';
 
   html += '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">';
-  html += '  <div class="payment-filters" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center; flex: 1;">';
+  html += '  <div class="payment-filters" id="payment-filter-group" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center; flex: 1;">';
   html += '    <input type="month" class="form-input form-input-sm" value="' + currentPaymentFilter.month + '" onchange="currentPaymentFilter.month = this.value; paymentPagination.currentPage = 1; renderPaymentRecordsListBody()" style="width: 115px;">';
   html += '    <input type="text" id="payment-record-search" class="form-input form-input-sm" placeholder="학생명" value="' + (currentPaymentFilter.search || '').replace(/"/g, '&quot;') + '" oninput="handlePaymentRecordSearchInput(this)" style="width: 85px;">';
   html += '    <select class="form-input form-input-sm" style="width: 80px;" onchange="currentPaymentFilter.schoolType = this.value; paymentPagination.currentPage = 1; renderPaymentRecordsListBody()">';
@@ -8351,6 +8351,7 @@ function renderPaymentRecords(canWrite) {
   }
 
   html += '  </div>';
+  html += '  <div class="bulk-inline-bar" id="payment-bulk-bar"></div>';
 
   html += '  <div class="payment-buttons-desktop" style="display: flex; gap: 8px; flex-shrink: 0; align-items: center;">';
   if (canWrite) {
@@ -8372,15 +8373,6 @@ function renderPaymentRecordsListBody() {
 
   const canWrite = permissions[currentUser.role].payments?.write;
   let html = '';
-
-  if (canWrite && selectedPaymentIds.length > 0) {
-    html += '<div class="bulk-actions-bar show" style="margin-bottom:12px;">';
-    html += '  <span class="bulk-count">' + selectedPaymentIds.length + '건 선택됨</span>';
-    html += '  <button class="btn btn-outline btn-sm" onclick="openPaymentBulkEditModal()">일괄수정</button>';
-    html += '  <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="bulkDeletePayments()">삭제</button>';
-    html += '  <button class="btn btn-outline btn-sm" onclick="selectedPaymentIds=[];renderPaymentRecordsListBody()">선택해제</button>';
-    html += '</div>';
-  }
 
   if (paymentsData.length === 0) {
     html += '<div class="empty-state">';
@@ -8545,6 +8537,7 @@ function renderPaymentRecordsListBody() {
   });
 
   bodyMount.innerHTML = html;
+  syncPaymentsBulkBar();
 }
 
 function renderPaymentMobileCards(pagePayments, canWrite) {
@@ -9598,7 +9591,7 @@ function renderClassesPage() {
   const canWrite = permissions[currentUser.role].classes?.write;
 
   let html = '<div class="page-actions">';
-  html += '  <div class="search-filter-group">';
+  html += '  <div class="search-filter-group" id="classes-filter-group">';
   html += '    <div class="search-box">';
   html += '      <span class="search-icon">🔍</span>';
   html += '      <input type="text" id="classes-search-input" class="search-input" placeholder="반 이름, 선생님 검색" ';
@@ -9614,6 +9607,7 @@ function renderClassesPage() {
   html += '      </select>';
   html += '    </div>';
   html += '  </div>';
+  html += '  <div class="bulk-inline-bar" id="classes-bulk-bar"></div>';
   if (canWrite) {
     html += '  <div class="page-action-buttons">';
     html += '    <button class="btn btn-primary btn-sm" onclick="openClassForm()">+ 수강반 추가</button>';
@@ -9643,11 +9637,6 @@ function renderClassesListBody() {
   const displayView = isMobile ? 'card' : currentClassesDisplayView;
 
   let html = '';
-
-  html += '<div class="bulk-actions-bar' + (selectedClassIds.length > 0 ? ' show' : '') + '">';
-  html += '  <span class="bulk-count">' + selectedClassIds.length + '개 선택됨</span>';
-  html += '  <button class="btn btn-outline btn-sm" onclick="clearClassSelection()">선택 해제</button>';
-  html += '</div>';
 
   html += renderPagination(classesPagination.currentPage, totalPages, 'changeClassesPage(PAGE)', {
     leftHtml: isMobile ? '' : renderViewToggleHtml(currentClassesDisplayView, "changeClassesDisplayView('card')", "changeClassesDisplayView('list')", 'classes-view-toggle'),
@@ -9705,6 +9694,7 @@ function renderClassesListBody() {
   });
 
   mount.innerHTML = html;
+  syncClassesBulkBar();
 }
 
 function handleClassesSearchInput(input) {
@@ -9900,7 +9890,7 @@ function renderSchoolsPage() {
   const canWrite = permissions[currentUser.role].schools?.write;
 
   let html = '<div class="page-actions">';
-  html += '  <div class="search-filter-group">';
+  html += '  <div class="search-filter-group" id="schools-filter-group">';
   html += '    <div class="search-box">';
   html += '      <span class="search-icon">🔍</span>';
   html += '      <input type="text" id="schools-search-input" class="search-input" placeholder="학교 이름 검색" ';
@@ -9921,6 +9911,7 @@ function renderSchoolsPage() {
   html += '      </select>';
   html += '    </div>';
   html += '  </div>';
+  html += '  <div class="bulk-inline-bar" id="schools-bulk-bar"></div>';
   if (canWrite) {
     html += '  <div class="page-action-buttons">';
     html += '    <button class="btn btn-primary btn-sm" onclick="openSchoolForm()">+ 학교 추가</button>';
@@ -9950,11 +9941,6 @@ function renderSchoolsListBody() {
   const displayView = isMobile ? 'card' : currentSchoolsDisplayView;
 
   let html = '';
-
-  html += '<div class="bulk-actions-bar' + (selectedSchoolIds.length > 0 ? ' show' : '') + '">';
-  html += '  <span class="bulk-count">' + selectedSchoolIds.length + '개 선택됨</span>';
-  html += '  <button class="btn btn-outline btn-sm" onclick="clearSchoolSelection()">선택 해제</button>';
-  html += '</div>';
 
   html += renderPagination(schoolsPagination.currentPage, totalPages, 'changeSchoolsPage(PAGE)', {
     leftHtml: isMobile ? '' : renderViewToggleHtml(currentSchoolsDisplayView, "changeSchoolsDisplayView('card')", "changeSchoolsDisplayView('list')", 'schools-view-toggle'),
@@ -10018,6 +10004,7 @@ function renderSchoolsListBody() {
   });
 
   mount.innerHTML = html;
+  syncSchoolsBulkBar();
 }
 
 function handleSchoolsSearchInput(input) {
@@ -10210,7 +10197,7 @@ function renderTeachersPage() {
   const isOwner = currentUser.role === 'owner';
 
   let html = '<div class="page-actions">';
-  html += '  <div class="search-filter-group">';
+  html += '  <div class="search-filter-group" id="teachers-filter-group">';
   html += '    <div class="search-box">';
   html += '      <span class="search-icon">🔍</span>';
   html += '      <input type="text" id="teachers-search-input" class="search-input" placeholder="이름, 연락처 검색" ';
@@ -10229,6 +10216,7 @@ function renderTeachersPage() {
   html += '      </select>';
   html += '    </div>';
   html += '  </div>';
+  html += '  <div class="bulk-inline-bar" id="teachers-bulk-bar"></div>';
   if (isOwner) {
     html += '  <div class="page-action-buttons">';
     html += '    <button class="btn btn-primary btn-sm" onclick="openTeacherForm()">+ 선생님 추가</button>';
@@ -10258,13 +10246,6 @@ function renderTeachersListBody() {
   const displayView = isMobile ? 'card' : currentTeachersDisplayView;
 
   let html = '';
-
-  if (isOwner) {
-    html += '<div class="bulk-actions-bar' + (selectedTeacherIds.length > 0 ? ' show' : '') + '">';
-    html += '  <span class="bulk-count">' + selectedTeacherIds.length + '명 선택됨</span>';
-    html += '  <button class="btn btn-outline btn-sm" onclick="clearTeacherSelection()">선택 해제</button>';
-    html += '</div>';
-  }
 
   html += renderPagination(teachersPagination.currentPage, totalPages, 'changeTeachersPage(PAGE)', {
     leftHtml: (isOwner && !isMobile) ? renderViewToggleHtml(currentTeachersDisplayView, "changeTeachersDisplayView('card')", "changeTeachersDisplayView('list')", 'teachers-view-toggle') : '',
@@ -10332,6 +10313,7 @@ function renderTeachersListBody() {
   });
 
   mount.innerHTML = html;
+  syncTeachersBulkBar();
 }
 
 function handleTeachersSearchInput(input) {
@@ -10386,6 +10368,144 @@ function clearTeacherSelection() {
   selectedTeacherIds = [];
   renderTeachersListBody();
 }
+
+function syncStudentsBulkBar() {
+  var bar = document.getElementById('students-bulk-bar');
+  var fg = document.getElementById('students-filter-group');
+  if (!bar) return;
+  var n = selectedStudentIds.length;
+  if (n > 0) {
+    var cw = permissions[currentUser.role].students && permissions[currentUser.role].students.write;
+    bar.innerHTML = '<span class="bulk-count">' + n + '명 선택됨</span>' +
+      (cw ? '<button class="btn btn-primary btn-sm" onclick="openBulkEditModal()">일괄 수정</button>' +
+        '<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="bulkDeleteStudents()">선택 삭제</button>' : '') +
+      '<button class="btn btn-outline btn-sm" onclick="clearSelection()">선택 해제</button>';
+    bar.classList.add('show');
+    if (fg) fg.style.display = 'none';
+  } else {
+    bar.classList.remove('show');
+    bar.innerHTML = '';
+    if (fg) fg.style.display = '';
+  }
+}
+
+function syncTextbooksBulkBar() {
+  var bar = document.getElementById('textbooks-bulk-bar');
+  var fg = document.getElementById('textbooks-filter-group');
+  if (!bar) return;
+  var n = selectedTextbookIds.length;
+  if (n > 0) {
+    var cw = permissions[currentUser.role].textbooks && permissions[currentUser.role].textbooks.write;
+    bar.innerHTML = '<span class="bulk-count">' + n + '개 선택됨</span>' +
+      (cw ? '<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="bulkDeleteTextbooks()">선택 삭제</button>' : '') +
+      '<button class="btn btn-outline btn-sm" onclick="clearTextbookSelection()">선택 해제</button>';
+    bar.classList.add('show');
+    if (fg) fg.style.display = 'none';
+  } else {
+    bar.classList.remove('show');
+    bar.innerHTML = '';
+    if (fg) fg.style.display = '';
+  }
+}
+
+function syncClassesBulkBar() {
+  var bar = document.getElementById('classes-bulk-bar');
+  var fg = document.getElementById('classes-filter-group');
+  if (!bar) return;
+  var n = selectedClassIds.length;
+  if (n > 0) {
+    var cw = permissions[currentUser.role].classes && permissions[currentUser.role].classes.write;
+    bar.innerHTML = '<span class="bulk-count">' + n + '개 선택됨</span>' +
+      (cw ? '<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="bulkDeleteClasses()">선택 삭제</button>' : '') +
+      '<button class="btn btn-outline btn-sm" onclick="clearClassSelection()">선택 해제</button>';
+    bar.classList.add('show');
+    if (fg) fg.style.display = 'none';
+  } else {
+    bar.classList.remove('show');
+    bar.innerHTML = '';
+    if (fg) fg.style.display = '';
+  }
+}
+
+function bulkDeleteClasses() {
+  if (!confirm(selectedClassIds.length + '개 수강반을 삭제하시겠습니까?')) return;
+  classesData = classesData.filter(function(c) { return selectedClassIds.indexOf(c.id) === -1; });
+  selectedClassIds = [];
+  renderClassesListBody();
+}
+
+function syncSchoolsBulkBar() {
+  var bar = document.getElementById('schools-bulk-bar');
+  var fg = document.getElementById('schools-filter-group');
+  if (!bar) return;
+  var n = selectedSchoolIds.length;
+  if (n > 0) {
+    var cw = permissions[currentUser.role].schools && permissions[currentUser.role].schools.write;
+    bar.innerHTML = '<span class="bulk-count">' + n + '개 선택됨</span>' +
+      (cw ? '<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="bulkDeleteSchools()">선택 삭제</button>' : '') +
+      '<button class="btn btn-outline btn-sm" onclick="clearSchoolSelection()">선택 해제</button>';
+    bar.classList.add('show');
+    if (fg) fg.style.display = 'none';
+  } else {
+    bar.classList.remove('show');
+    bar.innerHTML = '';
+    if (fg) fg.style.display = '';
+  }
+}
+
+function bulkDeleteSchools() {
+  if (!confirm(selectedSchoolIds.length + '개 학교를 삭제하시겠습니까?')) return;
+  schoolsData = schoolsData.filter(function(s) { return selectedSchoolIds.indexOf(s.id) === -1; });
+  selectedSchoolIds = [];
+  renderSchoolsListBody();
+}
+
+function syncTeachersBulkBar() {
+  var bar = document.getElementById('teachers-bulk-bar');
+  var fg = document.getElementById('teachers-filter-group');
+  if (!bar) return;
+  var n = selectedTeacherIds.length;
+  if (n > 0) {
+    var isOwner = currentUser.role === 'owner';
+    bar.innerHTML = '<span class="bulk-count">' + n + '명 선택됨</span>' +
+      (isOwner ? '<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="bulkDeleteTeachers()">선택 삭제</button>' : '') +
+      '<button class="btn btn-outline btn-sm" onclick="clearTeacherSelection()">선택 해제</button>';
+    bar.classList.add('show');
+    if (fg) fg.style.display = 'none';
+  } else {
+    bar.classList.remove('show');
+    bar.innerHTML = '';
+    if (fg) fg.style.display = '';
+  }
+}
+
+function bulkDeleteTeachers() {
+  if (!confirm(selectedTeacherIds.length + '명의 선생님을 삭제하시겠습니까?')) return;
+  teachersData = teachersData.filter(function(t) { return selectedTeacherIds.indexOf(t.id) === -1; });
+  selectedTeacherIds = [];
+  renderTeachersListBody();
+}
+
+function syncPaymentsBulkBar() {
+  var bar = document.getElementById('payment-bulk-bar');
+  var fg = document.getElementById('payment-filter-group');
+  if (!bar) return;
+  var n = selectedPaymentIds.length;
+  var cw = permissions[currentUser.role].payments && permissions[currentUser.role].payments.write;
+  if (n > 0 && cw) {
+    bar.innerHTML = '<span class="bulk-count">' + n + '건 선택됨</span>' +
+      '<button class="btn btn-outline btn-sm" onclick="openPaymentBulkEditModal()">일괄수정</button>' +
+      '<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="bulkDeletePayments()">삭제</button>' +
+      '<button class="btn btn-outline btn-sm" onclick="selectedPaymentIds=[];renderPaymentRecordsListBody()">선택해제</button>';
+    bar.classList.add('show');
+    if (fg) fg.style.display = 'none';
+  } else {
+    bar.classList.remove('show');
+    bar.innerHTML = '';
+    if (fg) fg.style.display = '';
+  }
+}
+
 
 function openTeacherDetail(teacherId) {
   const t = teachersData.find(tc => tc.id === teacherId);
